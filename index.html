@@ -27,9 +27,10 @@
   - TOPICS ....... het "Onderwerpen"-uitklapmenu
   - CTAS ......... de drie actiekaarten bovenin "Onderwerpen"
   - ADMIN_LINKS .. beheerlinks
-  - bandleft ..... de knoppenbalk onderin
-  De zesde knop "Nu actueel" haalt zijn twee kaarten LIVE op uit het losse
-  bestand actueel.json (naast index.html) — dat pas je los aan, zonder code.
+  - bandleft ..... de knoppenbalk onderin (incl. de knop "Nu actueel")
+  De knop "Nu actueel" in de onderbalk toont bij openen een compacte rij
+  linkjes die LIVE uit het losse bestand actueel.json (naast index.html) komen
+  — dat pas je los aan, zonder code.
   Beheer-ID: ADMIN_ID. Zoek-app-URL: ZOEK_APP.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -123,9 +124,10 @@
 
   .band { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 16px; border-top: 1px solid rgba(128,0,0,.1); background: #fdf9f8; }
   .band .left { display: flex; gap: 8px; flex-wrap: wrap; }
-  .band .left a { padding: 8px 16px; border-radius: 9px; font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 13.5px; white-space: nowrap; }
-  .band .left a.light { background: rgba(128,0,0,.06); color: var(--brand); border: 1px solid rgba(128,0,0,.18); }
-  .band .left a.light:hover { background: rgba(128,0,0,.11); }
+  .band .left a, .band .left button { padding: 8px 16px; border-radius: 9px; font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 13.5px; white-space: nowrap; }
+  .band .left button { display: inline-flex; align-items: center; gap: 7px; line-height: 1; }
+  .band .left a.light, .band .left button.light { background: rgba(128,0,0,.06); color: var(--brand); border: 1px solid rgba(128,0,0,.18); }
+  .band .left a.light:hover, .band .left button.light:hover { background: rgba(128,0,0,.11); }
   .band .left a.fill { background: var(--brand); color: #fff; }
   .band .left a.fill:hover { filter: brightness(1.1); }
   .eco { display: flex; align-items: center; gap: 10px; font-size: 13.5px; white-space: nowrap; }
@@ -278,12 +280,15 @@
     ["Wonen algemeen",U("/profiles/blog/list?tag=Woningen+Algemeen")],["Woningen gevraagd",U("/profiles/blog/list?tag=Woningen+Gevraagd")],["Word sponsor",U("/page/sponsorprogramma"),1]
   ];
 
-  var DOOR_DEFS = [["lezen","Lezen","rubrieken"],["doen","Meedoen","plaatsen & steunen"],["vinden","Vinden","tools & hulp"],["mijn","Mijn NLFR","leden"],["nieuws","Nieuws","& feeds"],["actueel","Nu actueel","live"]];
+  var DOOR_DEFS = [["lezen","Lezen","rubrieken"],["doen","Meedoen","plaatsen & steunen"],["vinden","Vinden","tools & hulp"],["mijn","Mijn NLFR","leden"],["nieuws","Nieuws","& feeds"]];
 
-  // "Nu actueel" (zesde knop) — twee kaarten die LIVE uit actueel.json komen.
-  // Zo kan de inhoud gewijzigd worden zonder deze index.html aan te raken.
-  // Kaart 1 wijst standaard naar /api/nieuwsbrief van nlfr-nieuwsbrief, dat
-  // 302-doorstuurt naar de webversie van de laatst verzonden nieuwsbrief.
+  // "Nu actueel" — compacte knop in de onderbalk (naast "Diensten"), niet in
+  // de menuknoppenrij. De items komen LIVE uit actueel.json, zodat de inhoud
+  // aanpasbaar is zonder deze index.html aan te raken. Bij openen toont de
+  // drawer één rij kleine linkjes (adminlinks-stijl); een item met live:true
+  // geeft de balkknop een pulserend stipje. Het eerste item wijst standaard
+  // naar /api/nieuwsbrief van nlfr-nieuwsbrief, dat 302-doorstuurt naar de
+  // webversie van de laatst verzonden nieuwsbrief.
   var ACTUEEL = null; // null = nog niet geladen; {kaarten:[...]} na fetch.
   var ACTUEEL_URL = "/actueel.json";
 
@@ -305,10 +310,14 @@
   });
 
   // ---- Build band ----
+  // "Nu actueel" is een <button> (opent de drawer, navigeert niet); hij krijgt
+  // dezelfde light-stijl als de balklinks. Het stipje staat standaard verborgen
+  // en wordt zichtbaar zodra actueel.json een item met live:true bevat.
   document.getElementById("bandleft").innerHTML =
     link(U("/profiles/blog/new"),"Plaats bericht","light") +
     link(U("/page/betaalpagina-berichten"),"Plaats advertentie","light") +
-    link(U("/diensten"),"Diensten","fill");
+    link(U("/diensten"),"Diensten","fill") +
+    '<button type="button" class="light" id="actueelbtn"><span class="dot" id="actueeldot" style="display:none"></span>Nu actueel</button>';
 
   // ---- Admin button ----
   var adminBtn = document.getElementById("adminbtn");
@@ -355,26 +364,33 @@
     drawer.innerHTML = "";
   }
 
-  // ---- "Nu actueel" — twee kaarten uit actueel.json ----
-  function actueelKaart(k){
+  // ---- "Nu actueel" — compacte rij linkjes (adminlinks-stijl) uit actueel.json
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function actueelLink(k){
     var href = (k && k.href) ? String(k.href) : "#";
     var t = tgt(href), rel = (t === "_blank") ? ' rel="noopener"' : '';
-    var titel = (k && k.live ? '<span class="dot"></span>' : '') + ((k && k.titel) || "");
-    return '<a class="cta '+((k && k.accent)?"fill":"tint")+'" href="'+href+'" target="'+t+'"'+rel+'>'+
-      '<span class="ct">'+titel+'</span><span class="cs">'+((k && k.tekst) || "")+'</span></a>';
+    // De ondertitel (tekst) staat als title-attribuut, niet zichtbaar.
+    var titleAttr = (k && k.tekst) ? ' title="' + esc(k.tekst) + '"' : '';
+    return '<a href="' + href + '" target="' + t + '"' + rel + titleAttr + '>' + ((k && k.titel) || "") + '</a>';
   }
   function actueelHTML(){
-    if (ACTUEEL === null) return '<div class="ctas"><span class="cta tint"><span class="ct">Actueel wordt geladen…</span></span></div>';
-    var kaarten = (ACTUEEL.kaarten || []).slice(0, 2);
-    if (!kaarten.length) return '<div class="ctas"><span class="cta tint"><span class="ct">Op dit moment niets bijzonders</span><span class="cs">Kijk gerust rond in de andere menu’s.</span></span></div>';
-    return '<div class="ctas">' + kaarten.map(actueelKaart).join("") + '</div>';
+    var kop = '<div class="adminlinks"><span class="h">Nu actueel</span>';
+    if (ACTUEEL === null) return kop + '<span style="color:#8a7f7c;font-size:13px">wordt geladen…</span></div>';
+    var items = (ACTUEEL.kaarten || []);
+    if (!items.length) return kop + '<span style="color:#8a7f7c;font-size:13px">op dit moment niets bijzonders</span></div>';
+    return kop + items.map(actueelLink).join("") + '</div>';
   }
   function laadActueel(){
     fetch(ACTUEEL_URL, { cache: "no-store" })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ ACTUEEL = (j && typeof j === "object") ? j : { kaarten: [] }; })
       .catch(function(){ ACTUEEL = { kaarten: [] }; })
-      .then(function(){ if (current === "actueel") { drawer.innerHTML = actueelHTML(); report(); } });
+      .then(function(){
+        // Balkknop krijgt een stipje zodra minstens één item live is.
+        var dot = document.getElementById("actueeldot");
+        if (dot) dot.style.display = (ACTUEEL.kaarten || []).some(function(k){ return k && k.live; }) ? "" : "none";
+        if (current === "actueel") { drawer.innerHTML = actueelHTML(); report(); }
+      });
   }
 
   // ---- Open/close ----
@@ -419,6 +435,7 @@
   });
   document.getElementById("pullbtn").addEventListener("click", function(){ open("topics", this); });
   adminBtn.addEventListener("click", function(){ open("admin", this); });
+  document.getElementById("actueelbtn").addEventListener("click", function(){ open("actueel", this); });
   document.addEventListener("keydown", function(e){ if (e.key === "Escape") { closeAll(); report(); } });
 
   // ---- Profiel-ontvangst (cross-origin, vanuit embedcode op nederlanders.fr) ----

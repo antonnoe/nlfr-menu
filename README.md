@@ -9,9 +9,9 @@ Ning-editor code beschadigt bij opslaan.
 
 - `index.html` — het complete menu (HTML + CSS + JS in één bestand). Vercel
   publiceert dit als statische site.
-- `actueel.json` — de inhoud van de zesde knop **"Nu actueel"** (twee kaarten).
-  Het menu haalt dit bestand live op; je past het los aan, zonder `index.html`
-  aan te raken. Zie "'Nu actueel' bijwerken" hieronder.
+- `actueel.json` — de inhoud van de knop **"Nu actueel"** in de onderbalk (één
+  compacte rij linkjes). Het menu haalt dit bestand live op; je past het los
+  aan, zonder `index.html` aan te raken. Zie "'Nu actueel' bijwerken" hieronder.
 - `embedcode-ning.html` — de code die op nederlanders.fr in de tekst/codemodule
   staat. Staat hier alleen ter referentie/backup; wijzigingen hieraan moeten
   handmatig op Ning worden overgenomen.
@@ -37,16 +37,18 @@ Deployments → vorige deployment → "Promote to Production".
 
 ## "Nu actueel" bijwerken
 
-De zesde menuknop **"Nu actueel"** toont twee kaarten en leest die live uit
-`actueel.json` (naast `index.html`). Je hoeft de menucode dus niet aan te raken:
+De knop **"Nu actueel"** in de onderbalk (naast "Diensten") toont bij openen
+een compacte rij linkjes en leest die live uit `actueel.json` (naast
+`index.html`). Je hoeft de menucode dus niet aan te raken:
 
 1. Open `actueel.json` op github.com en klik op het potlood (Edit).
-2. Elke kaart heeft: `titel`, `tekst`, `href` (de link), optioneel
-   `accent: true` (de gevulde rode kaart; laat weg voor de lichte kaart) en
-   optioneel `live: true` (pulserend stipje). Er worden max. twee kaarten getoond.
+2. Elk item heeft: `titel` (de zichtbare linktekst), `tekst` (verschijnt als
+   tooltip, niet zichtbaar), `href` (de link), optioneel `accent: true`
+   (behouden veld) en optioneel `live: true` (dan krijgt de balkknop een
+   pulserend stipje). Alle items worden getoond.
 3. Commit. Vercel publiceert automatisch; na ± 1 minuut staat het live.
 
-De eerste kaart wijst standaard naar `https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief`.
+Het eerste item wijst standaard naar `https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief`.
 Die route (in de aparte repo `nlfr-nieuwsbrief`) stuurt 302 door naar de
 webversie van de laatst verzonden Laposta-nieuwsbrief, zodat de link altijd de
 nieuwste editie opent zonder handmatig bijwerken.

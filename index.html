@@ -22,12 +22,14 @@
   3. Hoogte-postMessage ongewijzigd (FIX 1 van 21-07 behouden).
 
   ONDERHOUD — alles wat je normaal wijzigt staat in het <script>-blok:
-  - DOORS ........ inhoud van de vijf uitklapmenu's (Lezen/Meedoen/Vinden/Nieuws)
+  - DOORS ........ inhoud van de uitklapmenu's (Lezen/Meedoen/Vinden/Nieuws)
   - MEMBER_GROUPS  ledenmenu (Mijn NLFR, ingelogd)
   - TOPICS ....... het "Onderwerpen"-uitklapmenu
   - CTAS ......... de drie actiekaarten bovenin "Onderwerpen"
   - ADMIN_LINKS .. beheerlinks
   - bandleft ..... de knoppenbalk onderin
+  De zesde knop "Nu actueel" haalt zijn twee kaarten LIVE op uit het losse
+  bestand actueel.json (naast index.html) — dat pas je los aan, zonder code.
   Beheer-ID: ADMIN_ID. Zoek-app-URL: ZOEK_APP.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -103,6 +105,7 @@
   .cta.tint:hover { background: rgba(128,0,0,.12); }
   .cta.tint .cs { color: #8a7f7c; }
   .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--brand); animation: pulse 1.6s ease-in-out infinite; }
+  .cta.fill .dot { background: #fff; }
 
   .teaser h3 { font-family: 'Poppins',sans-serif; font-weight: 700; font-size: 18px; margin: 0 0 6px; color: #5c0f0f; }
   .teaser p { margin: 0 0 12px; font-size: 14px; color: #6d6360; }
@@ -275,7 +278,14 @@
     ["Wonen algemeen",U("/profiles/blog/list?tag=Woningen+Algemeen")],["Woningen gevraagd",U("/profiles/blog/list?tag=Woningen+Gevraagd")],["Word sponsor",U("/page/sponsorprogramma"),1]
   ];
 
-  var DOOR_DEFS = [["lezen","Lezen","rubrieken"],["doen","Meedoen","plaatsen & steunen"],["vinden","Vinden","tools & hulp"],["mijn","Mijn NLFR","leden"],["nieuws","Nieuws","& feeds"]];
+  var DOOR_DEFS = [["lezen","Lezen","rubrieken"],["doen","Meedoen","plaatsen & steunen"],["vinden","Vinden","tools & hulp"],["mijn","Mijn NLFR","leden"],["nieuws","Nieuws","& feeds"],["actueel","Nu actueel","live"]];
+
+  // "Nu actueel" (zesde knop) — twee kaarten die LIVE uit actueel.json komen.
+  // Zo kan de inhoud gewijzigd worden zonder deze index.html aan te raken.
+  // Kaart 1 wijst standaard naar /api/nieuwsbrief van nlfr-nieuwsbrief, dat
+  // 302-doorstuurt naar de webversie van de laatst verzonden nieuwsbrief.
+  var ACTUEEL = null; // null = nog niet geladen; {kaarten:[...]} na fetch.
+  var ACTUEEL_URL = "/actueel.json";
 
   // ---- Build nav ----
   var doorsEl = document.getElementById("doors");
@@ -330,6 +340,7 @@
       drawer.innerHTML = '<div class="adminlinks"><span class="h">Beheer</span>' + ADMIN_LINKS.map(function(l){ return link(l[1], l[0], ""); }).join("") + '</div>';
       return;
     }
+    if (target === "actueel") { drawer.innerHTML = actueelHTML(); return; }
     if (target === "topics") {
       var c = '<div class="ctas">' + CTAS.map(function(x){
         var title = (x.live ? '<span class="dot"></span>' : '') + x.t;
@@ -342,6 +353,28 @@
       return;
     }
     drawer.innerHTML = "";
+  }
+
+  // ---- "Nu actueel" — twee kaarten uit actueel.json ----
+  function actueelKaart(k){
+    var href = (k && k.href) ? String(k.href) : "#";
+    var t = tgt(href), rel = (t === "_blank") ? ' rel="noopener"' : '';
+    var titel = (k && k.live ? '<span class="dot"></span>' : '') + ((k && k.titel) || "");
+    return '<a class="cta '+((k && k.accent)?"fill":"tint")+'" href="'+href+'" target="'+t+'"'+rel+'>'+
+      '<span class="ct">'+titel+'</span><span class="cs">'+((k && k.tekst) || "")+'</span></a>';
+  }
+  function actueelHTML(){
+    if (ACTUEEL === null) return '<div class="ctas"><span class="cta tint"><span class="ct">Actueel wordt geladen…</span></span></div>';
+    var kaarten = (ACTUEEL.kaarten || []).slice(0, 2);
+    if (!kaarten.length) return '<div class="ctas"><span class="cta tint"><span class="ct">Op dit moment niets bijzonders</span><span class="cs">Kijk gerust rond in de andere menu’s.</span></span></div>';
+    return '<div class="ctas">' + kaarten.map(actueelKaart).join("") + '</div>';
+  }
+  function laadActueel(){
+    fetch(ACTUEEL_URL, { cache: "no-store" })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ ACTUEEL = (j && typeof j === "object") ? j : { kaarten: [] }; })
+      .catch(function(){ ACTUEEL = { kaarten: [] }; })
+      .then(function(){ if (current === "actueel") { drawer.innerHTML = actueelHTML(); report(); } });
   }
 
   // ---- Open/close ----
@@ -418,6 +451,9 @@
   q.addEventListener("focus", function(){ sbox.classList.add("focus"); });
   q.addEventListener("blur", function(){ sbox.classList.remove("focus"); });
   clr.addEventListener("click", function(){ q.value = ""; clr.classList.remove("show"); q.focus(); });
+
+  // ---- "Nu actueel" alvast ophalen, zodat de kaarten er bij openen staan ----
+  laadActueel();
 
   // ---- Height sync ----
   window.addEventListener("load", report);

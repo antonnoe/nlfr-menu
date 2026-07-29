@@ -1,0 +1,18 @@
+{
+  "_uitleg": "Inhoud van de knop 'Nu actueel' in het hoofdmenu. Pas de twee kaarten hieronder aan; het menu haalt dit bestand live op (er hoeft niets aan index.html te veranderen). Velden per kaart: titel, tekst, href (de link), accent (true = de gevulde rode kaart, weglaten/false = de lichte kaart) en live (true = pulserend stipje). Er worden maximaal twee kaarten getoond.",
+  "kaarten": [
+    {
+      "titel": "Laatste nieuwsbrief",
+      "tekst": "Lees de meest recente nieuwsbrief van Nederlanders.fr online.",
+      "href": "https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief",
+      "accent": true,
+      "live": true
+    },
+    {
+      "titel": "Bosbranden in Frankrijk",
+      "tekst": "Actueel overzicht en veiligheidsinformatie bij natuurbranden.",
+      "href": "https://www.nederlanders.fr/page/bosbranden",
+      "live": true
+    }
+  ]
+}

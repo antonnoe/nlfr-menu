@@ -1,0 +1,30 @@
+<!-- NLFR-menu embedcode (29-07-2026) — plak dit in de tekst/codemodule op nederlanders.fr.
+     Vervang eerst JOUW-VERCEL-URL door de echte URL van het Vercel-project,
+     bv. https://nlfr-menu.vercel.app — verder niets wijzigen. -->
+<iframe id="nlfrMenu" src="JOUW-VERCEL-URL" style="width:100%;height:230px;border:0;overflow:hidden;" scrolling="no" title="Menu" name="nlfrMenu"></iframe>
+<script>
+(function(){
+  var f = document.getElementById('nlfrMenu');
+  var ORIGIN = new URL(f.src).origin;
+
+  // Hoogte-sync: alleen berichten van het menu zelf accepteren
+  window.addEventListener('message', function(e){
+    if (e.origin !== ORIGIN) return;
+    if (e.data && e.data.nlfrMenuHeight) {
+      f.style.height = (e.data.nlfrMenuHeight + 4) + 'px';
+    }
+  });
+
+  // Profieloverdracht: deze pagina draait op nederlanders.fr en kan dus
+  // ning.CurrentProfile lezen; het menu op Vercel kan dat niet meer.
+  function sendProfile(){
+    var cp = (window.ning && window.ning.CurrentProfile) ? window.ning.CurrentProfile : null;
+    var p = (cp && cp.id) ? { id: cp.id, profileUrl: cp.profileUrl || "" } : null;
+    try { f.contentWindow.postMessage({ nlfrProfile: p }, ORIGIN); } catch(err){}
+  }
+  f.addEventListener('load', function(){
+    sendProfile();
+    setTimeout(sendProfile, 1000); // herhaling voor het geval ning.CurrentProfile traag laadt
+  });
+})();
+</script>

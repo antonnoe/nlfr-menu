@@ -1,7 +1,4 @@
-<!-- NLFR-menu embedcode (29-07-2026) — plak dit in de tekst/codemodule op nederlanders.fr.
-     Vervang eerst JOUW-VERCEL-URL door de echte URL van het Vercel-project,
-     bv. https://nlfr-menu.vercel.app — verder niets wijzigen. -->
-<iframe id="nlfrMenu" src="JOUW-VERCEL-URL" style="width:100%;height:230px;border:0;overflow:hidden;" scrolling="no" title="Menu" name="nlfrMenu"></iframe>
+<iframe id="nlfrMenu" src="https://nlfr-menu.vercel.app/" style="width:100%;height:230px;border:0;overflow:hidden;" scrolling="no" title="Menu" name="nlfrMenu"></iframe>
 <script>
 (function(){
   var f = document.getElementById('nlfrMenu');
@@ -24,7 +21,7 @@
   }
   f.addEventListener('load', function(){
     sendProfile();
-    setTimeout(sendProfile, 1000); // herhaling voor het geval ning.CurrentProfile traag laadt
+    setTimeout(sendProfile, 1000);
   });
 })();
 </script>

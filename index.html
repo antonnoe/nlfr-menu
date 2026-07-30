@@ -37,7 +37,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --brand: #800000; }
+  :root { --brand: #800000; --actueel: #2f6b3a; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: transparent; }
   body { font-family: 'Mulish', system-ui, sans-serif; line-height: 1.6; color: #3a3330; padding: 6px; }
@@ -121,6 +121,14 @@
   .adminlinks .h { font-family: 'Poppins',sans-serif; font-weight: 700; font-size: 12px; color: #8a7f7c; margin-right: 4px; }
   .adminlinks a { padding: 6px 12px; font-size: 13px; color: #5b524f; border-radius: 8px; background: #fff; border: 1px solid rgba(128,0,0,.12); font-weight: 600; }
   .adminlinks a:hover { background: rgba(128,0,0,.06); color: var(--brand); }
+
+  /* "Nu actueel"-rij in de drawer — zelfde opbouw als .adminlinks, maar los
+     stylebaar (groene accentkleur --actueel). De beheer-rij .adminlinks blijft
+     ongewijzigd; het stipje op de balkknop blijft bordeaux (--brand). */
+  .actueellinks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .actueellinks .h { font-family: 'Poppins',sans-serif; font-weight: 700; font-size: 12px; color: var(--brand); margin-right: 4px; }
+  .actueellinks a { padding: 6px 12px; font-size: 13px; color: var(--actueel); border-radius: 8px; background: rgba(47,107,58,.07); border: 1px solid rgba(47,107,58,.35); font-weight: 600; }
+  .actueellinks a:hover { background: rgba(47,107,58,.14); }
 
   .band { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 16px; border-top: 1px solid rgba(128,0,0,.1); background: #fdf9f8; }
   .band .left { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -285,7 +293,7 @@
   // "Nu actueel" — compacte knop in de onderbalk (naast "Diensten"), niet in
   // de menuknoppenrij. De items komen LIVE uit actueel.json, zodat de inhoud
   // aanpasbaar is zonder deze index.html aan te raken. Bij openen toont de
-  // drawer één rij kleine linkjes (adminlinks-stijl); een item met live:true
+  // drawer één rij kleine linkjes (klasse .actueellinks); een item met live:true
   // geeft de balkknop een pulserend stipje. Het eerste item wijst standaard
   // naar /api/nieuwsbrief van nlfr-nieuwsbrief, dat 302-doorstuurt naar de
   // webversie van de laatst verzonden nieuwsbrief.
@@ -364,7 +372,7 @@
     drawer.innerHTML = "";
   }
 
-  // ---- "Nu actueel" — compacte rij linkjes (adminlinks-stijl) uit actueel.json
+  // ---- "Nu actueel" — compacte rij linkjes (klasse .actueellinks) uit actueel.json
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
   function actueelLink(k){
     var href = (k && k.href) ? String(k.href) : "#";
@@ -374,7 +382,7 @@
     return '<a href="' + href + '" target="' + t + '"' + rel + titleAttr + '>' + ((k && k.titel) || "") + '</a>';
   }
   function actueelHTML(){
-    var kop = '<div class="adminlinks"><span class="h">Nu actueel</span>';
+    var kop = '<div class="actueellinks"><span class="h">Nu actueel</span>';
     if (ACTUEEL === null) return kop + '<span style="color:#8a7f7c;font-size:13px">wordt geladen…</span></div>';
     var items = (ACTUEEL.kaarten || []);
     if (!items.length) return kop + '<span style="color:#8a7f7c;font-size:13px">op dit moment niets bijzonders</span></div>';

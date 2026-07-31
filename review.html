@@ -70,9 +70,19 @@
 
   function bronnenHtml(bronnen){
     if (!bronnen || !bronnen.length) return "";
-    return '<div class="bronnen"><b>Bronnen</b>' + bronnen.map(function(b){
-      return '<a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(b.naam || b.titel || b.url)+'</a>';
-    }).join("") + '</div>';
+    var perBron = {}, volgorde = [];
+    bronnen.forEach(function(b){
+      var naam = b.naam || b.url || "bron";
+      if (!perBron[naam]){ perBron[naam] = []; volgorde.push(naam); }
+      perBron[naam].push(b);
+    });
+    var rijen = volgorde.map(function(naam){
+      var links = perBron[naam].map(function(b){
+        return '<a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(b.datum?datum(b.datum):"link")+'</a>';
+      }).join(" · ");
+      return '<div>'+esc(naam)+' — '+links+'</div>';
+    }).join("");
+    return '<div class="bronnen"><b>Bronnen</b>'+rijen+'</div>';
   }
 
   function render(data){

@@ -14,6 +14,7 @@ import crypto from "node:crypto";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import {
   CONCEPT_TTL_S,
+  PUBLICATIE_TTL_S,
   KEY_CONCEPT,
   KEY_PUBLICATIE,
   KEY_AFGEWEZEN,
@@ -139,7 +140,7 @@ export default async function handler(req, res) {
         gepubliceerd: true,
         gepubliceerdOp: new Date().toISOString(),
       };
-      await setJSON(KEY_PUBLICATIE(id), publicatie); // geen TTL: blijft tot handmatig weg
+      await setJSON(KEY_PUBLICATIE(id), publicatie, PUBLICATIE_TTL_S); // verloopt na 7 dagen
       await del(KEY_CONCEPT(id));
       return res.status(200).json({ ok: true, publicatie });
     }

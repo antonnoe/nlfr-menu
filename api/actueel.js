@@ -9,7 +9,7 @@
 // standaard ingeklapt getoond ("Alle Franse koppen").
 // Cache: stale-while-revalidate op de drie headers (Vercel negeert de standaard).
 
-import { haalAlleItems } from "../lib/feeds.js";
+import { haalAlleItems, haalAgenda } from "../lib/feeds.js";
 import { listJSON } from "../lib/store.js";
 import {
   FEED_MAX_AGE_S,
@@ -21,6 +21,7 @@ import {
   OVERHEID_THEMAS,
   OVERHEID_THEMA_LABEL,
   MAX_FRANSE_KOPPEN_PER_BRON,
+  MAX_NIEUWS_LEEFTIJD_DAGEN,
 } from "../lib/config.js";
 
 export default async function handler(req, res) {
@@ -29,18 +30,32 @@ export default async function handler(req, res) {
 
   let items = [];
   let bronStatus = [];
+  let agenda = [];
   try {
-    ({ items, bronStatus } = await haalAlleItems(nu));
+    [{ items, bronStatus }, { items: agenda }] = await Promise.all([
+      haalAlleItems(nu),
+      haalAgenda(nu),
+    ]);
   } catch {
     items = [];
     bronStatus = [];
+    agenda = [];
   }
+
+  // Max leeftijd hoofdweergave: niets ouder dan 7 dagen.
+  const maxLeeftijd = MAX_NIEUWS_LEEFTIJD_DAGEN * 24 * 60 * 60 * 1000;
+  const versGenoeg = (iso) => {
+    const t = Date.parse(iso);
+    return !Number.isNaN(t) && nu - t <= maxLeeftijd;
+  };
 
   // ---- 1) Gepubliceerde perssyntheses (KV) --------------------------------
   const versGrens = HOT_VENSTER_UREN * 60 * 60 * 1000;
   let persSyntheses = await listJSON(SCAN_PUBLICATIE);
   persSyntheses = persSyntheses
     .filter((p) => p && p.gepubliceerd)
+    // Niets ouder dan 7 dagen (op basis van clusterdatum of publicatietijd).
+    .filter((p) => versGenoeg(p.clusterLaatste || p.gepubliceerdOp))
     .sort(
       (a, b) => (Date.parse(b.gepubliceerdOp) || 0) - (Date.parse(a.gepubliceerdOp) || 0)
     )
@@ -60,6 +75,7 @@ export default async function handler(req, res) {
   const perThemaOverheid = new Map();
   for (const d of overheidDocs) {
     if (!d || !d.samenvatting) continue;
+    if (!versGenoeg(d.datum || d.gepubliceerdOp)) continue; // max 7 dagen
     if (!perThemaOverheid.has(d.thema)) perThemaOverheid.set(d.thema, []);
     perThemaOverheid.get(d.thema).push({
       id: d.id,
@@ -77,9 +93,10 @@ export default async function handler(req, res) {
       .sort((a, b) => (Date.parse(b.datum) || 0) - (Date.parse(a.datum) || 0)),
   }));
 
-  // ---- 3) Verenigingen (al NL) uit de live feed ---------------------------
+  // ---- 3) Verenigingen-nieuws (al NL) uit de live feed --------------------
   const verenigingen = items
     .filter((i) => i.thema === "verenigingen")
+    .filter((i) => versGenoeg(i.datum)) // max 7 dagen
     .sort((a, b) => (Date.parse(b.datum) || 0) - (Date.parse(a.datum) || 0))
     .slice(0, 20);
 
@@ -110,6 +127,7 @@ export default async function handler(req, res) {
     persSyntheses,
     overheid,
     verenigingen,
+    agenda: agenda || [], // activiteiten komende 14 dagen (verenigingen-repo)
     franseKoppen,
     bronStatus,
   };

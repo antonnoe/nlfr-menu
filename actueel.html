@@ -42,7 +42,15 @@
   .pub .tekst { font-size: 15px; color: #3a3330; white-space: pre-wrap; }
   .bronblok { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(47,107,58,.2); font-size: 12.5px; color: #6d6360; }
   .bronblok b { font-family: 'Poppins',sans-serif; font-weight: 600; color: var(--actueel); font-size: 11.5px; display: block; margin-bottom: 4px; }
-  .bronblok a { display: block; padding: 1px 0; }
+  .bronblok .bronrij { padding: 2px 0; }
+  .bronblok .bronrij .bn { font-family: 'Poppins',sans-serif; font-weight: 600; color: #5b524f; }
+  .bronblok .bronrij a { color: var(--brand); }
+
+  /* Agenda. */
+  .ag { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(128,0,0,.08); }
+  .ag .agdatum { font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 12.5px; color: var(--actueel); flex: 0 0 118px; }
+  .ag .agtitel { font-size: 14px; color: #3a3330; }
+  .ag .agmeta { font-size: 12px; color: #a99e9a; }
 
   /* 2) Overheid NL per thema. */
   .thema { margin-bottom: 16px; }
@@ -110,21 +118,39 @@
   function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function datum(iso){ try { var d=new Date(iso); return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
   function dag(iso){ try { return new Date(iso).toLocaleDateString("nl-NL",{day:"numeric",month:"short"}); } catch(e){ return ""; } }
+  function agendaDag(iso){ try { return new Date(iso+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"long"}); } catch(e){ return iso; } }
   function vakDatum(iso){ try { return new Date(iso).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"}); } catch(e){ return iso; } }
   function themaLabel(t){ return String(t||"").replace(/-/g," "); }
+
+  // Bronnenlijst onder een synthese: elke bron één keer, met per aangehaald
+  // artikel de link mét publicatietijdstip ("Midi Libre — 31 jul 15:44 · 31 jul 10:36").
+  function bronblokHtml(bronnen){
+    if (!bronnen || !bronnen.length) return "";
+    var perBron = {}, volgorde = [];
+    bronnen.forEach(function(b){
+      var naam = b.naam || b.url || "bron";
+      if (!perBron[naam]){ perBron[naam] = []; volgorde.push(naam); }
+      perBron[naam].push(b);
+    });
+    var rijen = volgorde.map(function(naam){
+      var links = perBron[naam].map(function(b){
+        var t = b.datum ? datum(b.datum) : "link";
+        return '<a href="'+esc(b.url)+'" target="_top" rel="noopener">'+esc(t)+'</a>';
+      }).join(" · ");
+      return '<div class="bronrij"><span class="bn">'+esc(naam)+'</span> — '+links+'</div>';
+    }).join("");
+    return '<div class="bronblok"><b>Bronnen</b>'+rijen+'</div>';
+  }
 
   function render(data){
     var html = "";
 
     // 1) Redactiesyntheses (pers), bovenaan.
     (data.persSyntheses||[]).forEach(function(p){
-      var bron = (p.bronnen||[]).map(function(b){
-        return '<a href="'+esc(b.url)+'" target="_top" rel="noopener">'+esc(b.naam || b.titel || b.url)+'</a>';
-      }).join("");
       html += '<div class="pub">'+
         '<div class="label">'+(p.hot?'<span class="dot"></span>':'')+esc(p.label)+'</div>'+
         '<div class="tekst">'+esc(p.tekst)+'</div>'+
-        (bron ? '<div class="bronblok"><b>Bronnen</b>'+bron+'</div>' : '')+
+        bronblokHtml(p.bronnen)+
       '</div>';
     });
 
@@ -149,6 +175,18 @@
         html += '<div class="ver"><div class="titel"><a href="'+esc(v.url)+'" target="_top" rel="noopener">'+esc(v.titel)+'</a></div>'+
           (v.samenvatting?'<div class="tekst">'+esc(v.samenvatting)+'</div>':'')+
           '<div class="meta">'+esc(v.bron)+' · '+esc(dag(v.datum))+'</div></div>';
+      });
+      html += '</section>';
+    }
+
+    // Agenda: activiteiten komende twee weken.
+    if ((data.agenda||[]).length){
+      html += '<section><h2>Agenda — komende twee weken</h2>';
+      data.agenda.forEach(function(a){
+        var detail = [a.tijd, a.plaats].filter(Boolean).join(" · ");
+        html += '<div class="ag"><span class="agdatum">'+esc(agendaDag(a.datum))+'</span>'+
+          '<div class="agtxt"><span class="agtitel">'+esc(a.titel)+'</span>'+
+          '<div class="agmeta">'+esc(a.vereniging)+(detail?' · '+esc(detail):'')+'</div></div></div>';
       });
       html += '</section>';
     }
@@ -189,12 +227,8 @@
   }
 
   function renderVakanties(v){
-    if (!v || !v.zones || !v.zones.length) return "";
-    var rijen = v.zones.map(function(z){
-      return '<tr><td class="zone">'+esc(z.zone)+'</td><td>'+esc(z.vakantie)+
-        '<br><span style="color:#8a7f7c">'+esc(vakDatum(z.start))+' – '+esc(vakDatum(z.eind))+'</span></td></tr>';
-    }).join("");
-    return '<section class="vak"><h2>Schoolvakanties</h2><table>'+rijen+'</table>'+
+    if (!v || !v.zin) return "";
+    return '<section class="vak"><h2>Schoolvakanties</h2><p style="margin:0 0 4px">'+esc(v.zin)+'</p>'+
       '<div class="link"><a href="'+esc(v.servicePublic)+'" target="_top" rel="noopener">Officiële kalender &amp; regels (service-public.gouv.fr) →</a></div></section>';
   }
 

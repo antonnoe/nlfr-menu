@@ -155,14 +155,16 @@
     },
     {
       "naam": "NL-verenigingen in Frankrijk",
-      "feed": "",
+      "feed": "https://antonnoe.github.io/verenigingen-kalender/data/nieuws.json",
+      "type": "json-verenigingen",
       "thema": "verenigingen",
       "regime": "overheid",
       "taal": "nl",
       "prioriteit": 3,
-      "actief": false,
-      "verificatie": "geen-feed-gevonden",
-      "_opmerking": "In de bosbrandentool (antonnoe/bosbranden) bestaat geen NL-verenigingenfeed; niet gegist. Vul 'feed' met een echte RSS/Atom-URL en zet 'actief' op true zodra die bekend is."
+      "actief": true,
+      "verificatie": "te-testen",
+      "vensterDagen": 30,
+      "_opmerking": "Aggregaat-JSON van antonnoe/verenigingen-kalender (GitHub Pages). Bundelt de nieuwsfeeds van NL-verenigingen in Frankrijk. Ruimer venster (30 dagen), want laagfrequent."
     }
   ]
 }

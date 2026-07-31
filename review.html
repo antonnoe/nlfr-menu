@@ -70,9 +70,19 @@
 
   function bronnenHtml(bronnen){
     if (!bronnen || !bronnen.length) return "";
-    return '<div class="bronnen"><b>Bronnen</b>' + bronnen.map(function(b){
-      return '<a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(b.naam || b.titel || b.url)+'</a>';
-    }).join("") + '</div>';
+    var perBron = {}, volgorde = [];
+    bronnen.forEach(function(b){
+      var naam = b.naam || b.url || "bron";
+      if (!perBron[naam]){ perBron[naam] = []; volgorde.push(naam); }
+      perBron[naam].push(b);
+    });
+    var rijen = volgorde.map(function(naam){
+      var links = perBron[naam].map(function(b){
+        return '<a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(b.datum?datum(b.datum):"link")+'</a>';
+      }).join(" · ");
+      return '<div>'+esc(naam)+' — '+links+'</div>';
+    }).join("");
+    return '<div class="bronnen"><b>Bronnen</b>'+rijen+'</div>';
   }
 
   function render(data){
@@ -93,7 +103,7 @@
               '</div></div>';
     });
 
-    html += '<h2>Gepubliceerd ('+(data.publicaties||[]).length+')</h2>';
+    html += '<h2>Gepubliceerd — pers ('+(data.publicaties||[]).length+')</h2>';
     if (!(data.publicaties||[]).length){
       html += '<div class="leeg">Nog niets gepubliceerd.</div>';
     }
@@ -103,6 +113,21 @@
               '<div class="tekst">'+esc(p.tekst)+'</div>'+
               bronnenHtml(p.bronnen)+
               '<div class="knoppen"><button class="wegbtn" data-act="depubliceer">Van de site halen</button></div>'+
+              '</div>';
+    });
+
+    // Overheid: staat automatisch live (geen review) — hier alleen als
+    // kill-switch om een verkeerd bericht van de site te halen.
+    html += '<h2>Overheid — automatisch live ('+(data.overheid||[]).length+')</h2>';
+    if (!(data.overheid||[]).length){
+      html += '<div class="leeg">Nog geen NL-overheidsberichten (verschijnen automatisch zodra de cron nieuwe items verwerkt).</div>';
+    }
+    (data.overheid||[]).forEach(function(o){
+      html += '<div class="kaart" data-id="'+esc(o.id)+'">'+
+              '<div class="meta"><b>'+esc(o.bron||"")+'</b> · '+esc(o.thema||"")+' · '+esc(datum(o.gepubliceerdOp))+'</div>'+
+              '<div class="tekst">'+esc(o.samenvatting)+'</div>'+
+              (o.url?'<div class="bronnen"><a href="'+esc(o.url)+'" target="_blank" rel="noopener">Bron →</a></div>':'')+
+              '<div class="knoppen"><button class="wegbtn" data-act="verwijder-overheid">Van de site halen</button></div>'+
               '</div>';
     });
 

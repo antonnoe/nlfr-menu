@@ -1,7 +1,10 @@
 // GET /api/cron — serverless job die hot-clusters detecteert en er AI-syntheses
 // (concepten) voor schrijft. Wordt door Vercel Cron aangeroepen (schema in
-// vercel.json). Ook handmatig aan te roepen met de juiste Authorization-header,
-// handig om te testen.
+// vercel.json) — Vercel Cron draait ALLEEN op de productie-deployment.
+// Handmatig aanroepen kan altijd met `Authorization: Bearer <CRON_SECRET>`,
+// op elke deployment. Met `?force=1` negeert de run de >=3-bronnendrempel en
+// synthetiseert hij het best scorende cluster (max. 1), zodat je vóór de merge
+// gegarandeerd één concept krijgt om de Publiceer/Weg-knoppen te testen.
 // ---------------------------------------------------------------------------
 // Trigger: een cluster met >= HOT_MIN_BRONNEN bronnen dat nog geen concept,
 // publicatie of afwijzing heeft -> synthese schrijven en als CONCEPT opslaan
@@ -20,15 +23,28 @@ import {
   KEY_AFGEWEZEN,
 } from "../lib/config.js";
 
+// Leest ?force=... robuust (req.query kan in de runtime leeg zijn).
+function leesForce(req) {
+  let f = req && req.query ? req.query.force : undefined;
+  if (!f && req && req.url) {
+    try {
+      f = new URL(req.url, "http://localhost").searchParams.get("force");
+    } catch {
+      f = null;
+    }
+  }
+  return /^(1|true|ja|yes)$/i.test(String(f || "").trim());
+}
+
 export default async function handler(req, res) {
-  // --- Toegang ---
-  const secret = process.env.CRON_SECRET;
+  // --- Toegang (secret getrimd, zelfde robuustheid als de reviewtool) ---
+  const secret = (process.env.CRON_SECRET || "").trim();
   if (!secret) {
     return res
       .status(503)
       .json({ ok: false, fout: "CRON_SECRET niet ingesteld." });
   }
-  const auth = req.headers.authorization || "";
+  const auth = (req.headers.authorization || "").trim();
   if (auth !== `Bearer ${secret}`) {
     return res.status(401).json({ ok: false, fout: "Niet geautoriseerd." });
   }
@@ -45,13 +61,22 @@ export default async function handler(req, res) {
 
   const nu = Date.now();
   const { items } = await haalAlleItems(nu);
-  const { hot } = bepaalHot(items, nu);
+  const { clusters, hot } = bepaalHot(items, nu);
+
+  // Normaal: alleen echte hot-clusters (>= 3 bronnen). Met ?force=1 (handmatige
+  // test): het best scorende cluster ongeacht bronaantal, zodat je gegarandeerd
+  // één concept krijgt om de Publiceer/Weg-knoppen mee te testen.
+  const force = leesForce(req);
+  const kandidaten = force
+    ? [...clusters].sort((a, b) => b.score - a.score)
+    : hot;
+  const limiet = force ? 1 : MAX_SYNTHESE_PER_RONDE;
 
   const verwerkt = [];
   let nieuw = 0;
 
-  for (const cluster of hot) {
-    if (nieuw >= MAX_SYNTHESE_PER_RONDE) break;
+  for (const cluster of kandidaten) {
+    if (nieuw >= limiet) break;
     const id = cluster.sleutel;
 
     // Al een concept, publicatie of afwijzing? Dan overslaan (dedup).
@@ -91,7 +116,10 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     ok: true,
+    modus: force ? "force (test: negeert de >=3-drempel)" : "cron",
     tijdstip: new Date(nu).toISOString(),
+    totaalItems: items.length,
+    totaalClusters: clusters.length,
     hotClusters: hot.length,
     nieuweConcepten: nieuw,
     verwerkt,

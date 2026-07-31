@@ -17,8 +17,10 @@ import {
   KEY_CONCEPT,
   KEY_PUBLICATIE,
   KEY_AFGEWEZEN,
+  KEY_OVERHEID,
   SCAN_CONCEPT,
   SCAN_PUBLICATIE,
+  SCAN_OVERHEID,
 } from "../lib/config.js";
 
 // Leest het token robuust, ongeacht runtime-eigenaardigheden:
@@ -94,9 +96,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const [concepten, publicaties] = await Promise.all([
+    const [concepten, publicaties, overheid] = await Promise.all([
       listJSON(SCAN_CONCEPT),
       listJSON(SCAN_PUBLICATIE),
+      listJSON(SCAN_OVERHEID),
     ]);
     concepten.sort(
       (a, b) => (Date.parse(b.aangemaaktOp) || 0) - (Date.parse(a.aangemaaktOp) || 0)
@@ -105,7 +108,12 @@ export default async function handler(req, res) {
       (a, b) =>
         (Date.parse(b.gepubliceerdOp) || 0) - (Date.parse(a.gepubliceerdOp) || 0)
     );
-    return res.status(200).json({ ok: true, concepten, publicaties });
+    overheid.sort(
+      (a, b) =>
+        (Date.parse(b.gepubliceerdOp) || 0) - (Date.parse(a.gepubliceerdOp) || 0)
+    );
+    // overheid staat automatisch live; hier alleen als kill-switch (verwijderen).
+    return res.status(200).json({ ok: true, concepten, publicaties, overheid });
   }
 
   if (req.method === "POST") {
@@ -159,6 +167,12 @@ export default async function handler(req, res) {
 
     if (actie === "depubliceer") {
       await del(KEY_PUBLICATIE(id));
+      return res.status(200).json({ ok: true });
+    }
+
+    if (actie === "verwijder-overheid") {
+      // Kill-switch voor een automatisch gepubliceerd overheidsbericht.
+      await del(KEY_OVERHEID(id));
       return res.status(200).json({ ok: true });
     }
 

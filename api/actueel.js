@@ -16,6 +16,7 @@ import {
   FEED_SWR_S,
   SCAN_PUBLICATIE,
   REDACTIE_LABEL,
+  MAX_ITEMS_PER_BRON_THEMA,
 } from "../lib/config.js";
 
 export default async function handler(req, res) {
@@ -37,7 +38,18 @@ export default async function handler(req, res) {
 
   // Hot-items niet nog eens in de "overige" lijst tonen.
   const hotUrls = new Set(hot.flatMap((c) => c.items.map((i) => i.url)));
-  const overige = items.filter((i) => !hotUrls.has(i.url));
+  let overige = items.filter((i) => !hotUrls.has(i.url));
+
+  // Volume-cap: hooguit MAX_ITEMS_PER_BRON_THEMA items per bron in de
+  // themaweergave (nieuwste eerst), zodat geen enkele bron de pagina domineert.
+  overige.sort((a, b) => (Date.parse(b.datum) || 0) - (Date.parse(a.datum) || 0));
+  const perBronTeller = new Map();
+  overige = overige.filter((i) => {
+    const n = perBronTeller.get(i.bron) || 0;
+    if (n >= MAX_ITEMS_PER_BRON_THEMA) return false;
+    perBronTeller.set(i.bron, n + 1);
+    return true;
+  });
 
   // Overige chronologisch per thema.
   const perThema = new Map();

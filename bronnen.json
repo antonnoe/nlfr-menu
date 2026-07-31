@@ -140,8 +140,9 @@
       "regime": "overheid",
       "taal": "fr",
       "prioriteit": 2,
-      "actief": true,
-      "verificatie": "te-testen"
+      "actief": false,
+      "verificatie": "geblokkeerd",
+      "_opmerking": "Uitgezet: info.gouv.fr zit achter Cloudflare-botbescherming die serverside fetches blokkeert (⚪ bevestigd op de preview). Geen bruikbare, niet-geblokkeerde publieke RSS/Atom-feed gevonden — niet gegist. Regeringsnieuws wordt deels al gedekt door Bercy, Service-Public en DG Trésor. Alternatief: opnemen als vaste link i.p.v. feed."
     },
     {
       "naam": "vie-publique.fr",

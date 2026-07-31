@@ -149,8 +149,7 @@
     statusEl.innerHTML = '<span class="b" style="font-weight:600">Bronnen:</span>' + lijst.map(function(b){
       var cls = b.ok ? "ok" : "nok";
       var teken = b.ok ? "●" : "○";
-      var tt = b.verificatie === "te-testen" ? ' <span class="tt">(te testen)</span>' : "";
-      return '<span class="b '+cls+'">'+teken+' '+esc(b.naam)+' ('+(b.aantal||0)+')'+tt+'</span>';
+      return '<span class="b '+cls+'">'+teken+' '+esc(b.naam)+' ('+(b.aantal||0)+')</span>';
     }).join("");
   }
 

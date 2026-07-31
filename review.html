@@ -60,12 +60,12 @@
   function melding(tekst, soort){ meldingEl.innerHTML = tekst ? '<div class="melding '+(soort||"info")+'">'+esc(tekst)+'</div>' : ""; }
 
   function api(method, body){
+    // Token in de querystring (zo leest de server hem) + als header, voor de
+    // zekerheid. Content-Type alleen bij een body (POST).
     var url = "/api/review?token=" + encodeURIComponent(token);
-    return fetch(url, {
-      method: method,
-      headers: { "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : undefined
-    }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, data: j }; }); });
+    var opties = { method: method, headers: { "X-Review-Token": token } };
+    if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
+    return fetch(url, opties).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, data: j }; }); });
   }
 
   function bronnenHtml(bronnen){

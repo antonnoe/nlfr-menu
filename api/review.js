@@ -21,18 +21,50 @@ import {
   SCAN_PUBLICATIE,
 } from "../lib/config.js";
 
+// Leest het token robuust, ongeacht runtime-eigenaardigheden:
+//   1) req.query.token als de runtime die vult (Vercel Node vult dit normaal);
+//   2) anders zelf uit req.url parsen (werkt altijd, ook als req.query leeg is);
+//   3) als alternatief de header x-review-token.
+// Whitespace wordt getrimd (een geplakte env-waarde heeft vaak een \n aan het eind).
+function leesToken(req) {
+  let t = req && req.query ? req.query.token : undefined;
+  if (Array.isArray(t)) t = t[0];
+  if (!t && req && req.url) {
+    try {
+      t = new URL(req.url, "http://localhost").searchParams.get("token");
+    } catch {
+      t = null;
+    }
+  }
+  if (!t && req && req.headers) t = req.headers["x-review-token"];
+  return (t == null ? "" : String(t)).trim();
+}
+
 function tokenGeldig(req) {
-  const verwacht = process.env.REVIEW_TOKEN;
-  if (!verwacht) return false;
-  const q = req.query && req.query.token;
-  const uitQuery = Array.isArray(q) ? q[0] : q;
-  const geleverd =
-    uitQuery || (req.headers["x-review-token"] || "").toString();
-  if (!geleverd) return false;
-  const a = Buffer.from(String(geleverd));
-  const b = Buffer.from(String(verwacht));
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  const verwachtRuw = process.env.REVIEW_TOKEN;
+  const verwacht = (verwachtRuw == null ? "" : String(verwachtRuw)).trim();
+  const geleverd = leesToken(req);
+
+  // Veilige diagnose: alleen lengtes en of de env-var bestaat — nooit waarden.
+  if (!verwacht || !geleverd || verwacht.length !== geleverd.length) {
+    console.warn(
+      `[review] tokencheck faalt: env REVIEW_TOKEN ${
+        verwachtRuw == null ? "ONTBREEKT in deze runtime" : "aanwezig"
+      }; verwachte lengte ${verwacht.length}, ontvangen lengte ${geleverd.length}`
+    );
+    return false;
+  }
+
+  const gelijk = crypto.timingSafeEqual(
+    Buffer.from(geleverd),
+    Buffer.from(verwacht)
+  );
+  if (!gelijk) {
+    console.warn(
+      `[review] tokencheck faalt: lengtes gelijk (${verwacht.length}) maar waarden verschillen`
+    );
+  }
+  return gelijk;
 }
 
 async function leesBody(req) {

@@ -1,0 +1,171 @@
+{
+  "_uitleg": "Bronnenlijst voor de route /actueel (live Frankrijknieuws). De API-route /api/actueel haalt UITSLUITEND de feeds hieronder op, parseert ze (RSS 2.0 + Atom), normaliseert en respecteert per bron het regime. Velden per bron: naam, feed (RSS/Atom-URL), thema, regime ('overheid' of 'pers'), taal ('fr' of 'nl'), prioriteit (1=hoog .. 3=laag), actief (true/false). Extra veld 'verificatie': 'geverifieerd' = door Anton/Claude bevestigd op 31-07-2026; 'te-testen' = vanaf Vercel verifiëren (werkt niet -> in de bron-status melden, niet gissen). Regime-regel: overheid = titel + samenvatting uit de feed + bronvermelding met URL; pers = UITSLUITEND titel + bron + datum + link (geen samenvatting, geen vertaling). Een kapotte feed wordt overgeslagen; de rest blijft werken.",
+  "bronnen": [
+    {
+      "naam": "Bercy — Ministère de l'Économie",
+      "feed": "https://www.economie.gouv.fr/rss/toutesactualites",
+      "thema": "geld-belasting",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 1,
+      "actief": true,
+      "verificatie": "geverifieerd"
+    },
+    {
+      "naam": "Service-Public — particuliers",
+      "feed": "https://www.service-public.fr/abonnements/rss/actu-actualites-particuliers.rss",
+      "thema": "praktisch",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 1,
+      "actief": true,
+      "verificatie": "geverifieerd"
+    },
+    {
+      "naam": "Service-Public — professionnels",
+      "feed": "https://www.service-public.fr/abonnements/rss/actu-actu-pro.rss",
+      "thema": "ondernemen",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "geverifieerd"
+    },
+    {
+      "naam": "Douane — douane.gouv.fr",
+      "feed": "https://www.douane.gouv.fr/rss.xml",
+      "thema": "douane",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "geverifieerd"
+    },
+    {
+      "naam": "DG Trésor",
+      "feed": "https://www.tresor.economie.gouv.fr/Flux/Atom/Articles/Home",
+      "thema": "economie",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "geverifieerd"
+    },
+    {
+      "naam": "NOS — Buitenland",
+      "feed": "https://feeds.nos.nl/nosnieuwsbuitenland",
+      "thema": "nl-nieuws",
+      "regime": "pers",
+      "taal": "nl",
+      "prioriteit": 1,
+      "actief": true,
+      "verificatie": "geverifieerd",
+      "frankrijkFilter": true
+    },
+    {
+      "naam": "NU.nl — Algemeen",
+      "feed": "https://www.nu.nl/rss/Algemeen",
+      "thema": "nl-nieuws",
+      "regime": "pers",
+      "taal": "nl",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "te-testen",
+      "frankrijkFilter": true
+    },
+    {
+      "naam": "Le Monde — À la une",
+      "feed": "https://www.lemonde.fr/rss/une.xml",
+      "thema": "landelijk-fr",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "te-testen"
+    },
+    {
+      "naam": "Le Figaro — Actualités",
+      "feed": "https://www.lefigaro.fr/rss/figaro_actualites.xml",
+      "thema": "landelijk-fr",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "te-testen"
+    },
+    {
+      "naam": "Franceinfo — Titres",
+      "feed": "https://www.francetvinfo.fr/titres.rss",
+      "thema": "landelijk-fr",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "te-testen"
+    },
+    {
+      "naam": "Sud Ouest",
+      "feed": "https://www.sudouest.fr/rss.xml",
+      "thema": "regionaal-fr",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 3,
+      "actief": true,
+      "verificatie": "te-testen"
+    },
+    {
+      "naam": "Midi Libre",
+      "feed": "https://www.midilibre.fr/rss.xml",
+      "thema": "regionaal-fr",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 3,
+      "actief": true,
+      "verificatie": "te-testen"
+    },
+    {
+      "naam": "ici (France Bleu / France 3)",
+      "feed": "https://www.ici.fr/rss",
+      "thema": "regionaal-fr",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 3,
+      "actief": true,
+      "verificatie": "te-testen"
+    },
+    {
+      "naam": "info.gouv.fr — Gouvernement",
+      "feed": "https://www.info.gouv.fr/rss.xml",
+      "thema": "regering",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": false,
+      "verificatie": "geblokkeerd",
+      "_opmerking": "Uitgezet: info.gouv.fr zit achter Cloudflare-botbescherming die serverside fetches blokkeert (⚪ bevestigd op de preview). Geen bruikbare, niet-geblokkeerde publieke RSS/Atom-feed gevonden — niet gegist. Regeringsnieuws wordt deels al gedekt door Bercy, Service-Public en DG Trésor. Alternatief: opnemen als vaste link i.p.v. feed."
+    },
+    {
+      "naam": "vie-publique.fr",
+      "feed": "https://www.vie-publique.fr/rss.xml",
+      "thema": "wetgeving",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 3,
+      "actief": true,
+      "verificatie": "te-testen"
+    },
+    {
+      "naam": "NL-verenigingen in Frankrijk",
+      "feed": "https://antonnoe.github.io/verenigingen-kalender/data/nieuws.json",
+      "type": "json-verenigingen",
+      "thema": "verenigingen",
+      "regime": "overheid",
+      "taal": "nl",
+      "prioriteit": 3,
+      "actief": true,
+      "verificatie": "te-testen",
+      "vensterDagen": 30,
+      "_opmerking": "Aggregaat-JSON van antonnoe/verenigingen-kalender (GitHub Pages). Bundelt de nieuwsfeeds van NL-verenigingen in Frankrijk. Ruimer venster (30 dagen), want laagfrequent."
+    }
+  ]
+}

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Actueel — Frankrijknieuws</title>
+<!--
+  NLFR ACTUEEL — live Frankrijknieuws, embed via iframe op
+  https://www.nederlanders.fr/page/actueel-frankrijknieuws (zie EMBED.md).
+  Hoogte-sync via postMessage({nlfrActueelHeight}). Inhoud komt live uit
+  /api/actueel (feed + hot-clusters + gepubliceerde redactiesyntheses) en
+  /api/schoolvakanties.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --brand: #800000; --actueel: #2f6b3a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body { font-family: 'Mulish', system-ui, sans-serif; line-height: 1.8; color: #3a3330; padding: 6px; }
+  a { color: var(--brand); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1, h2, h3 { font-family: 'Poppins', sans-serif; }
+
+  .card { background: #fff; border: 1px solid rgba(128,0,0,.12); border-radius: 18px; box-shadow: 0 12px 40px -26px rgba(90,0,0,.55); overflow: hidden; }
+  .head { padding: 16px 18px 10px; border-bottom: 1px solid rgba(128,0,0,.1); }
+  .head h1 { margin: 0; font-size: 20px; font-weight: 700; color: var(--brand); }
+  .head .sub { font-size: 13px; color: #8a7f7c; margin-top: 2px; }
+  .body { padding: 14px 18px 6px; }
+
+  section { margin-bottom: 22px; }
+  section > h2 { font-size: 15px; font-weight: 700; color: var(--brand); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(128,0,0,.12); display: inline-flex; align-items: center; gap: 8px; }
+
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(1.5); } }
+  .dot { width: 9px; height: 9px; border-radius: 999px; background: var(--actueel); animation: pulse 1.6s ease-in-out infinite; flex: 0 0 auto; }
+
+  /* Redactiesyntheses (bovenaan). */
+  .pub { border: 1px solid rgba(47,107,58,.35); background: rgba(47,107,58,.07); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .pub .label { font-family: 'Poppins',sans-serif; font-weight: 700; font-size: 12px; color: var(--actueel); text-transform: none; letter-spacing: .2px; margin-bottom: 6px; }
+  .pub .tekst { font-size: 14.5px; color: #3a3330; white-space: pre-wrap; }
+  .pub .bronnen { margin-top: 10px; font-size: 12.5px; color: #6d6360; }
+  .pub .bronnen b { font-family: 'Poppins',sans-serif; font-weight: 600; color: var(--actueel); font-size: 11.5px; display: block; margin-bottom: 3px; }
+  .pub .bronnen a { display: block; padding: 1px 0; }
+
+  /* Hot-cluster. */
+  .hot { border: 1px solid rgba(47,107,58,.35); border-left: 3px solid var(--actueel); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; background: rgba(47,107,58,.04); }
+  .hot .kop { font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 13px; color: var(--actueel); margin-bottom: 6px; display: inline-flex; align-items: center; gap: 7px; }
+  .lijst a.item { display: block; padding: 4px 0 4px 12px; border-left: 2px solid rgba(128,0,0,.14); color: #5b524f; font-size: 13.5px; margin: 2px 0; border-radius: 0 6px 6px 0; }
+  .lijst a.item:hover { background: rgba(128,0,0,.05); color: var(--brand); border-color: var(--brand); text-decoration: none; }
+  .lijst a.item .meta { color: #a99e9a; font-size: 11.5px; }
+
+  .thema h3 { font-size: 13px; font-weight: 600; color: var(--brand); margin: 12px 0 4px; text-transform: capitalize; }
+
+  /* Schoolvakanties. */
+  .vak { border: 1px solid rgba(47,107,58,.35); background: rgba(47,107,58,.07); border-radius: 12px; padding: 12px 16px; }
+  .vak h2 { color: var(--actueel); border: none; margin-bottom: 6px; }
+  .vak table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .vak td { padding: 4px 6px; border-bottom: 1px solid rgba(47,107,58,.14); vertical-align: top; }
+  .vak td.zone { font-family: 'Poppins',sans-serif; font-weight: 600; color: var(--actueel); white-space: nowrap; }
+  .vak .link { margin-top: 8px; font-size: 12.5px; }
+
+  .bronstatus { border-top: 1px solid rgba(128,0,0,.1); padding: 10px 18px 14px; font-size: 12px; color: #8a7f7c; display: flex; flex-wrap: wrap; gap: 6px 14px; background: #fdf9f8; }
+  .bronstatus .b { display: inline-flex; align-items: center; gap: 5px; }
+  .bronstatus .ok { color: var(--actueel); }
+  .bronstatus .nok { color: var(--brand); }
+  .bronstatus .tt { color: #b58b00; }
+
+  .leeg { color: #8a7f7c; font-size: 13.5px; padding: 4px 0; }
+  .laden { color: #8a7f7c; font-size: 14px; padding: 20px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <h1>Actueel — Frankrijknieuws</h1>
+    <div class="sub" id="sub">wordt geladen…</div>
+  </div>
+  <div class="body" id="body">
+    <div class="laden">Nieuws wordt opgehaald…</div>
+  </div>
+  <div class="bronstatus" id="bronstatus"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var bodyEl = document.getElementById("body");
+  var subEl = document.getElementById("sub");
+  var statusEl = document.getElementById("bronstatus");
+
+  function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function datum(iso){ try { var d = new Date(iso); return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"}) + " " + d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
+  function vakDatum(iso){ try { return new Date(iso).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"}); } catch(e){ return iso; } }
+
+  function itemHtml(it){
+    return '<a class="item" href="'+esc(it.url)+'" target="_top" rel="noopener">'+esc(it.titel)+
+           ' <span class="meta">— '+esc(it.bron)+' · '+esc(datum(it.datum))+'</span></a>';
+  }
+
+  function render(data){
+    var html = "";
+
+    // Gepubliceerde redactiesyntheses (bovenaan).
+    (data.publicaties||[]).forEach(function(p){
+      var bron = (p.bronnen||[]).map(function(b){
+        return '<a href="'+esc(b.url)+'" target="_top" rel="noopener">'+esc(b.naam || b.titel || b.url)+'</a>';
+      }).join("");
+      html += '<div class="pub"><div class="label">'+esc(p.label)+'</div>'+
+              '<div class="tekst">'+esc(p.tekst)+'</div>'+
+              (bron ? '<div class="bronnen"><b>Bronnen</b>'+bron+'</div>' : '')+'</div>';
+    });
+
+    // Hot-clusters.
+    if ((data.hot||[]).length){
+      html += '<section><h2><span class="dot"></span>Nu volop in het nieuws</h2>';
+      data.hot.forEach(function(c){
+        html += '<div class="hot"><div class="kop"><span class="dot"></span>'+
+                c.aantalBronnen+' bronnen melden dit</div><div class="lijst">'+
+                (c.items||[]).map(itemHtml).join("")+'</div></div>';
+      });
+      html += '</section>';
+    }
+
+    // Overige per thema.
+    if ((data.themas||[]).length){
+      html += '<section><h2>Per onderwerp</h2>';
+      data.themas.forEach(function(t){
+        if (!t.items || !t.items.length) return;
+        html += '<div class="thema"><h3>'+esc(t.thema.replace(/-/g," "))+'</h3><div class="lijst">'+
+                t.items.map(itemHtml).join("")+'</div></div>';
+      });
+      html += '</section>';
+    }
+
+    if (!(data.publicaties||[]).length && !(data.hot||[]).length && !(data.themas||[]).length){
+      html += '<div class="leeg">Op dit moment geen actueel nieuws opgehaald.</div>';
+    }
+
+    bodyEl.innerHTML = html;
+    subEl.textContent = "Bijgewerkt " + datum(data.bijgewerkt);
+    renderStatus(data.bronStatus||[]);
+    report();
+  }
+
+  function renderStatus(lijst){
+    if (!lijst.length){ statusEl.innerHTML = ""; return; }
+    statusEl.innerHTML = '<span class="b" style="font-weight:600">Bronnen:</span>' + lijst.map(function(b){
+      var cls = b.ok ? "ok" : "nok";
+      var teken = b.ok ? "●" : "○";
+      return '<span class="b '+cls+'">'+teken+' '+esc(b.naam)+' ('+(b.aantal||0)+')</span>';
+    }).join("");
+  }
+
+  function renderVakanties(v){
+    if (!v || !v.zones || !v.zones.length) return "";
+    var rijen = v.zones.map(function(z){
+      return '<tr><td class="zone">'+esc(z.zone)+'</td><td>'+esc(z.vakantie)+
+             '<br><span style="color:#8a7f7c">'+esc(vakDatum(z.start))+' – '+esc(vakDatum(z.eind))+'</span></td></tr>';
+    }).join("");
+    return '<section class="vak"><h2>Schoolvakanties</h2><table>'+rijen+'</table>'+
+           '<div class="link"><a href="'+esc(v.servicePublic)+'" target="_top" rel="noopener">Officiële kalender &amp; regels (service-public.gouv.fr) →</a></div></section>';
+  }
+
+  // ---- Hoogte-sync naar de moederpagina (zelfde patroon als het menu) ----
+  var lastH = 0;
+  function report(){
+    try {
+      if (window.parent && window.parent !== window){
+        var card = document.querySelector(".card");
+        if (!card) return;
+        var h = Math.ceil(card.getBoundingClientRect().height) + 12;
+        if (h !== lastH){ lastH = h; window.parent.postMessage({ nlfrActueelHeight: h }, "*"); }
+      }
+    } catch(e){}
+  }
+
+  function laad(){
+    Promise.all([
+      fetch("/api/actueel", { cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+      fetch("/api/schoolvakanties", { cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+    ]).then(function(res){
+      var data = res[0] || { bijgewerkt: new Date().toISOString(), publicaties: [], hot: [], themas: [], bronStatus: [] };
+      render(data);
+      var vak = renderVakanties(res[1]);
+      if (vak){ bodyEl.insertAdjacentHTML("beforeend", vak); report(); }
+    });
+  }
+
+  window.addEventListener("load", report);
+  window.addEventListener("resize", report);
+  laad();
+  // Elke 5 minuten verversen (past bij de feed-versheid).
+  setInterval(laad, 5 * 60 * 1000);
+})();
+</script>
+</body>
+</html>

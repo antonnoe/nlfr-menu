@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>NLFR — Redactie actueel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --brand: #800000; --actueel: #2f6b3a; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Mulish', system-ui, sans-serif; line-height: 1.7; color: #3a3330; background: #fdf9f8; margin: 0; padding: 12px; max-width: 760px; margin: 0 auto; }
+  h1 { font-family: 'Poppins',sans-serif; font-size: 20px; color: var(--brand); margin: 6px 0 2px; }
+  .sub { color: #8a7f7c; font-size: 13px; margin-bottom: 16px; }
+  h2 { font-family: 'Poppins',sans-serif; font-size: 15px; color: var(--brand); border-bottom: 1px solid rgba(128,0,0,.12); padding-bottom: 6px; margin: 22px 0 12px; }
+
+  .kaart { background: #fff; border: 1px solid rgba(128,0,0,.14); border-radius: 14px; padding: 14px; margin-bottom: 14px; box-shadow: 0 10px 30px -24px rgba(90,0,0,.5); }
+  .kaart.pub { border-color: rgba(47,107,58,.4); background: rgba(47,107,58,.05); }
+  .meta { font-size: 12px; color: #8a7f7c; margin-bottom: 8px; }
+  .meta b { font-family: 'Poppins',sans-serif; color: var(--actueel); font-weight: 600; }
+  textarea { width: 100%; min-height: 150px; font-family: 'Mulish',sans-serif; font-size: 14.5px; line-height: 1.7; color: #3a3330; border: 1px solid rgba(128,0,0,.2); border-radius: 10px; padding: 10px 12px; resize: vertical; }
+  textarea:focus { outline: none; border-color: rgba(128,0,0,.5); }
+  .tekst { white-space: pre-wrap; font-size: 14.5px; }
+  .bronnen { margin-top: 10px; font-size: 12.5px; color: #6d6360; }
+  .bronnen b { font-family: 'Poppins',sans-serif; font-weight: 600; color: var(--actueel); font-size: 11.5px; display: block; margin-bottom: 3px; }
+  .bronnen a { display: block; padding: 1px 0; color: var(--brand); text-decoration: none; }
+
+  .knoppen { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  button { font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 14px; border-radius: 9px; padding: 10px 16px; border: none; cursor: pointer; min-height: 44px; }
+  .pubbtn { background: var(--actueel); color: #fff; }
+  .pubbtn:hover { filter: brightness(1.08); }
+  .wegbtn { background: rgba(128,0,0,.06); color: var(--brand); border: 1px solid rgba(128,0,0,.2); }
+  .wegbtn:hover { background: rgba(128,0,0,.12); }
+  .bewaarbtn { background: rgba(128,0,0,.06); color: var(--brand); border: 1px solid rgba(128,0,0,.2); }
+
+  .melding { padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 14px; }
+  .fout { background: rgba(128,0,0,.08); color: var(--brand); border: 1px solid rgba(128,0,0,.25); }
+  .info { background: rgba(47,107,58,.08); color: var(--actueel); border: 1px solid rgba(47,107,58,.25); }
+  .leeg { color: #8a7f7c; font-size: 14px; }
+</style>
+</head>
+<body>
+  <h1>Redactie — Actueel</h1>
+  <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 48 uur. Publiceer of verwijder ze hieronder. Bewerk de tekst gerust vóór publicatie.</div>
+  <div id="melding"></div>
+  <div id="inhoud"><div class="leeg">Laden…</div></div>
+
+<script>
+(function(){
+  "use strict";
+  var params = new URLSearchParams(location.search);
+  var token = params.get("token") || "";
+  var meldingEl = document.getElementById("melding");
+  var inhoudEl = document.getElementById("inhoud");
+
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
+  function melding(tekst, soort){ meldingEl.innerHTML = tekst ? '<div class="melding '+(soort||"info")+'">'+esc(tekst)+'</div>' : ""; }
+
+  function api(method, body){
+    // Token in de querystring (zo leest de server hem) + als header, voor de
+    // zekerheid. Content-Type alleen bij een body (POST).
+    var url = "/api/review?token=" + encodeURIComponent(token);
+    var opties = { method: method, headers: { "X-Review-Token": token } };
+    if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
+    return fetch(url, opties).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, data: j }; }); });
+  }
+
+  function bronnenHtml(bronnen){
+    if (!bronnen || !bronnen.length) return "";
+    return '<div class="bronnen"><b>Bronnen</b>' + bronnen.map(function(b){
+      return '<a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(b.naam || b.titel || b.url)+'</a>';
+    }).join("") + '</div>';
+  }
+
+  function render(data){
+    var html = "";
+    html += '<h2>Concepten ('+(data.concepten||[]).length+')</h2>';
+    if (!(data.concepten||[]).length){
+      html += '<div class="leeg">Geen concepten. Zodra een verhaal door 3+ bronnen wordt gemeld, verschijnt hier automatisch een synthese.</div>';
+    }
+    (data.concepten||[]).forEach(function(c){
+      html += '<div class="kaart" data-id="'+esc(c.id)+'">'+
+              '<div class="meta"><b>'+(c.aantalBronnen||"?")+' bronnen</b> · gemaakt '+esc(datum(c.aangemaaktOp))+' · model '+esc(c.model||"?")+(c.afgekapt?' · <span style="color:#b58b00">mogelijk afgekapt</span>':'')+'</div>'+
+              '<textarea>'+esc(c.tekst)+'</textarea>'+
+              bronnenHtml(c.bronnen)+
+              '<div class="knoppen">'+
+                '<button class="pubbtn" data-act="publiceer">Publiceer</button>'+
+                '<button class="bewaarbtn" data-act="bewerk">Bewaar tekst</button>'+
+                '<button class="wegbtn" data-act="weg">Weg</button>'+
+              '</div></div>';
+    });
+
+    html += '<h2>Gepubliceerd ('+(data.publicaties||[]).length+')</h2>';
+    if (!(data.publicaties||[]).length){
+      html += '<div class="leeg">Nog niets gepubliceerd.</div>';
+    }
+    (data.publicaties||[]).forEach(function(p){
+      html += '<div class="kaart pub" data-id="'+esc(p.id)+'">'+
+              '<div class="meta">gepubliceerd '+esc(datum(p.gepubliceerdOp))+'</div>'+
+              '<div class="tekst">'+esc(p.tekst)+'</div>'+
+              bronnenHtml(p.bronnen)+
+              '<div class="knoppen"><button class="wegbtn" data-act="depubliceer">Van de site halen</button></div>'+
+              '</div>';
+    });
+
+    inhoudEl.innerHTML = html;
+    koppelKnoppen();
+  }
+
+  function koppelKnoppen(){
+    inhoudEl.querySelectorAll("button").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var kaart = btn.closest(".kaart");
+        var id = kaart.getAttribute("data-id");
+        var act = btn.getAttribute("data-act");
+        var ta = kaart.querySelector("textarea");
+        var body = { actie: act, id: id };
+        if (ta && (act === "publiceer" || act === "bewerk")) body.tekst = ta.value;
+        btn.disabled = true; btn.textContent = "…";
+        api("POST", body).then(function(res){
+          if (res.ok && res.data.ok){
+            melding(act === "publiceer" ? "Gepubliceerd." : act === "weg" ? "Verwijderd." : act === "depubliceer" ? "Van de site gehaald." : "Bewaard.", "info");
+            laad();
+          } else {
+            melding((res.data && res.data.fout) || "Er ging iets mis.", "fout");
+            btn.disabled = false;
+          }
+        }).catch(function(){ melding("Netwerkfout.", "fout"); btn.disabled = false; });
+      });
+    });
+  }
+
+  function laad(){
+    if (!token){ melding("Geen token in de URL. Voeg ?token=… toe.", "fout"); inhoudEl.innerHTML = ""; return; }
+    api("GET").then(function(res){
+      if (res.ok && res.data.ok){ melding(""); render(res.data); }
+      else { melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout"); inhoudEl.innerHTML = ""; }
+    }).catch(function(){ melding("Netwerkfout.", "fout"); });
+  }
+
+  laad();
+})();
+</script>
+</body>
+</html>

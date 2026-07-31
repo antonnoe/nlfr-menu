@@ -1,0 +1,10 @@
+{
+  "name": "nlfr-menu",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "NLFR hoofdmenu + route /actueel (live Frankrijknieuws) — statische site met Vercel serverless functions.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0"
+  }
+}

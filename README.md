@@ -66,6 +66,37 @@ nieuwste editie opent zonder handmatig bijwerken.
 - Beheer-ID staat in `index.html` als `ADMIN_ID`; dit stuurt alleen de
   zichtbaarheid van beheer-snelkoppelingen, geen rechten.
 
+## Route `/actueel` — live Frankrijknieuws (PR B)
+
+Naast het statische menu draait op dezelfde Vercel-deployment de route
+**`/actueel`** (`actueel.html`), bedoeld om via een iframe embed te worden op
+`https://www.nederlanders.fr/page/actueel-frankrijknieuws` (embedcode in
+`EMBED.md`). Zelfde hoogte-sync als het menu, via
+`postMessage({nlfrActueelHeight})`.
+
+### Onderdelen
+
+- `bronnen.json` — de enige toegestane bronnenlijst (RSS/Atom). Los aanpasbaar,
+  zonder code. Elke bron heeft o.a. `regime` (`overheid` of `pers`) en `actief`.
+- `/api/actueel` — haalt alle actieve bronnen op, parseert (RSS 2.0 + Atom),
+  normaliseert en respecteert het regime (overheid: titel + samenvatting; pers:
+  alleen titel + bron + datum + link). Bepaalt hot-clusters (≥ 3 onafhankelijke
+  bronnen) en zet gepubliceerde redactiesyntheses bovenaan. Een kapotte feed
+  wordt overgeslagen; de rest blijft werken. Stale-while-revalidate (~5 min).
+- `/api/schoolvakanties` — eerstvolgende schoolvakantie per zone, live uit de
+  open data van het onderwijsministerie, met vaste link naar service-public.
+- `/api/cron` — serverless job (Vercel Cron) die voor nieuwe hot-clusters via de
+  Anthropic API één NL-synthese schrijft en als **concept** opslaat. Nooit direct
+  live. Model/max_tokens staan in één constante (`lib/config.js` → `AI_CONFIG`).
+- `/review?token=…` — mobielvriendelijke reviewtool. Publiceer / Weg / inline
+  bewerken. Concepten verlopen automatisch na 48 uur.
+
+### Env-vars (in Vercel instellen, zie `.env.example`)
+
+`ANTHROPIC_API_KEY`, `REVIEW_TOKEN`, `CRON_SECRET`, en een gekoppelde Vercel KV
+(`KV_REST_API_URL` / `KV_REST_API_TOKEN`). De feedpagina werkt ook zonder deze
+vars; alleen de AI-synthese en de reviewtool hebben ze nodig.
+
 ## Eenmalige installatie (uitgevoerd 29-07-2026)
 
 1. Repo aangemaakt, `index.html` toegevoegd.

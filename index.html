@@ -133,6 +133,10 @@
   .cta.tint .cs { color: #8a7f7c; }
   .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--brand); animation: pulse 1.6s ease-in-out infinite; }
   .cta.fill .dot { background: #fff; }
+  /* De "Nu actueel"-dot in de onderbalk: flessengroen en nadrukkelijker pulserend. */
+  @keyframes pulseSterk { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .2; transform: scale(1.9); } }
+  #actueeldot { background: var(--actueel); animation: pulseSterk 1.05s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { #actueeldot { animation: none; } }
 
   .teaser h3 { font-family: 'Poppins',sans-serif; font-weight: 700; font-size: 18px; margin: 0 0 6px; color: #5c0f0f; }
   .teaser p { margin: 0 0 12px; font-size: 14px; color: #6d6360; }

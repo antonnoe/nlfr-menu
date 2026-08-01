@@ -13,6 +13,12 @@
       "tekst": "Actueel overzicht en veiligheidsinformatie bij natuurbranden.",
       "href": "https://www.nederlanders.fr/page/bosbranden",
       "live": true
+    },
+    {
+      "titel": "Frankrijknieuws",
+      "tekst": "Live Frankrijknieuws: overheid, pers en verenigingen op één pagina.",
+      "href": "https://www.nederlanders.fr/page/actueel-frankrijknieuws",
+      "live": true
     }
   ]
 }

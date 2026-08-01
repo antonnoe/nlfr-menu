@@ -3,23 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
 <title>NLFR hoofdmenu</title>
 <!--
-  NLFR HOOFDMENU — externe versie voor GitHub/Vercel (29-07-2026)
-  Gebaseerd op de embed-versie van 21/26-07-2026. Inhoud ongewijzigd.
+  NLFR HOOFDMENU — externe versie voor GitHub/Vercel
+  Basis: versie 29-07-2026. MOBIELE HERZIENING + AUTO-DARK-FIX (01-08-2026).
 
   Dit bestand wordt gehost op Vercel en op nederlanders.fr geladen via een
   iframe. Zie README.md voor de bijbehorende embedcode en beheerinstructies.
 
-  TECHNISCHE WIJZIGINGEN t.o.v. de Ning-versie (nodig omdat het menu nu op
-  een ander domein draait):
-  1. Ingelogde gebruiker wordt niet meer gelezen via window.parent.ning
-     (cross-origin geblokkeerd), maar ontvangen via postMessage(nlfrProfile)
-     vanuit de embedcode op nederlanders.fr. De oude same-origin-lezing
-     blijft als fallback staan (onschadelijk).
-  2. Profiel kan ná de eerste weergave binnenkomen; ledenstatus (slotje op
-     "Mijn NLFR", beheerknop, ledenlinks) wordt dan live bijgewerkt.
-  3. Hoogte-postMessage ongewijzigd (FIX 1 van 21-07 behouden).
+  WAT IS ER GEWIJZIGD T.O.V. 29-07-2026 (alleen weergave, geen inhoud verloren)
+  1. KLACHT: home en "Alle berichten" waren op mobiel niet meer aan te klikken.
+     Op smalle schermen (<= 700px) staat nu bovenaan een vaste rij:
+     [Home] [Alle berichten] [Zoeken]. Home is een echte 48px-knop i.p.v. de
+     smalle verticale strip; "Alle berichten" is de bordeaux hoofdknop.
+  2. KLACHT: dark mode was onleesbaar. Chrome/Android donkerde het menu zelf in
+     ("auto dark theme"). Opgelost met color-scheme: only light (meta + CSS) en
+     expliciete achtergrondkleuren op elk paneel, zodat er niets meer valt om te
+     inverteren. Het menu blijft dus altijd licht.
+  3. Op mobiel klapt de zoekbalk in tot een loep-icoon (scheelt een hele regel)
+     en zijn de uitklappanelen accordeons: groepen dicht, één open tegelijk,
+     met het aantal links erachter. Geen honderden pixels scrollen meer.
+  4. Op mobiel staan bovenaan elk paneel snelkoppelingen (MOBILE_QUICK) en
+     worden enkele lange lijsten ingekort (MOBILE_HIDE / TOPICS_MOBILE_MAX).
+     Op tablet/desktop is alles onveranderd zichtbaar.
+  5. Alle raakvlakken op mobiel zijn minimaal 44px hoog.
 
   ONDERHOUD — alles wat je normaal wijzigt staat in het <script>-blok:
   - DOORS ........ inhoud van de uitklapmenu's (Lezen/Meedoen/Vinden/Nieuws)
@@ -28,17 +36,18 @@
   - CTAS ......... de drie actiekaarten bovenin "Onderwerpen"
   - ADMIN_LINKS .. beheerlinks
   - bandleft ..... de knoppenbalk onderin (incl. de knop "Nu actueel")
-  De knop "Nu actueel" in de onderbalk toont bij openen een compacte rij
-  linkjes die LIVE uit het losse bestand actueel.json (naast index.html) komen
-  — dat pas je los aan, zonder code.
+  - MOBILE_QUICK / MOBILE_HIDE .. wat op mobiel bovenaan staat resp. wegvalt
+  De knop "Nu actueel" toont linkjes die LIVE uit actueel.json komen.
   Beheer-ID: ADMIN_ID. Zoek-app-URL: ZOEK_APP.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --brand: #800000; --actueel: #2f6b3a; }
+  /* --- Auto-dark blokkeren: het menu is een lichte kaart, altijd. --- */
+  :root { color-scheme: only light; --brand: #800000; --actueel: #2f6b3a; }
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   html, body { margin: 0; padding: 0; background: transparent; }
   body { font-family: 'Mulish', system-ui, sans-serif; line-height: 1.6; color: #3a3330; padding: 6px; }
   a { color: var(--brand); text-decoration: none; }
@@ -46,7 +55,15 @@
   input::placeholder { color: #9a8f8c; }
   input:focus { outline: none; }
   .card { background: #fff; border: 1px solid rgba(128,0,0,.12); border-radius: 18px; box-shadow: 0 12px 40px -26px rgba(90,0,0,.55); overflow: hidden; }
-  .top { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .top { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; background: #fff; }
+
+  /* --- Mobiele hoofdrij: Home / Alle berichten / Zoeken (alleen <=700px) --- */
+  .ecotoggle { display: none; }
+  .mbar { display: none; gap: 8px; align-items: stretch; }
+  .mbar .mhome, .mbar .msearch { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 12px; color: var(--brand); border: 1px solid rgba(128,0,0,.18); background: rgba(128,0,0,.05); }
+  .mbar .mmenu { display: none; flex: 0 0 auto; width: 48px; height: 48px; place-items: center; border-radius: 12px; color: var(--brand); border: 1px solid rgba(128,0,0,.18); background: rgba(128,0,0,.05); }
+  .mbar .msearch.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .mbar .mforum { flex: 1 1 auto; min-width: 0; height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; background: var(--brand); color: #fff; font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 15px; white-space: nowrap; }
 
   .searchrow { display: flex; align-items: stretch; gap: 8px; }
   .searchform { flex: 2 1 0; min-width: 0; display: flex; }
@@ -88,6 +105,7 @@
 
   .cols { display: grid; gap: 8px 26px; }
   .grp .h { font-family: 'Poppins',sans-serif; font-weight: 700; font-size: 12.5px; color: var(--brand); margin-bottom: 7px; padding-bottom: 6px; border-bottom: 1px solid rgba(128,0,0,.12); }
+  .grp .h .cnt, .grp .h .gcaret { display: none; }
   .grp .lk { display: flex; flex-direction: column; gap: 1px; }
   .drawer a.item { display: block; padding: 5px 10px; color: #5b524f; font-size: 13.5px; border-left: 2px solid rgba(128,0,0,.14); border-radius: 0 6px 6px 0; transition: background .12s, color .12s, border-color .12s; }
   .drawer a.item:hover { background: rgba(128,0,0,.06); color: var(--brand); border-color: var(--brand); }
@@ -98,6 +116,10 @@
      lichte kaartstijl i.p.v. massief bordeaux. */
   .drawer a.support { display: block; padding: 7px 12px; margin: 2px 0; border-radius: 8px; background: rgba(128,0,0,.06); color: var(--brand); border: 1px solid rgba(128,0,0,.20); font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 13.5px; }
   .drawer a.support:hover { background: rgba(128,0,0,.12); }
+
+  /* Snelkoppelingen bovenaan een paneel op mobiel */
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid rgba(128,0,0,.10); }
+  .quick a { min-height: 40px; display: inline-flex; align-items: center; padding: 8px 13px; border-radius: 10px; background: rgba(128,0,0,.06); border: 1px solid rgba(128,0,0,.20); color: var(--brand); font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 13.5px; }
 
   .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
   .cta { display: flex; flex-direction: column; gap: 1px; flex: 1 1 200px; border-radius: 12px; padding: 12px 18px; }
@@ -126,9 +148,7 @@
   .adminlinks a { padding: 6px 12px; font-size: 13px; color: #5b524f; border-radius: 8px; background: #fff; border: 1px solid rgba(128,0,0,.12); font-weight: 600; }
   .adminlinks a:hover { background: rgba(128,0,0,.06); color: var(--brand); }
 
-  /* "Nu actueel"-rij in de drawer — zelfde opbouw als .adminlinks, maar los
-     stylebaar (groene accentkleur --actueel). De beheer-rij .adminlinks blijft
-     ongewijzigd; het stipje op de balkknop blijft bordeaux (--brand). */
+  /* "Nu actueel"-rij in de drawer — groene accentkleur (--actueel). */
   .actueellinks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .actueellinks .h { font-family: 'Poppins',sans-serif; font-weight: 700; font-size: 12px; color: var(--brand); margin-right: 4px; }
   .actueellinks a { padding: 6px 12px; font-size: 13px; color: var(--actueel); border-radius: 8px; background: rgba(47,107,58,.07); border: 1px solid rgba(47,107,58,.35); font-weight: 600; }
@@ -155,18 +175,146 @@
     .door { flex: 1 1 42%; }
     .cols { grid-template-columns: 1fr 1fr !important; }
   }
-  @media (max-width: 560px) {
-    .cols { grid-template-columns: 1fr !important; }
-    .door { flex: 1 1 100%; }
-    .band { flex-wrap: wrap; }
-    .eco { flex-wrap: wrap; white-space: normal; }
+
+  /* ================= MOBIEL (<= 700px) ================= */
+  @media (max-width: 700px) {
+    body { padding: 4px; }
+    .top { padding: 8px; gap: 8px; }
+
+    /* Vaste hoofdrij zichtbaar; oude smalle home-strip verdwijnt */
+    .mbar { display: flex; }
+    .home { display: none; }
+
+    /* Zoekbalk ingeklapt tot de loep in .mbar; opent bij tikken */
+    .searchform { display: none; }
+    .searchform.open { display: flex; flex: 1 1 100%; }
+    .searchbox { border-color: rgba(128,0,0,.35); }
+    .searchbox input { font-size: 16px; padding: 9px 0; } /* 16px: geen zoom op iOS */
+    .zoek { padding: 11px 15px; font-size: 14px; }
+
+    /* Onderwerpen volle breedte, daaronder de knoppen 2 per rij */
+    .pull-btn { min-height: 46px; }
+    .navrow { flex-wrap: wrap; }
+    .doors { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+    .door { flex: none; min-height: 46px; flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 12px; text-align: left; }
+    .door .t { font-size: 15px; }
+    .door .t .caret { margin-left: auto; }
+    .admin { width: 100%; min-height: 46px; }
+
+    /* Panelen: accordeon, één groep open */
+    .drawer { padding: 10px; }
+    .cols { grid-template-columns: 1fr !important; gap: 6px; }
+    .grp { border: 1px solid rgba(128,0,0,.12); border-radius: 12px; background: #fff; overflow: hidden; }
+    .grp .h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; min-height: 46px; padding: 10px 13px; border-bottom: none; font-size: 14px; cursor: pointer; }
+    .grp.open .h { background: rgba(128,0,0,.09); }
+    .grp .h .cnt { display: inline; font-family: 'Mulish',sans-serif; font-size: 11.5px; color: #a99e9a; font-weight: 600; margin-left: auto; }
+    .grp .h .gcaret { display: inline-grid; place-items: center; transition: transform .2s; flex: 0 0 auto; }
+    .grp.open .h .gcaret { transform: rotate(180deg); }
+    .grp .lk { display: none; padding: 2px 8px 8px; }
+    .grp.open .lk { display: flex; }
+    .drawer a.item { min-height: 44px; display: flex; align-items: center; padding: 6px 10px; font-size: 14.5px; border-radius: 0 8px 8px 0; }
+    .drawer a.accent, .drawer a.support { min-height: 44px; display: flex; align-items: center; font-size: 14px; }
+
+    /* Actiekaarten en teaser */
+    .ctas { flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .cta { flex: none; padding: 11px 14px; }
     .perks { grid-template-columns: 1fr; }
+    .btn-p, .btn-o { flex: 1 1 100%; text-align: center; }
+
+    /* Onderbalk: 2 per rij, zusterplatforms achter "meer" */
+    .band { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
+    .band .left { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .band .left a, .band .left button { min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 10px 12px; font-size: 14px; }
+    .eco { display: none; flex-wrap: wrap; white-space: normal; justify-content: center; }
+    .eco.open { display: flex; }
+    .ecotoggle { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border: none; background: transparent; color: #8a7f7c; font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 13px; }
+    .actueellinks a { min-height: 40px; display: inline-flex; align-items: center; }
   }
+
+  /* ============ COMPACTE MODUS ============
+     Standaard actief op elk scherm <= 700px, en te forceren met ?compact=1
+     (of uit te zetten met ?compact=0) achter de iframe-URL. Dicht is het menu
+     dan ~70px hoog i.p.v. ~450px, zodat de pagina eronder niet wordt
+     weggedrukt. Alles blijft bereikbaar via de hamburger. */
+  html.compact body { padding: 3px; }
+  html.compact .card { border-radius: 14px; box-shadow: 0 6px 18px -14px rgba(90,0,0,.5); }
+  html.compact .top { padding: 7px; gap: 7px; }
+  html.compact .mbar { display: flex; }
+  html.compact .mbar .mmenu { display: grid; }
+  html.compact .mbar .mmenu.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  html.compact .home { display: none; }
+  html.compact .searchrow { flex-wrap: wrap; gap: 7px; }
+  html.compact .searchform { display: none; }
+  html.compact .searchform.open { display: flex; flex: 1 1 100%; }
+  html.compact .searchbox { border-color: rgba(128,0,0,.35); }
+  html.compact .searchbox input { font-size: 16px; padding: 9px 0; }
+  /* Dicht: alleen de hoofdrij. Open (hamburger): de rest verschijnt. */
+  html.compact .pull, html.compact .navrow, html.compact .band { display: none; }
+  html.compact.menuopen .pull { display: flex; flex: 1 1 100%; }
+  html.compact.menuopen .navrow { display: flex; flex-wrap: wrap; }
+  html.compact.menuopen .band { display: flex; }
+  html.compact .pull-btn { min-height: 46px; }
+  html.compact .doors { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+  html.compact .door { flex: none; min-height: 46px; flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 12px; text-align: left; }
+  html.compact .door .t { font-size: 15px; }
+  html.compact .door .t .caret { margin-left: auto; }
+  html.compact .admin { width: 100%; min-height: 46px; }
+  /* Geen max-height/interne scroll: het iframe groeit mee via postMessage en de
+     pagina eromheen scrollt \u2014 een scrollbalk in een scrollbalk is op mobiel
+     onwerkbaar. */
+  html.compact .drawer { padding: 10px; }
+  html.compact .cols { grid-template-columns: 1fr !important; gap: 6px; }
+  html.compact .grp { border: 1px solid rgba(128,0,0,.12); border-radius: 12px; background: #fff; overflow: hidden; }
+  html.compact .grp .h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; min-height: 46px; padding: 10px 13px; border-bottom: none; font-size: 14px; cursor: pointer; }
+  html.compact .grp.open .h { background: rgba(128,0,0,.09); }
+  html.compact .grp .h .cnt { display: inline; font-family: 'Mulish',sans-serif; font-size: 11.5px; color: #a99e9a; font-weight: 600; margin-left: auto; }
+  html.compact .grp .h .gcaret { display: inline-grid; place-items: center; transition: transform .2s; flex: 0 0 auto; }
+  html.compact .grp.open .h .gcaret { transform: rotate(180deg); }
+  html.compact .grp .lk { display: none; padding: 2px 8px 8px; }
+  html.compact .grp.open .lk { display: flex; }
+  html.compact .drawer a.item { min-height: 44px; display: flex; align-items: center; padding: 6px 10px; font-size: 14.5px; border-radius: 0 8px 8px 0; }
+  html.compact .drawer a.accent, html.compact .drawer a.support { min-height: 44px; display: flex; align-items: center; font-size: 14px; }
+  html.compact .ctas { flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  html.compact .cta { flex: none; padding: 11px 14px; }
+  html.compact .perks { grid-template-columns: 1fr; }
+  html.compact .btn-p, html.compact .btn-o { flex: 1 1 100%; text-align: center; }
+  html.compact .band { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
+  html.compact .band .left { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  html.compact .band .left a, html.compact .band .left button { min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 10px 12px; font-size: 14px; }
+  html.compact .ecotoggle { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border: none; background: transparent; color: #8a7f7c; font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 13px; }
+  html.compact .eco { display: none; flex-wrap: wrap; white-space: normal; justify-content: center; }
+  html.compact .eco.open { display: flex; }
+  html.compact .eco .pfx { display: none; }
+
+  /* ---- /m-modus (?compact=1): bewust beperkt, zoals /m altijd al was ----
+     Geen vijf deuren, geen onderbalk, geen onderwerpenlijst: alleen een korte
+     lijst met de dingen waar men op een telefoon voor komt. */
+  html.msite .pull, html.msite .navrow, html.msite .band { display: none !important; }
+  html.msite .mlist { display: flex; flex-direction: column; gap: 6px; }
+  html.msite .mlist a { display: flex; align-items: center; gap: 11px; min-height: 50px; padding: 10px 14px; border-radius: 12px; background: #fff; border: 1px solid rgba(128,0,0,.14); color: #3a3330; font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 15px; }
+  html.msite .mlist a:active { background: rgba(128,0,0,.08); }
+  html.msite .mlist a .ic { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(128,0,0,.07); color: var(--brand); }
+  html.msite .mlist a .sub { display: block; font-family: 'Mulish',sans-serif; font-weight: 400; font-size: 12.5px; color: #8a7f7c; line-height: 1.25; }
+  html.msite .mlist .sep { margin: 6px 2px 2px; font-family: 'Poppins',sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: #a99e9a; }
+  html.msite .mlist a.full { background: var(--brand); color: #fff; border-color: var(--brand); justify-content: center; }
+
+  /* Noodrem: de ouderpagina neemt onze hoogte niet over (oude embedcode of een
+     mobiel thema zonder het sync-script). Het paneel krijgt dan interne scroll
+     binnen de vaste iframe-hoogte, zodat niets onbereikbaar wordt. */
+  html.noresize .drawer { max-height: calc(100vh - 76px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  html.noresize.menuopen .drawer { max-height: calc(100vh - 210px); }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="top">
+    <!-- Mobiele hoofdrij: home + forum + zoeken (verborgen op desktop) -->
+    <div class="mbar">
+      <a class="mhome" href="https://www.nederlanders.fr/" target="_parent" title="Home" aria-label="Home"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.75 20v-5.5h4.5V20"/></svg></a>
+      <a class="mforum" href="https://www.nederlanders.fr/profiles/blog/list" target="_parent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Alle berichten</a>
+      <button type="button" class="msearch" id="msearch" aria-label="Zoeken" aria-expanded="false"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+      <button type="button" class="mmenu" id="mmenu" aria-label="Menu" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    </div>
     <div class="searchrow">
       <form class="searchform" id="searchform">
         <div class="searchbox" id="searchbox">
@@ -192,7 +340,8 @@
   <div class="drawer" id="drawer"></div>
   <div class="band">
     <div class="left" id="bandleft"></div>
-    <div class="eco">
+    <button type="button" class="ecotoggle" id="ecotoggle" aria-expanded="false">Zusterplatforms<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="eco" id="eco">
       <span class="pfx">Zusterplatforms:</span>
       <a href="https://infofrankrijk.com/" target="_blank" rel="noopener">Infofrankrijk</a><span class="sep">·</span>
       <a href="https://www.cafeclaude.fr/" target="_blank" rel="noopener">Café Claude</a><span class="sep">·</span>
@@ -208,11 +357,31 @@
   var ZOEK_APP = "https://www.nederlanders.fr/page/ai-zoek?q="; // resultatenpagina (menu + zoek-app)
   var NL = "https://www.nederlanders.fr";
   var PARENT_ORIGIN = "https://www.nederlanders.fr"; // enige afzender waarvan profielberichten worden geaccepteerd
+  var MOBILE_MQ = "(max-width: 700px)";
+
+  // ---- COMPACTE MODUS ----
+  // Standaard aan op smalle schermen (<= 700px). Met ?compact=1 forceer je hem
+  // op elk formaat (gebruik dit op nederlanders.fr/m); met ?compact=0 zet je
+  // hem uit en krijg je het volledige menu.
+  var FORCE = /[?&]compact=1/.test(location.search) || location.hash === "#compact" ? 1
+            : /[?&]compact=0/.test(location.search) ? 0 : -1;
+  function mqNarrow(){ return !!(window.matchMedia && window.matchMedia(MOBILE_MQ).matches); }
+  function wantCompact(){ return FORCE === 1 ? true : FORCE === 0 ? false : mqNarrow(); }
+  var COMPACT = wantCompact();
+  // /m-modus: expliciet aangezet met ?compact=1. Dan tonen we niet het hele
+  // menu achter de hamburger, maar een korte lijst — /m is altijd al veel
+  // beperkter geweest dan de laptopversie en dat houden we zo.
+  var MSITE = (FORCE === 1) || /\/m(\/|\?|#|$)/.test(document.referrer || "");
+  if (MSITE) { document.documentElement.classList.add("msite", "compact"); COMPACT = true; }
+  function applyCompact(){
+    COMPACT = wantCompact();
+    var root = document.documentElement;
+    root.classList.toggle("compact", COMPACT);
+    if (!COMPACT) { root.classList.remove("menuopen"); var mb = document.getElementById("mmenu"); if (mb) { mb.classList.remove("active"); mb.setAttribute("aria-expanded", "false"); } }
+  }
+  applyCompact();
 
   // ---- Ingelogde gebruiker ----
-  // Cross-origin (Vercel): het profiel komt binnen via postMessage(nlfrProfile)
-  // vanuit de embedcode op nederlanders.fr — zie listener onderaan.
-  // Same-origin (oude situatie): directe lezing hieronder blijft als fallback.
   var cp = null;
   try { if (window.parent && window.parent.ning && window.parent.ning.CurrentProfile) cp = window.parent.ning.CurrentProfile; } catch(e) { cp = null; }
   var isMember = false, isAdmin = false, uid = "", myPage = NL + "/profiles/settings/editProfileInfo";
@@ -223,6 +392,8 @@
     myPage = (p && p.profileUrl) ? p.profileUrl : (NL + "/profiles/settings/editProfileInfo");
   }
   setProfile(cp);
+
+  function isNarrow(){ return COMPACT || mqNarrow(); }
 
   // ---- Link-target: eigen site = zelfde venster, andere site = nieuw tabblad ----
   function tgt(href){ return href.indexOf("nederlanders.fr") > -1 ? "_parent" : "_blank"; }
@@ -235,12 +406,12 @@
   var U = function(p){ return NL + p; };
   var DOORS = {
     lezen: { cols: 4, groups: [
-      ["Wonen & klussen", [["Woningen algemeen",U("/profiles/blog/list?tag=Woningen+Algemeen")],["Woningbeheer & huishouding",U("/profiles/blog/list?tag=Woningbeheer+en+Huishouding")],["Bouw",U("/profiles/blog/list?tag=Bouw")],["Inrichting",U("/profiles/blog/list?tag=Inrichting")],["Exterieur",U("/profiles/blog/list?tag=Exterieur")],["Telecommunicatie",U("/page/telecommunicatie")]]],
-      ["Werk & ondernemen", [["Werk algemeen",U("/profiles/blog/list?tag=Werk+Algemeen")],["Midden- en kleinbedrijf",U("/profiles/blog/list?tag=Midden-+en+Kleinbedrijf")],["Horeca en toerisme",U("/profiles/blog/list?tag=Horeca+en+Toerisme")],["Vervoer",U("/profiles/blog/list?tag=Vervoer")],["Overige diensten",U("/profiles/blog/list?tag=Overige+Diensten")]]],
-      ["Geld, overheid & migratie", [["Geldzaken",U("/profiles/blog/list?tag=Geldzaken")],["Overheid",U("/profiles/blog/list?tag=Overheid")],["Migratie",U("/profiles/blog/list?tag=Migratie")]]],
-      ["Leren & taal", [["Onderwijs",U("/profiles/blog/list?tag=Onderwijs")],["Cursussen en opleidingen",U("/profiles/blog/list?tag=Cursussen+en+Opleidingen")],["Kinderen",U("/profiles/blog/list?tag=Kinderen")],["Vertaling",U("/profiles/blog/list?tag=Vertaling")],["Woordenlijsten",U("/profiles/blog/list?tag=Lexicon")]]],
-      ["Leven & zorg", [["Gezondheid, sport & spel",U("/profiles/blog/list?tag=Gezondheid%2C+Sport+en+Spel")],["Ouderverzorging",U("/profiles/blog/list?tag=Ouderverzorging")],["Dieren",U("/profiles/blog/list?tag=Dieren")],["Recepten",U("/profiles/blog/list?tag=Recepten")]]],
-      ["Ontmoeten & cultuur", [["Clubs, verenigingen & bijeenkomsten",U("/profiles/blog/list?tag=Clubs%2C+Verenigingen+en+Bij%C3%A9%C3%A9nkomsten")],["Contact gezocht",U("/profiles/blog/list?tag=Contact+Gezocht")],["Kunst & cultuur",U("/profiles/blog/list?tag=Kunst+en+Cultuur")]]],
+      ["Wonen &amp; klussen", [["Woningen algemeen",U("/profiles/blog/list?tag=Woningen+Algemeen")],["Woningbeheer &amp; huishouding",U("/profiles/blog/list?tag=Woningbeheer+en+Huishouding")],["Bouw",U("/profiles/blog/list?tag=Bouw")],["Inrichting",U("/profiles/blog/list?tag=Inrichting")],["Exterieur",U("/profiles/blog/list?tag=Exterieur")],["Telecommunicatie",U("/page/telecommunicatie")]]],
+      ["Werk &amp; ondernemen", [["Werk algemeen",U("/profiles/blog/list?tag=Werk+Algemeen")],["Midden- en kleinbedrijf",U("/profiles/blog/list?tag=Midden-+en+Kleinbedrijf")],["Horeca en toerisme",U("/profiles/blog/list?tag=Horeca+en+Toerisme")],["Vervoer",U("/profiles/blog/list?tag=Vervoer")],["Overige diensten",U("/profiles/blog/list?tag=Overige+Diensten")]]],
+      ["Geld, overheid &amp; migratie", [["Geldzaken",U("/profiles/blog/list?tag=Geldzaken")],["Overheid",U("/profiles/blog/list?tag=Overheid")],["Migratie",U("/profiles/blog/list?tag=Migratie")]]],
+      ["Leren &amp; taal", [["Onderwijs",U("/profiles/blog/list?tag=Onderwijs")],["Cursussen en opleidingen",U("/profiles/blog/list?tag=Cursussen+en+Opleidingen")],["Kinderen",U("/profiles/blog/list?tag=Kinderen")],["Vertaling",U("/profiles/blog/list?tag=Vertaling")],["Woordenlijsten",U("/profiles/blog/list?tag=Lexicon")]]],
+      ["Leven &amp; zorg", [["Gezondheid, sport &amp; spel",U("/profiles/blog/list?tag=Gezondheid%2C+Sport+en+Spel")],["Ouderverzorging",U("/profiles/blog/list?tag=Ouderverzorging")],["Dieren",U("/profiles/blog/list?tag=Dieren")],["Recepten",U("/profiles/blog/list?tag=Recepten")]]],
+      ["Ontmoeten &amp; cultuur", [["Clubs, verenigingen &amp; bijeenkomsten",U("/profiles/blog/list?tag=Clubs%2C+Verenigingen+en+Bij%C3%A9%C3%A9nkomsten")],["Contact gezocht",U("/profiles/blog/list?tag=Contact+Gezocht")],["Kunst &amp; cultuur",U("/profiles/blog/list?tag=Kunst+en+Cultuur")]]],
       ["Marktplaats", [["Vastgoed van leden",U("/page/onroerend-goed"),1],["Roerende goederen te koop",U("/profiles/blog/list?tag=Te+Koop+Aangeboden")],["Te koop gevraagd",U("/profiles/blog/list?tag=Te+Koop+Gevraagd")],["Werk aangeboden",U("/profiles/blog/list?tag=Werk+Aangeboden"),1],["Werk gevraagd",U("/profiles/blog/list?tag=Werk+Gevraagd")],["Woningen gevraagd",U("/profiles/blog/list?tag=Woningen+Gevraagd")],["Vakantiewoningen",U("/profiles/blog/list?tag=Vakantiehuis")],["Woningruil",U("/profiles/blog/list?tag=Woningruil")]]],
       ["Meer in het forum", [["In de schijnwerpers",U("/profiles/blog/list?promoted=1"),1],["Alle berichten",U("/profiles/blog/list")],["Alle foto's",U("/photo")],["Alle video's",U("/video/video")]]]
     ]},
@@ -249,8 +420,8 @@
       ["Steunen", [["Doneer",U("/page/fundraising-en-donaties"),"support"],["Word sponsor",U("/page/sponsorprogramma"),"support"],["Word abonnee","https://infofrankrijk.com/abonnement/","support","_top"]]]
     ]},
     vinden: { cols: 4, groups: [
-      ["Tools & bestemmingen", [["Vervoershub",U("/page/lift-en-transportcentrale")],["Verenigingen in Frankrijk",U("/page/nederlandse-verenigingen-in-frankrijk")],["Frans leren",U("/page/frantastique-1")]]],
-      ["Regels & hulp", [["Huisregels",U("/page/huisregels"),1],["Hulp vinden",U("/page/hulpverlening-in-frankrijk"),1]]],
+      ["Tools &amp; bestemmingen", [["Vervoershub",U("/page/lift-en-transportcentrale")],["Verenigingen in Frankrijk",U("/page/nederlandse-verenigingen-in-frankrijk")],["Frans leren",U("/page/frantastique-1")]]],
+      ["Regels &amp; hulp", [["Huisregels",U("/page/huisregels"),1],["Hulp vinden",U("/page/hulpverlening-in-frankrijk"),1]]],
       ["Adressen", [["Wegwijs Franse overheid",U("/profiles/blogs/wegwijs-franse-overheid")],["Handige sites",U("/page/handige-sites")],["Nedergids","https://nedergids.nl/"]]],
       ["Uitgelicht", [["Groepen",U("/groups")],["Onze sponsors",U("/page/sponsors")],["Auteurs",U("/profiles/friend/listFeatured")]]]
     ]},
@@ -260,19 +431,33 @@
     ]}
   };
 
-  // Functie i.p.v. constante: uid en myPage kunnen wijzigen zodra het profiel
-  // via postMessage binnenkomt.
+  // MOBIEL — snelkoppelingen bovenaan een paneel (de meest gevraagde links).
+  var MOBILE_QUICK = {
+    lezen:  [["Alle berichten",U("/profiles/blog/list")],["In de schijnwerpers",U("/profiles/blog/list?promoted=1")],["Alle foto's",U("/photo")]],
+    doen:   [["Plaats bericht",U("/profiles/blog/new")]],
+    vinden: [["Huisregels",U("/page/huisregels")],["Hulp vinden",U("/page/hulpverlening-in-frankrijk")]],
+    nieuws: [["Dagelijks Frankrijknieuws",U("/page/dagelijks-frankrijknieuws")]],
+    mijn:   [["Mijn pagina",""]],
+    topics: [["Rubrieken",U("/page/rubrieken")],["Vastgoed van leden",U("/page/onroerend-goed")]]
+  };
+  // MOBIEL — groepen die op smalle schermen wegvallen (inhoud staat elders,
+  // zie MOBILE_QUICK). Op tablet/desktop blijven ze gewoon zichtbaar.
+  var MOBILE_HIDE = { lezen: ["Meer in het forum"] };
+  // MOBIEL — aantal onderwerpen dat direct wordt getoond; de rest achter een
+  // "Alle onderwerpen"-link naar de rubriekenpagina.
+  var TOPICS_MOBILE_MAX = 14;
+
   function memberGroups(){ return [
     ["Leden", [["Ledenlijst",U("/profiles/members/")],["Leden zoeken",U("/profiles/members/advancedSearch")],["Veelgestelde vragen",U("/page/veelgestelde-vragen-en-goede-antwoorden")],["Ledenservice",U("/profiles/blog/list?tag=Ledenservice")],["Boîte à idées",U("/boite-a-idees")]]],
     ["Mijn eigen", [["Mijn pagina",myPage],["Profiel bewerken",U("/profiles/settings/editProfileInfo")],["Mijn foto's",U("/photo/photo/listForContributor?screenName="+uid)],["Mijn berichten",U("/profiles/blog/list?user="+uid)],["Mijn vrienden",U("/profiles/friend/list?user="+uid)]]]
   ]; }
 
   var ADMIN_LINKS = [["Dashboard",U("/main/dashboard")],["Tags",U("/page/tags")],["Standaard teksten",U("/page/standard-berichten")],["Bestandsbeheer",U("/main/filemanager/list")],["Mijn pagina's",U("/page/page/listForContributor")]];
-  var PERKS = ["Uw eigen profielpagina","Chat met leden die online zijn","Ledenlijst & leden zoeken in uw regio","Gratis berichten en advertenties plaatsen"];
+  var PERKS = ["Uw eigen profielpagina","Chat met leden die online zijn","Ledenlijst &amp; leden zoeken in uw regio","Gratis berichten en advertenties plaatsen"];
 
   var CTAS = [
     { href: U("/page/onroerend-goed"), t: "Vastgoed van leden", s: "Huizen aangeboden door landgenoten", fill: 1 },
-    { href: U("/page/nederlandse-verenigingen-in-frankrijk"), t: "NL-verenigingen", s: "Contactgegevens, activiteiten & bijeenkomsten, regionale spreiding" },
+    { href: U("/page/nederlandse-verenigingen-in-frankrijk"), t: "NL-verenigingen", s: "Contactgegevens, activiteiten &amp; bijeenkomsten, regionale spreiding" },
     { href: U("/page/bosbranden"), t: "Nu actueel", s: "Overzicht bosbranden", live: 1 }
   ];
 
@@ -292,22 +477,20 @@
     ["Wonen algemeen",U("/profiles/blog/list?tag=Woningen+Algemeen")],["Woningen gevraagd",U("/profiles/blog/list?tag=Woningen+Gevraagd")],["Word sponsor",U("/page/sponsorprogramma"),1]
   ];
 
-  var DOOR_DEFS = [["lezen","Lezen","rubrieken"],["doen","Meedoen","plaatsen & steunen"],["vinden","Vinden","tools & hulp"],["mijn","Mijn NLFR","leden"],["nieuws","Nieuws","& feeds"]];
+  var DOOR_DEFS = [["lezen","Lezen","rubrieken"],["doen","Meedoen","plaatsen &amp; steunen"],["vinden","Vinden","tools &amp; hulp"],["mijn","Mijn NLFR","leden"],["nieuws","Nieuws","&amp; feeds"]];
 
-  // "Nu actueel" — compacte knop in de onderbalk (naast "Diensten"), niet in
-  // de menuknoppenrij. De items komen LIVE uit actueel.json, zodat de inhoud
-  // aanpasbaar is zonder deze index.html aan te raken. Bij openen toont de
-  // drawer één rij kleine linkjes (klasse .actueellinks); een item met live:true
-  // geeft de balkknop een pulserend stipje. Het eerste item wijst standaard
-  // naar /api/nieuwsbrief van nlfr-nieuwsbrief, dat 302-doorstuurt naar de
-  // webversie van de laatst verzonden nieuwsbrief.
   var ACTUEEL = null; // null = nog niet geladen; {kaarten:[...]} na fetch.
+  // Dit bestand kan op twee plekken staan: op Vercel (naast actueel.json) en als
+  // bestand in het Ning-bestandsbeheer (waar actueel.json niet naast ligt).
+  // Daarom eerst relatief proberen, dan het vaste adres op Vercel.
   var ACTUEEL_URL = "/actueel.json";
+  var ACTUEEL_FALLBACK = "https://nlfr-menu.vercel.app/actueel.json";
 
   // ---- Build nav ----
   var doorsEl = document.getElementById("doors");
   var lock = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.85"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   var caret = '<svg class="caret" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  var gcaret = '<span class="gcaret"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span>';
   function doorHTML(d){
     var locked = (d[0] === "mijn" && !isMember);
     return { locked: locked, html: '<span class="t">' + d[1] + caret + (locked ? lock : '') + '</span><span class="s">' + d[2] + '</span>' };
@@ -322,9 +505,6 @@
   });
 
   // ---- Build band ----
-  // "Nu actueel" is een <button> (opent de drawer, navigeert niet); hij krijgt
-  // dezelfde light-stijl als de balklinks. Het stipje staat standaard verborgen
-  // en wordt zichtbaar zodra actueel.json een item met live:true bevat.
   document.getElementById("bandleft").innerHTML =
     link(U("/profiles/blog/new"),"Plaats bericht","light") +
     link(U("/page/betaalpagina-berichten"),"Plaats advertentie","light") +
@@ -338,10 +518,24 @@
 
   // ---- Drawer rendering ----
   var drawer = document.getElementById("drawer");
-  function groupsHTML(groups, cols){
+
+  function quickHTML(target){
+    if (!isNarrow()) return "";
+    var items = (MOBILE_QUICK[target] || []).slice();
+    if (target === "mijn") { if (!isMember) return ""; items = [["Mijn pagina", myPage],["Mijn berichten", U("/profiles/blog/list?user="+uid)]]; }
+    if (!items.length) return "";
+    return '<div class="quick">' + items.map(function(l){ return link(l[1], l[0], ""); }).join("") + '</div>';
+  }
+
+  function groupsHTML(groups, cols, target){
+    var narrow = isNarrow();
+    var hide = (narrow && MOBILE_HIDE[target]) ? MOBILE_HIDE[target] : [];
+    var list = groups.filter(function(g){ return hide.indexOf(g[0]) === -1; });
     var h = '<div class="cols" style="grid-template-columns:repeat('+cols+',1fr)">';
-    groups.forEach(function(g){
-      h += '<div class="grp"><div class="h">'+g[0]+'</div><div class="lk">';
+    list.forEach(function(g, i){
+      // Op mobiel is elke groep een accordeon; de eerste staat open.
+      var open = narrow && i === 0;
+      h += '<div class="grp'+(open ? " open" : "")+'"><div class="h" role="button" tabindex="0">'+g[0]+'<span class="cnt">'+g[1].length+'</span>'+gcaret+'</div><div class="lk">';
       g[1].forEach(function(l){
         // Derde element: string = eigen klasse (bv. "support"), truthy = "accent",
         // leeg = gewoon "item". Vierde element (optioneel) forceert het target.
@@ -352,10 +546,11 @@
     });
     return h + '</div>';
   }
+
   function build(target){
-    if (DOORS[target]) { drawer.innerHTML = groupsHTML(DOORS[target].groups, DOORS[target].cols); return; }
+    if (DOORS[target]) { drawer.innerHTML = quickHTML(target) + groupsHTML(DOORS[target].groups, isNarrow() ? 1 : DOORS[target].cols, target); bindGroups(); return; }
     if (target === "mijn") {
-      if (isMember) { drawer.innerHTML = groupsHTML(memberGroups(), 2); return; }
+      if (isMember) { drawer.innerHTML = quickHTML("mijn") + groupsHTML(memberGroups(), isNarrow() ? 1 : 2, "mijn"); bindGroups(); return; }
       var p = PERKS.map(function(x){ return '<div class="perk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'+x+'</div>'; }).join("");
       drawer.innerHTML = '<div class="teaser"><h3>Word gratis lid — dan kan er meer</h3><p>Als lid heeft u opties die bezoekers niet zien:</p><div class="perks">'+p+'</div><div class="btns">'+
         '<a class="btn-p" href="'+U("/main/authorization/signUp")+'" target="_parent">Word lid — gratis</a>'+
@@ -367,13 +562,17 @@
       return;
     }
     if (target === "actueel") { drawer.innerHTML = actueelHTML(); return; }
+    if (target === "msite") { drawer.innerHTML = msiteHTML(); return; }
     if (target === "topics") {
+      var narrow = isNarrow();
       var c = '<div class="ctas">' + CTAS.map(function(x){
         var title = (x.live ? '<span class="dot"></span>' : '') + x.t;
         return '<a class="cta '+(x.fill?"fill":"tint")+'" href="'+x.href+'" target="'+tgt(x.href)+'"'+(tgt(x.href)==="_blank"?' rel="noopener"':'')+'><span class="ct">'+title+'</span><span class="cs">'+x.s+'</span></a>';
       }).join("") + '</div>';
-      c += '<div class="cols" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1px 18px">';
-      TOPICS.forEach(function(t){ c += link(t[1], t[0], t[2] ? "item emph" : "item"); });
+      var topics = narrow ? TOPICS.slice(0, TOPICS_MOBILE_MAX) : TOPICS;
+      c += '<div class="cols" style="grid-template-columns:'+(narrow ? '1fr' : 'repeat(auto-fill,minmax(160px,1fr))')+';gap:1px 18px">';
+      topics.forEach(function(t){ c += link(t[1], t[0], t[2] ? "item emph" : "item"); });
+      if (narrow && TOPICS.length > TOPICS_MOBILE_MAX) c += link(U("/page/rubrieken"), "Alle onderwerpen →", "item emph");
       c += '</div>';
       drawer.innerHTML = c;
       return;
@@ -381,12 +580,25 @@
     drawer.innerHTML = "";
   }
 
-  // ---- "Nu actueel" — compacte rij linkjes (klasse .actueellinks) uit actueel.json
+  // Accordeon: één groep open tegelijk (alleen zichtbaar effect op mobiel).
+  function bindGroups(){
+    Array.prototype.forEach.call(drawer.querySelectorAll(".grp > .h"), function(h){
+      function toggle(){
+        var grp = h.parentNode, wasOpen = grp.classList.contains("open");
+        Array.prototype.forEach.call(drawer.querySelectorAll(".grp"), function(g){ g.classList.remove("open"); });
+        if (!wasOpen) grp.classList.add("open");
+        report();
+      }
+      h.addEventListener("click", toggle);
+      h.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+    });
+  }
+
+  // ---- "Nu actueel" — compacte rij linkjes uit actueel.json
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
   function actueelLink(k){
     var href = (k && k.href) ? String(k.href) : "#";
     var t = tgt(href), rel = (t === "_blank") ? ' rel="noopener"' : '';
-    // De ondertitel (tekst) staat als title-attribuut, niet zichtbaar.
     var titleAttr = (k && k.tekst) ? ' title="' + esc(k.tekst) + '"' : '';
     return '<a href="' + href + '" target="' + t + '"' + rel + titleAttr + '>' + ((k && k.titel) || "") + '</a>';
   }
@@ -398,16 +610,17 @@
     return kop + items.map(actueelLink).join("") + '</div>';
   }
   function laadActueel(){
-    fetch(ACTUEEL_URL, { cache: "no-store" })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){ ACTUEEL = (j && typeof j === "object") ? j : { kaarten: [] }; })
-      .catch(function(){ ACTUEEL = { kaarten: [] }; })
-      .then(function(){
-        // Balkknop krijgt een stipje zodra minstens één item live is.
-        var dot = document.getElementById("actueeldot");
-        if (dot) dot.style.display = (ACTUEEL.kaarten || []).some(function(k){ return k && k.live; }) ? "" : "none";
-        if (current === "actueel") { drawer.innerHTML = actueelHTML(); report(); }
-      });
+    var klaar = function(j){
+      ACTUEEL = (j && typeof j === "object") ? j : { kaarten: [] };
+      var dot = document.getElementById("actueeldot");
+      if (dot) dot.style.display = (ACTUEEL.kaarten || []).some(function(k){ return k && k.live; }) ? "" : "none";
+      if (current === "actueel") { drawer.innerHTML = actueelHTML(); report(); }
+    };
+    var haal = function(url){ return fetch(url, { cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }); };
+    haal(ACTUEEL_URL)
+      .then(function(j){ return j || haal(ACTUEEL_FALLBACK); })
+      .catch(function(){ return haal(ACTUEEL_FALLBACK).catch(function(){ return null; }); })
+      .then(klaar, function(){ klaar(null); });
   }
 
   // ---- Open/close ----
@@ -416,16 +629,30 @@
   // FIX 1 (21-07-2026, behouden): meet de werkelijke kaarthoogte (niet
   // body.scrollHeight, want die is nooit kleiner dan het iframe-venster →
   // oneindige groei-lus). Meld alleen bij een gewijzigde waarde.
-  var lastReported = 0;
+  var lastReported = 0, fitTimer = null;
   function report(){
     try {
       if (window.parent && window.parent !== window) {
         var card = document.querySelector(".card");
         if (!card) return;
-        var h = Math.ceil(card.getBoundingClientRect().height) + 12; // + body-padding (2 × 6px)
+        var h = Math.ceil(card.getBoundingClientRect().height) + 12; // + body-padding
         if (h !== lastReported) {
           lastReported = h;
           window.parent.postMessage({ nlfrMenuHeight: h }, "*");
+          // Als de ouderpagina de hoogte NIET overneemt (oude embedcode, of een
+          // mobiel thema zonder ons script), blijft dit iframe op zijn vaste
+          // hoogte staan en zou een open paneel onbereikbaar zijn. Daarom:
+          // meet na een moment of we werkelijk zijn meegegroeid; zo niet, dan
+          // schakelen we het paneel over op interne scroll.
+          if (h > window.innerHeight + 20) {
+            clearTimeout(fitTimer);
+            fitTimer = setTimeout(function(){
+              var grew = window.innerHeight >= h - 20;
+              document.documentElement.classList.toggle("noresize", !grew);
+            }, 450);
+          } else {
+            document.documentElement.classList.remove("noresize");
+          }
         }
       }
     } catch(e){}
@@ -455,12 +682,77 @@
   document.getElementById("actueelbtn").addEventListener("click", function(){ open("actueel", this); });
   document.addEventListener("keydown", function(e){ if (e.key === "Escape") { closeAll(); report(); } });
 
+  // ---- Mobiel: zoekbalk in/uitklappen ----
+  var msearch = document.getElementById("msearch"), sform = document.getElementById("searchform");
+  msearch.addEventListener("click", function(){
+    var open = !sform.classList.contains("open");
+    sform.classList.toggle("open", open);
+    msearch.classList.toggle("active", open);
+    msearch.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) { var i = document.getElementById("q"); if (i) i.focus(); }
+    report();
+  });
+
+  // ---- /m: de korte lijst achter de hamburger ----
+  var MSITE_ICONS = {
+    schijn: '<path d="M12 3l2.4 6.2L21 11l-6.6 1.8L12 19l-2.4-6.2L3 11l6.6-1.8z"/>',
+    foto: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4 4 3 3-2 4 3"/>',
+    plaats: '<path d="M12 5v14M5 12h14"/>',
+    nieuws: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h7M7 13h10M7 16h6"/>',
+    zoek: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+    mijn: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4S18.1 16.4 19.5 20"/>',
+    hulp: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.4v.4"/><path d="M12 17h.01"/>',
+    diensten: '<path d="M4 7h16v12H4z"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/>',
+    verenig: '<circle cx="9" cy="9" r="3"/><path d="M3.5 19c.9-2.7 2.9-4.2 5.5-4.2S13.6 16.3 14.5 19"/><path d="M16 6.5a3 3 0 0 1 0 5.8M17.5 19c-.3-1.4-.8-2.5-1.5-3.3"/>'
+  };
+  function ico(k){ return '<span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (MSITE_ICONS[k] || "") + '</svg></span>'; }
+  function mrow(href, icon, label, sub){
+    var t = tgt(href), rel = (t === "_blank") ? ' rel="noopener"' : '';
+    return '<a href="' + href + '" target="' + t + '"' + rel + '>' + ico(icon) + '<span>' + label + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</span></a>';
+  }
+  function msiteHTML(){
+    var h = '<div class="mlist">';
+    h += mrow(U("/profiles/blog/list?promoted=1"), "schijn", "In de schijnwerpers", "Uitgelichte berichten");
+    h += mrow(U("/page/dagelijks-frankrijknieuws"), "nieuws", "Frankrijknieuws", "Dagelijks bijgewerkt");
+    h += mrow(U("/page/rubrieken"), "zoek", "Rubrieken", "Alle onderwerpen");
+    h += mrow(U("/photo"), "foto", "Foto's");
+    h += '<div class="sep">Zelf doen</div>';
+    h += mrow(U("/profiles/blog/new"), "plaats", "Plaats een bericht");
+    h += mrow(isMember ? myPage : U("/main/authorization/signIn"), "mijn", isMember ? "Mijn pagina" : "Meld je aan", isMember ? "" : "of word gratis lid");
+    h += '<div class="sep">Handig</div>';
+    h += mrow(U("/diensten"), "diensten", "Diensten");
+    h += mrow(U("/page/nederlandse-verenigingen-in-frankrijk"), "verenig", "NL-verenigingen");
+    h += mrow(U("/page/hulpverlening-in-frankrijk"), "hulp", "Hulp vinden");
+    h += '<a class="full" href="' + U("/") + '" target="_parent">Naar de volledige website</a>';
+    return h + '</div>';
+  }
+
+  // ---- Compacte modus: hamburger opent/sluit de rest van het menu ----
+  var mmenu = document.getElementById("mmenu");
+  mmenu.addEventListener("click", function(){
+    var root = document.documentElement, willOpen = !root.classList.contains("menuopen");
+    root.classList.toggle("menuopen", willOpen);
+    mmenu.classList.toggle("active", willOpen);
+    mmenu.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    if (MSITE) { if (willOpen) open("msite", null); else closeAll(); report(); return; }
+    if (!willOpen) closeAll(); // dichtklappen sluit ook een open paneel
+    report();
+  });
+
+  // ---- Mobiel: zusterplatforms in/uitklappen ----
+  var ecoT = document.getElementById("ecotoggle"), eco = document.getElementById("eco");
+  ecoT.addEventListener("click", function(){
+    var open = !eco.classList.contains("open");
+    eco.classList.toggle("open", open);
+    ecoT.setAttribute("aria-expanded", open ? "true" : "false");
+    report();
+  });
+
   // ---- Profiel-ontvangst (cross-origin, vanuit embedcode op nederlanders.fr) ----
   window.addEventListener("message", function(e){
     if (e.origin !== PARENT_ORIGIN) return;
     if (!e.data || !("nlfrProfile" in e.data)) return;
     setProfile(e.data.nlfrProfile);
-    // Slotje op "Mijn NLFR" en beheerknop bijwerken
     Array.prototype.forEach.call(document.querySelectorAll(".door"), function(b){
       var key = b.getAttribute("data-door");
       var def = null;
@@ -473,7 +765,6 @@
       if (wasActive) b.classList.add("active");
     });
     syncAdminBtn();
-    // Openstaand ledenpaneel opnieuw opbouwen met de juiste status
     if (current === "mijn" || current === "admin") { build(current); report(); }
   });
 
@@ -486,7 +777,14 @@
   q.addEventListener("blur", function(){ sbox.classList.remove("focus"); });
   clr.addEventListener("click", function(){ q.value = ""; clr.classList.remove("show"); q.focus(); });
 
-  // ---- "Nu actueel" alvast ophalen, zodat de kaarten er bij openen staan ----
+  // ---- Herbouwen bij wisseling mobiel <-> breed (draaien van het toestel) ----
+  if (window.matchMedia) {
+    var mq = window.matchMedia(MOBILE_MQ);
+    var onChange = function(){ applyCompact(); if (current) build(current); report(); };
+    if (mq.addEventListener) mq.addEventListener("change", onChange); else if (mq.addListener) mq.addListener(onChange);
+  }
+
+  // ---- "Nu actueel" alvast ophalen ----
   laadActueel();
 
   // ---- Height sync ----

@@ -155,6 +155,19 @@
       "verificatie": "te-testen"
     },
     {
+      "naam": "Infofrankrijk",
+      "feed": "https://infofrankrijk.com/feed/",
+      "thema": "infofrankrijk",
+      "regime": "eigen",
+      "taal": "nl",
+      "prioriteit": 1,
+      "actief": true,
+      "verificatie": "te-testen",
+      "eigenContent": true,
+      "vensterDagen": 14,
+      "_opmerking": "Eigen publicatie (infofrankrijk.com). Eigen content: titel + samenvatting + link mogen ruim (geen auteursrechtelijk bezwaar). Krijgt een eigen tegel op /actueel; loopt niet via de cron/synthese en niet via het Frankrijk-filter."
+    },
+    {
       "naam": "NL-verenigingen in Frankrijk",
       "feed": "https://antonnoe.github.io/verenigingen-kalender/data/nieuws.json",
       "type": "json-verenigingen",

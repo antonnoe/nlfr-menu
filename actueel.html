@@ -8,10 +8,10 @@
 <!--
   NLFR ACTUEEL — Nederlandstalige nieuwspagina, embed via iframe op
   https://www.nederlanders.fr/page/actueel-frankrijknieuws (zie EMBED.md).
-  Opbouw: thema-TEGELS die uitklappen. Alles Nederlands tot de laatste stap:
-    tegel (bullets) -> artikelen (titel + summary) -> volledige NL-tekst ->
-    "Bronnen" (pers: de Franse originelen; overige: de ene eigen/overheidsbron).
-  Alle tegels starten DICHT. Hoogte-sync via postMessage({nlfrActueelHeight}).
+  Thema-TEGELS die uitklappen: tegel (bullets) -> artikelen (titel + summary) ->
+  volledige NL-tekst -> "Bronnen". Alle tegels starten dicht. Sluiten kan met de
+  tegel-/artikelkop of met de expliciete "Sluiten"-knop. Bovenaan: alles
+  uit-/inklappen. Hoogte-sync via postMessage({nlfrActueelHeight}) + ResizeObserver.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,9 +26,17 @@
   h1,h2,h3 { font-family:'Poppins',sans-serif; line-height:1.3; }
 
   .card { background:#fff; border:1px solid var(--brand-line); border-radius:18px; box-shadow:0 12px 40px -26px rgba(90,0,0,.55); overflow:hidden; }
-  .head { padding:16px 18px 10px; border-bottom:1px solid rgba(128,0,0,.1); }
+  .head { padding:16px 18px 12px; border-bottom:1px solid rgba(128,0,0,.1); }
   .head h1 { margin:0; font-size:20px; font-weight:700; color:var(--brand); }
   .head .sub { font-size:13px; color:var(--ink-zacht); margin-top:2px; }
+
+  /* Alles uit-/inklappen. */
+  .regelbalk { display:flex; gap:8px; padding:10px 18px; border-bottom:1px solid rgba(128,0,0,.08); background:#fdf9f8; flex-wrap:wrap; }
+  .regelbalk button { font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; border-radius:999px; padding:7px 14px; cursor:pointer; min-height:38px;
+                      background:var(--brand-soft); color:var(--brand); border:1px solid var(--brand-line); }
+  .regelbalk button:hover { background:rgba(128,0,0,.14); }
+  .regelbalk button:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+
   .body { padding:14px 16px 8px; display:flex; flex-direction:column; gap:14px; }
 
   /* ---- Tegel (niveau 0) ---- */
@@ -42,13 +50,10 @@
   .t0 { display:block; width:100%; text-align:left; background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:15px 18px 5px; -webkit-tap-highlight-color:transparent; }
   .t0:focus-visible { outline:2px solid var(--brand); outline-offset:-3px; border-radius:16px; }
   .groen .t0:focus-visible { outline-color:var(--groen); }
-  .tkop { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
-  .tkop h2 { font-size:15.5px; font-weight:700; margin:0; color:var(--brand); }
+  .tkop { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
+  .tkop h2 { font-size:15.5px; font-weight:700; margin:0; color:var(--brand); flex:1 1 auto; }
   .groen .tkop h2 { color:var(--groen); }
-  .tkop .telling { font-size:11.5px; color:var(--ink-flauw); margin-left:auto; white-space:nowrap; }
-  .badge { font-family:'Poppins',sans-serif; font-weight:600; font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; padding:3px 8px; border-radius:999px; white-space:nowrap; }
-  .badge.redactie { color:var(--groen); background:var(--groen-soft); border:1px solid var(--groen-line); }
-  .badge.overheid { color:var(--brand); background:var(--brand-soft); border:1px solid var(--brand-line); }
+  .tkop .telling { font-size:11.5px; color:var(--ink-flauw); white-space:nowrap; flex:0 0 auto; align-self:center; }
 
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.3;transform:scale(1.5);} }
   .dot { width:8px; height:8px; border-radius:999px; background:var(--groen); display:inline-block; animation:pulse 1.7s ease-in-out infinite; flex:0 0 auto; align-self:center; }
@@ -66,23 +71,26 @@
   .chev { transition:transform .2s; font-size:11px; display:inline-block; }
   [aria-expanded="true"] .chev { transform:rotate(180deg); }
 
-  .reveal { max-height:0; overflow:hidden; transition:max-height .3s ease; }
-  .reveal.open { max-height:6000px; }
-  @media (prefers-reduced-motion:reduce){ .reveal{transition:none;} }
+  /* Uitklappen zonder hoogte-cap: gewoon tonen/verbergen (nooit afgekapt). */
+  .reveal { display:none; }
+  .reveal.open { display:block; animation:vouwin .22s ease; }
+  @keyframes vouwin { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+  @media (prefers-reduced-motion:reduce){ .reveal.open{ animation:none; } }
 
   /* ---- Artikel (niveau 1) ---- */
-  .artikelen { padding:2px 14px 12px; }
+  .artikelen { padding:2px 14px 6px; }
   .artikel { border:1px solid var(--brand-line); border-radius:12px; margin-top:10px; overflow:hidden; background:#fff; }
   .groen .artikel { border-color:var(--groen-line); }
   .t1 { display:block; width:100%; text-align:left; background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:12px 14px; }
   .t1:focus-visible { outline:2px solid var(--brand); outline-offset:-3px; }
   .groen .t1:focus-visible { outline-color:var(--groen); }
   .t1 .atitel { font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; color:var(--ink); display:flex; gap:8px; align-items:baseline; }
-  .t1 .atitel .chev { margin-left:auto; color:var(--ink-flauw); }
+  .t1 .atitel .att { flex:1 1 auto; }
+  .t1 .atitel .chev { flex:0 0 auto; color:var(--ink-flauw); align-self:flex-start; margin-top:3px; }
   .t1 .asum { font-size:13px; color:var(--ink-zacht); margin-top:3px; }
 
   /* ---- Volledige NL-tekst (niveau 2) ---- */
-  .uitleg .binnen { padding:2px 14px 14px; }
+  .uitleg .binnen { padding:2px 14px 12px; }
   .synthese { font-size:13.5px; color:var(--ink); line-height:1.62; }
   .synthese p { margin:0 0 9px; }
   .synthese p:last-child { margin-bottom:0; }
@@ -102,6 +110,14 @@
   .bron .m { font-size:11px; color:var(--ink-flauw); }
   .bron .m .bn { font-family:'Poppins',sans-serif; font-weight:600; color:var(--ink-zacht); }
 
+  /* Sluiten-knopjes. */
+  .sluit { display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-family:'Poppins',sans-serif; font-weight:600; font-size:11.5px; color:var(--ink-zacht); padding:6px 2px; }
+  .sluit:hover { color:var(--brand); }
+  .groen .sluit:hover { color:var(--groen); }
+  .sluit:focus-visible { outline:2px solid var(--brand); outline-offset:2px; border-radius:6px; }
+  .sluit-tegel-wrap { padding:2px 16px 14px; }
+  .art-sluit { margin-top:6px; }
+
   /* ---- Agenda (plat) ---- */
   .plat { padding:15px 18px 14px; }
   .agenda-rij { display:flex; gap:12px; padding:7px 0; border-bottom:1px solid var(--groen-line); }
@@ -109,6 +125,8 @@
   .agenda-rij .dat { font-family:'Poppins',sans-serif; font-weight:600; font-size:12px; color:var(--groen); flex:0 0 118px; }
   .agenda-rij .watt { font-size:13.5px; }
   .agenda-rij .watt .sub { color:var(--ink-flauw); font-size:11.5px; }
+  .agenda-link { margin-top:11px; padding-top:10px; border-top:1px solid var(--groen-line); font-size:12.5px; }
+  .agenda-link a { color:var(--groen); font-family:'Poppins',sans-serif; font-weight:600; }
 
   /* ---- Schoolvakanties ---- */
   .vak .plat h2 { color:var(--groen); margin:0 0 6px; font-size:15px; }
@@ -129,6 +147,10 @@
     <h1>Actueel — Frankrijknieuws</h1>
     <div class="sub" id="sub">wordt geladen…</div>
   </div>
+  <div class="regelbalk" id="regelbalk" style="display:none">
+    <button type="button" id="allesUit">Alles uitklappen</button>
+    <button type="button" id="allesIn">Alles inklappen</button>
+  </div>
   <div class="body" id="body">
     <div class="laden">Nieuws wordt opgehaald…</div>
   </div>
@@ -138,9 +160,11 @@
 <script>
 (function(){
   "use strict";
+  var VERENIGINGEN_PAGINA = "https://www.nederlanders.fr/page/nederlandse-verenigingen-in-frankrijk";
   var bodyEl = document.getElementById("body");
   var subEl = document.getElementById("sub");
   var statusEl = document.getElementById("bronstatus");
+  var regelbalk = document.getElementById("regelbalk");
 
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function datum(iso){ try{ var d=new Date(iso); return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
@@ -165,33 +189,35 @@
       : "";
     return '<div class="artikel">'+
       '<button class="t1" type="button" aria-expanded="false" aria-controls="'+uid+'">'+
-        '<span class="atitel">'+esc(a.titel)+' <span class="chev">▾</span></span>'+
+        '<span class="atitel"><span class="att">'+esc(a.titel)+'</span> <span class="chev">▾</span></span>'+
         (a.summary?'<span class="asum">'+esc(a.summary)+'</span>':'')+
       '</button>'+
       '<div class="reveal uitleg" id="'+uid+'"><div class="binnen">'+
         (t.soort==="pers" && a.label ? '<div class="redlabel">'+esc(a.label)+'</div>' : "")+
         '<div class="synthese">'+paras+'</div>'+
         bronBlok+
+        '<div class="art-sluit"><button class="sluit sluit-art" type="button">▲ Sluiten</button></div>'+
       '</div></div>'+
     '</div>';
   }
 
   function tegelHTML(t, ti){
     var arts = t.artikelen || [];
-    var badge = t.accent==="brand" ? "overheid" : "redactie";
     var bullets = arts.slice(0,6).map(function(a){ return "<li>"+esc(a.titel)+"</li>"; }).join("");
     if (arts.length>6) bullets += '<li class="meer">+'+(arts.length-6)+" meer</li>";
     return '<article class="tegel '+(t.accent==="groen"?"groen":"")+'">'+
       '<button class="t0" type="button" aria-expanded="false" aria-controls="l1-'+ti+'">'+
         '<div class="tkop">'+(t.hot?'<span class="dot"></span>':"")+
           '<h2>'+esc(t.label)+'</h2>'+
-          '<span class="badge '+badge+'">'+esc(t.badge)+'</span>'+
           '<span class="telling">'+arts.length+" "+meerv(arts.length)+'</span>'+
         '</div>'+
         '<ul class="bullets">'+bullets+'</ul>'+
         '<div class="balk"><span class="chev">▾</span><span>Toon de '+arts.length+" "+meerv(arts.length)+'</span></div>'+
       '</button>'+
-      '<div class="reveal artikelen" id="l1-'+ti+'">'+arts.map(function(a,ai){ return artikelHTML(t,ti,a,ai); }).join("")+'</div>'+
+      '<div class="reveal artikelen" id="l1-'+ti+'">'+
+        arts.map(function(a,ai){ return artikelHTML(t,ti,a,ai); }).join("")+
+        '<div class="sluit-tegel-wrap"><button class="sluit sluit-tegel" type="button">▲ Tegel sluiten</button></div>'+
+      '</div>'+
     '</article>';
   }
 
@@ -204,7 +230,9 @@
     }).join("");
     return '<article class="tegel groen"><div class="plat">'+
       '<div class="tkop"><h2>Agenda — komende twee weken</h2><span class="telling">'+agenda.length+' activiteiten</span></div>'+
-      rijen+'</div></article>';
+      rijen+
+      '<div class="agenda-link"><a href="'+VERENIGINGEN_PAGINA+'" target="_top" rel="noopener">Alle Nederlandse verenigingen in Frankrijk →</a></div>'+
+      '</div></article>';
   }
 
   function vakantieHTML(v){
@@ -224,6 +252,7 @@
       html = '<div class="leeg">Op dit moment is er geen nieuws opgehaald.</div>';
     }
     bodyEl.innerHTML = html;
+    regelbalk.style.display = tegels.length ? "" : "none";
     subEl.textContent = "Bijgewerkt " + datum(data.bijgewerkt);
     renderStatus(data.bronStatus||[]);
     report();
@@ -238,23 +267,52 @@
     }).join("");
   }
 
-  // Uitklappen: elke knop met aria-controls togglet zijn doel. Op niveau 0 krijgt
-  // de tegel ook de .open-highlight. Na elke toggle de hoogte opnieuw melden.
-  bodyEl.addEventListener("click", function(e){
-    var btn = e.target.closest("[aria-controls]");
-    if (!btn || !bodyEl.contains(btn)) return;
+  function zetOpen(btn, open){
     var doel = document.getElementById(btn.getAttribute("aria-controls"));
     if (!doel) return;
-    var open = doel.classList.toggle("open");
+    doel.classList.toggle("open", open);
     btn.setAttribute("aria-expanded", open ? "true" : "false");
     if (btn.classList.contains("t0")){
       var tegel = btn.closest(".tegel");
       if (tegel) tegel.classList.toggle("open", open);
     }
+  }
+
+  bodyEl.addEventListener("click", function(e){
+    var sluitTegel = e.target.closest(".sluit-tegel");
+    if (sluitTegel){
+      var tg = sluitTegel.closest(".tegel");
+      var t0 = tg && tg.querySelector(".t0");
+      if (t0) zetOpen(t0, false);
+      if (tg) tg.scrollIntoView({ block:"nearest" });
+      report(); return;
+    }
+    var sluitArt = e.target.closest(".sluit-art");
+    if (sluitArt){
+      var art = sluitArt.closest(".artikel");
+      var t1 = art && art.querySelector(".t1");
+      if (t1) zetOpen(t1, false);
+      report(); return;
+    }
+    var btn = e.target.closest("[aria-controls]");
+    if (!btn || !bodyEl.contains(btn)) return;
+    var doel = document.getElementById(btn.getAttribute("aria-controls"));
+    if (!doel) return;
+    zetOpen(btn, !doel.classList.contains("open"));
     report();
   });
 
-  // ---- Hoogte-sync naar de moederpagina ----
+  // Alles uit-/inklappen (tegels + artikelen; bronnen blijven dicht).
+  document.getElementById("allesUit").addEventListener("click", function(){
+    bodyEl.querySelectorAll(".t0, .t1").forEach(function(b){ zetOpen(b, true); });
+    report();
+  });
+  document.getElementById("allesIn").addEventListener("click", function(){
+    bodyEl.querySelectorAll(".t0, .t1, .t2").forEach(function(b){ zetOpen(b, false); });
+    report();
+  });
+
+  // ---- Hoogte-sync naar de moederpagina (postMessage + ResizeObserver) ----
   var lastH = 0;
   function report(){
     try {
@@ -265,6 +323,10 @@
         if (h !== lastH){ lastH = h; window.parent.postMessage({ nlfrActueelHeight: h }, "*"); }
       }
     } catch(e){}
+  }
+  if (window.ResizeObserver){
+    var ro = new ResizeObserver(function(){ report(); });
+    ro.observe(document.querySelector(".card"));
   }
 
   function laad(){

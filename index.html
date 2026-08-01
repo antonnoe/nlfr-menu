@@ -239,6 +239,10 @@
   html.compact body { padding: 3px; }
   html.compact .card { border-radius: 14px; box-shadow: 0 6px 18px -14px rgba(90,0,0,.5); }
   html.compact .top { padding: 7px; gap: 7px; }
+  /* Het huisje is op mobiel overbodig: Ning's eigen mobiele balk erboven heeft
+     de sitenaam al als link naar de homepagina. Ruimte gaat naar "Alle
+     berichten", de knop waar het om gaat. */
+  html.compact .mbar .mhome { display: none; }
   html.compact .mbar { display: flex; }
   html.compact .mbar .mmenu { display: grid; }
   html.compact .mbar .mmenu.active { background: var(--brand); color: #fff; border-color: var(--brand); }

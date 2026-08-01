@@ -72,7 +72,7 @@ export default async function handler(req, res) {
       continue;
     }
     try {
-      const { samenvatting, model } = await samenvatOverheid(item);
+      const { kop, samenvatting, model } = await samenvatOverheid(item);
       const doc = {
         id,
         thema: item.thema,
@@ -80,6 +80,7 @@ export default async function handler(req, res) {
         url: item.url,
         datum: item.datum,
         titelBron: item.titel, // Franse brontitel (niet getoond, wel bewaard)
+        kop, // NL-kop voor de artikelweergave
         samenvatting, // NL
         model,
         gepubliceerdOp: new Date().toISOString(),
@@ -127,6 +128,7 @@ export default async function handler(req, res) {
       const concept = {
         id,
         sleutel: id,
+        kop: synth.kop, // korte NL-kop voor de artikelweergave
         tekst: synth.tekst,
         bronnen: synth.bronnen,
         model: synth.model,

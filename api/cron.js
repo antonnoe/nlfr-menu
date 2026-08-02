@@ -102,10 +102,12 @@ export default async function handler(req, res) {
     (i) => i.regime === "pers" && faitsDiversDoorlaat(i.titel)
   );
   const clusters = clusterItems(persItems, nu);
+  // Drempel op ONAFHANKELIJKE bronnen: twee kranten met (vrijwel) dezelfde titel
+  // zijn dezelfde wire/persbericht en tellen als één (auteursrechtelijk veiliger).
   const kandidaten = force
     ? [...clusters].sort((a, b) => b.score - a.score).slice(0, 1)
     : clusters
-        .filter((c) => c.aantalBronnen >= SYNTHESE_MIN_BRONNEN)
+        .filter((c) => c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN)
         .sort((a, b) => b.score - a.score);
   const limiet = force ? 1 : MAX_SYNTHESE_PER_RONDE;
 
@@ -162,7 +164,7 @@ export default async function handler(req, res) {
     pers: {
       naZeef: persItems.length,
       clusters: clusters.length,
-      geschiktVoorSynthese: clusters.filter((c) => c.aantalBronnen >= SYNTHESE_MIN_BRONNEN).length,
+      geschiktVoorSynthese: clusters.filter((c) => c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN).length,
       nieuweConcepten: nieuwConcept,
       verwerkt: persVerwerkt,
     },

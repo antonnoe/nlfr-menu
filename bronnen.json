@@ -164,8 +164,9 @@
       "taal": "fr",
       "prioriteit": 3,
       "actief": true,
+      "vensterDagen": 14,
       "verificatie": "te-testen",
-      "_opmerking": "Actualités-feed (brèves, articles, dossiers). Juiste RSS-URL door Anton aangeleverd op 03-08-2026; de oude rss.xml gaf 0 items. Verifieer op Vercel via de bron-status."
+      "_opmerking": "Actualités-feed (brèves, articles, dossiers). Juiste RSS-URL door Anton aangeleverd op 03-08-2026; de oude rss.xml gaf 0 items. Venster op 14 dagen (trage publicatie) i.p.v. de standaard 72u. Verifieer op Vercel via de bron-status."
     },
     {
       "naam": "Infofrankrijk",

@@ -12,7 +12,9 @@
   Overheid / NL'ers in FR / Archief) filteren de tegels; per tegel 4-niveau
   drill-down (tegel -> artikel -> NL-tekst -> Bronnen). Icoontegels (inline SVG),
   getinte koppen, warme schaduw. Vaste-hoogte paneel met interne scroll; hoogte
-  via postMessage. Geen scrollIntoView (verschuift de host).
+  via postMessage. Nooit scrollIntoView(): dat scrollt ook de voorouders en dus
+  de moederpagina. Scrollen gebeurt uitsluitend met scrollerEl.scrollTo(), wat
+  gegarandeerd binnen de eigen scrollcontainer blijft.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,11 +68,25 @@
   .tab:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
   @media (min-width:600px){ .tab{ min-height:36px; } }
 
-  /* Scroller (enige scrollcontainer) */
+  /* Scroller (enige scrollcontainer) + de vervaag-rand eronder.
+     De wrap vult de 1fr-rij van het paneel; min-height:0 houdt de scroller
+     binnen die rij in plaats van hem te laten uitdijen. */
+  .scrollwrap{ position:relative; min-height:0; display:grid; }
   .scroller{ overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:10px; padding:12px; animation:paneelin 120ms ease; }
   .scroller > *{ flex:none; }
   @media (min-width:600px){ .scroller{ padding:20px; gap:12px; } }
   @keyframes paneelin{ from{opacity:0;} to{opacity:1;} }
+
+  /* "Hier zit meer"-signaal: vaste vervaag-rand onderaan het scrollpaneel.
+     Alleen zichtbaar zolang er inhoud onder de vouw zit (klasse .aan, gezet
+     door werkVervaagBij()); vervaagt zodra het einde in beeld komt. Vangt geen
+     klikken (pointer-events:none), zodat de knoppen eronder bereikbaar blijven.
+     De doorzichtige stop is bewust rgba(...,0) en niet `transparent`: sommige
+     browsers interpoleren `transparent` via zwart en geven dan een grijze waas. */
+  .vervaag{ position:absolute; left:1px; right:1px; bottom:0; height:44px; pointer-events:none; z-index:1;
+            background:linear-gradient(to bottom, rgba(253,249,248,0) 0%, rgba(253,249,248,.72) 55%, var(--bg) 100%);
+            opacity:0; transition:opacity 220ms cubic-bezier(.2,.6,.3,1); }
+  .vervaag.aan{ opacity:1; }
 
   /* ---- Tegel (niveau 1) ---- */
   .tegel{ background:var(--kaart); border:1px solid var(--c-rand); border-radius:12px; overflow:hidden; box-shadow:var(--sh-rust); transition:box-shadow 180ms cubic-bezier(.2,.6,.3,1); }
@@ -201,7 +217,10 @@
     <span class="bijwerk"><svg class="ic" aria-hidden="true"><use href="#ic-klok"/></svg><span id="bijwerk">wordt geladen…</span></span>
   </div>
   <div class="tabs" id="tabs" role="tablist" aria-label="Categorieën"></div>
-  <div class="scroller" id="scroller"></div>
+  <div class="scrollwrap">
+    <div class="scroller" id="scroller"></div>
+    <div class="vervaag" id="vervaag" aria-hidden="true"></div>
+  </div>
   <div class="status" id="status"></div>
 </div>
 
@@ -210,6 +229,7 @@
   "use strict";
   var VERENIGINGEN_PAGINA = "https://www.nederlanders.fr/page/nederlandse-verenigingen-in-frankrijk";
   var scrollerEl = document.getElementById("scroller");
+  var vervaagEl = document.getElementById("vervaag");
   var tabsEl = document.getElementById("tabs");
   var statusEl = document.getElementById("status");
   var bijwerkEl = document.getElementById("bijwerk");
@@ -403,6 +423,33 @@
     }).join("");
   }
 
+  // ---- Scroll-zichtbaarheid ---------------------------------------------
+  // 1) Vervaag-rand: aan zolang er nog inhoud ONDER de vouw zit. De marge van
+  //    8px voorkomt dat de rand blijft hangen op subpixel-resten aan het einde.
+  var VERVAAG_MARGE = 8;
+  function werkVervaagBij(){
+    if(!vervaagEl) return;
+    var rest = scrollerEl.scrollHeight - scrollerEl.clientHeight - scrollerEl.scrollTop;
+    vervaagEl.classList.toggle("aan", rest > VERVAAG_MARGE);
+  }
+
+  // 2) Openklappen brengt de tegelkop bovenaan het zichtbare deel. Bewust
+  //    scrollTo() op de scroller zelf en niet scrollIntoView(): die laatste
+  //    scrollt ook de voorouders mee en zou de moederpagina verspringen.
+  var ZACHT_UIT = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  function scrollNaarTegel(tg){
+    if(!tg) return;
+    requestAnimationFrame(function(){ // laat de open-staat eerst uitlayouten
+      var verschil = tg.getBoundingClientRect().top - scrollerEl.getBoundingClientRect().top;
+      var max = Math.max(0, scrollerEl.scrollHeight - scrollerEl.clientHeight);
+      var doel = Math.max(0, Math.min(scrollerEl.scrollTop + verschil - 8, max));
+      if(Math.abs(doel - scrollerEl.scrollTop) < 2){ werkVervaagBij(); return; }
+      try{ scrollerEl.scrollTo({ top:doel, behavior: ZACHT_UIT ? "auto" : "smooth" }); }
+      catch(e){ scrollerEl.scrollTop = doel; }
+      werkVervaagBij();
+    });
+  }
+
   function werkAllesLabelBij(){
     var koppen = scrollerEl.querySelectorAll(".kop");
     var allesOpen = koppen.length>0 && Array.prototype.every.call(koppen, function(k){ return k.getAttribute("aria-expanded")==="true"; });
@@ -455,6 +502,9 @@
     if(wantOpen) open[id]=true; else delete open[id];
     save("nlfr_open", open);
     werkAllesLabelBij(); meldHoogte();
+    // Alleen bij OPENklappen naar de tegel scrollen; bij inklappen blijft de
+    // scrollpositie staan waar de lezer hem had.
+    if(wantOpen) scrollNaarTegel(tg);
   }
 
   allesBtn.addEventListener("click", function(){
@@ -481,6 +531,10 @@
     return (bar?bar.offsetHeight:0)+(tabsEl.offsetHeight||0)+(scrollerEl.scrollHeight||0)+(st.offsetHeight||0)+4;
   }
   function meldHoogte(){
+    // Elke inhoudswijziging loopt hier langs (tegel/artikel/bronnen open of
+    // dicht, tabwissel, render) — dus dit is ook het punt om de vervaag-rand
+    // bij te werken. Bewust vóór de debounce-guard: de rand moet meteen kloppen.
+    werkVervaagBij();
     if(hTimer) return;
     hTimer = setTimeout(function(){
       hTimer=null;
@@ -498,8 +552,13 @@
       parentVenster=e.data.nlfrViewport; lastH=0; meldHoogte();
     }
   });
-  if(window.ResizeObserver){ new ResizeObserver(function(){ meldHoogte(); }).observe(scrollerEl); }
-  scrollerEl.addEventListener("scroll", function(){ save("nlfr_scroll", scrollerEl.scrollTop); });
+  // Verandert de paneelhoogte (moederpagina groeit/krimpt het iframe), dan
+  // verandert ook of er nog iets onder de vouw zit.
+  if(window.ResizeObserver){ new ResizeObserver(function(){ meldHoogte(); werkVervaagBij(); }).observe(scrollerEl); }
+  scrollerEl.addEventListener("scroll", function(){
+    save("nlfr_scroll", scrollerEl.scrollTop);
+    werkVervaagBij();
+  }, { passive:true });
 
   function laad(){
     Promise.all([
@@ -512,6 +571,8 @@
       renderStatus(data.bronStatus||[]);
       render();
       var sc = load("nlfr_scroll", 0); if(sc){ scrollerEl.scrollTop = sc; }
+      // Direct bij laden: staat er meer onder de vouw, dan meteen de rand tonen.
+      werkVervaagBij();
     });
   }
 

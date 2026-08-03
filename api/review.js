@@ -13,7 +13,7 @@
 import crypto from "node:crypto";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { buitenlandDoorlaatNL } from "../lib/feeds.js";
-import { beoordeelPublicatie, structureelGeldig } from "../lib/poort.js";
+import { beoordeelPublicatie, structureelGeldig, isPersConcept } from "../lib/poort.js";
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
@@ -214,9 +214,26 @@ export default async function handler(req, res) {
 
     // Bulk-acties zonder id: opruimen van de conceptenberg.
     if (actie === "wis-alles") {
+      // Uitsluitend PERSCONCEPTEN in de wachtrij. Deze route scant alleen
+      // actueel:concept:* — gepubliceerde persartikelen (actueel:publicatie:*)
+      // en overheidsrecords (actueel:overheid:*, inclusief hun levenscyclus)
+      // liggen buiten dat patroon en worden dus sowieso niet geraakt. De
+      // expliciete isPersConcept-toets houdt daarbovenop concepten van
+      // overheids-, Infofrankrijk- en verenigingsbronnen buiten schot, mocht er
+      // ooit zo'n concept in de wachtrij belanden.
       const alle = await listJSON(SCAN_CONCEPT);
-      for (const c of alle) if (c && c.id) await del(KEY_CONCEPT(c.id));
-      return res.status(200).json({ ok: true, verwijderd: alle.length });
+      let verwijderd = 0;
+      let overgeslagen = 0;
+      for (const c of alle) {
+        if (!c || !c.id) continue;
+        if (!isPersConcept(c)) {
+          overgeslagen += 1;
+          continue;
+        }
+        await del(KEY_CONCEPT(c.id));
+        verwijderd += 1;
+      }
+      return res.status(200).json({ ok: true, verwijderd, overgeslagen });
     }
     if (actie === "ontdubbel") {
       const alle = await listJSON(SCAN_CONCEPT);

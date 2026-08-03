@@ -32,7 +32,9 @@ import {
   KEY_AFGEWEZEN,
   KEY_OVERHEID,
   SCAN_CONCEPT,
+  SCAN_OVERHEID,
 } from "../lib/config.js";
+import { dedupOverheid, alBekend, overheidSleutel } from "../lib/overheid.js";
 
 function leesForce(req) {
   let f = req && req.query ? req.query.force : undefined;
@@ -67,9 +69,22 @@ export default async function handler(req, res) {
   const { items } = await haalAlleItems(nu);
 
   // ---- 1) OVERHEID: nieuwe items -> NL-samenvatting, direct live -----------
+  // Eerst de bestaande voorraad ontdubbelen. Service-Public publiceert dezelfde
+  // actualité op de particuliers- én de professionnels-feed, met verschillende
+  // URL's; op de oude URL-sleutel werden dat twee records met elk een eigen
+  // samenvatting. dedupOverheid() groepeert op het actualité-nummer (A18905) en
+  // houdt per groep het OUDSTE record, zodat de levenscyclus intact blijft (zie
+  // lib/overheid.js). Draait elke ronde, dus de huidige tweelingen verdwijnen
+  // bij de eerstvolgende cron.
+  const overheidVoorraad = await listJSON(SCAN_OVERHEID);
+  const { behouden: overheidBehouden, weg: overheidWeg } = dedupOverheid(overheidVoorraad);
+  for (const d of overheidWeg) if (d && d.id) await del(KEY_OVERHEID(d.id));
+  const overheidSamengevoegd = overheidWeg.length;
+
   const overheidItems = items.filter((i) => OVERHEID_THEMAS.includes(i.thema));
   const overheidVerwerkt = [];
   let nieuwOverheid = 0;
+  let overheidDubbelOvergeslagen = 0;
   for (const item of overheidItems) {
     if (nieuwOverheid >= MAX_OVERHEID_PER_RONDE) break;
     const id = hashId(item.url);
@@ -77,10 +92,22 @@ export default async function handler(req, res) {
       overheidVerwerkt.push({ id, status: "overgeslagen" });
       continue;
     }
+    // Zelfde bericht, andere feed of andere tracking-parameter? Dan geen tweede
+    // record en geen tweede AI-call. Dit vangt ook een gewijzigde ?xtor=-waarde,
+    // die anders een "nieuw" bericht zou lijken en de levenscyclus zou resetten.
+    if (alBekend(item, overheidBehouden)) {
+      overheidDubbelOvergeslagen += 1;
+      overheidVerwerkt.push({ id, status: "duplicaat-overgeslagen", bron: item.bron });
+      continue;
+    }
     try {
       const { kop, samenvatting, model } = await samenvatOverheid(item);
       const doc = {
         id,
+        // Actualité-nummer (A18905) als dat in de URL zit: de identiteit die
+        // over alle feeds heen gelijk is. Null voor bronnen zonder zo'n nummer;
+        // die vallen terug op de titelvergelijking.
+        sleutel: overheidSleutel(item.url),
         thema: item.thema,
         bron: item.bron,
         url: item.url,
@@ -92,6 +119,7 @@ export default async function handler(req, res) {
         gepubliceerdOp: new Date().toISOString(),
       };
       await setJSON(KEY_OVERHEID(id), doc, OVERHEID_TTL_S);
+      overheidBehouden.push(doc); // volgende items in deze ronde hiertegen dedupen
       nieuwOverheid += 1;
       overheidVerwerkt.push({ id, status: "live", bron: item.bron });
     } catch (e) {
@@ -284,6 +312,9 @@ export default async function handler(req, res) {
     overheid: {
       kandidaten: overheidItems.length,
       nieuwLive: nieuwOverheid,
+      samengevoegd: overheidSamengevoegd, // dubbele records uit de voorraad gehaald
+      dubbelOvergeslagen: overheidDubbelOvergeslagen, // instroom die al bestond
+      voorraad: overheidBehouden.length,
       verwerkt: overheidVerwerkt,
     },
     pers: {

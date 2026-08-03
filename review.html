@@ -163,7 +163,7 @@
     html += '<div class="balk"><span class="tel">'+state.concepten.length+' concept'+(state.concepten.length===1?"":"en")+
       (state.duplicaten?' · '+state.duplicaten+' duplicaten':"")+'</span>';
     if (state.duplicaten){ html += '<button id="ontdubbel">Ontdubbelen ('+state.duplicaten+')</button>'; }
-    if (state.totaal){ html += '<button id="wisAlles" class="gevaar">Alle concepten wissen</button>'; }
+    if (state.totaal){ html += '<button id="wisAlles" class="gevaar" title="Leegt alleen de wachtrij met persconcepten. Gepubliceerde artikelen en de overheidsberichten blijven staan.">Wachtrij persconcepten wissen</button>'; }
     html += '</div>';
 
     if (!state.concepten.length){
@@ -241,10 +241,13 @@
     });
     var wisAllesBtn = document.getElementById("wisAlles");
     if (wisAllesBtn) wisAllesBtn.addEventListener("click", function(){
-      if (!window.confirm("Alle concepten wissen? Dit verwijdert alle "+state.totaal+" concepten (publicaties blijven).")) return;
+      if (!window.confirm("De wachtrij met "+state.totaal+" persconcepten wissen?\n\nAlleen nog niet gepubliceerde persconcepten verdwijnen. Gepubliceerde artikelen, de overheidsberichten (live én archief) en de verenigingsitems blijven ongewijzigd.")) return;
       wisAllesBtn.disabled = true; wisAllesBtn.textContent = "…";
       api("POST", { actie: "wis-alles" }).then(function(res){
-        if (res.ok && res.data.ok){ melding("Alle concepten gewist ("+res.data.verwijderd+").", "info"); laad(); }
+        if (res.ok && res.data.ok){
+          melding("Persconcepten gewist ("+res.data.verwijderd+")."+(res.data.overgeslagen?" Overgeslagen (geen persconcept): "+res.data.overgeslagen+".":""), "info");
+          laad();
+        }
         else { melding((res.data&&res.data.fout)||"Mislukt.", "fout"); wisAllesBtn.disabled=false; }
       });
     });

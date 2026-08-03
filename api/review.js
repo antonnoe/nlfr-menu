@@ -263,6 +263,22 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    if (actie === "archiveer") {
+      // Handmatig naar de Archief-tegel schuiven (i.p.v. wachten op de
+      // automatische 48 u). De originele publicatietijd blijft staan, zodat de
+      // "blijft nog X dagen" en de 14-daagse TTL ongewijzigd doorlopen.
+      const pub = await getJSON(KEY_PUBLICATIE(id));
+      if (!pub) {
+        return res.status(404).json({ ok: false, fout: "Publicatie niet gevonden." });
+      }
+      pub.gearchiveerd = true;
+      pub.gearchiveerdOp = new Date().toISOString();
+      const gepubT = Date.parse(pub.gepubliceerdOp) || Date.now();
+      const rest = Math.max(60, Math.round(PUBLICATIE_TTL_S - (Date.now() - gepubT) / 1000));
+      await setJSON(KEY_PUBLICATIE(id), pub, rest); // TTL blijft op het 14-daagse eindpunt
+      return res.status(200).json({ ok: true, publicatie: pub });
+    }
+
     if (actie === "verwijder-overheid") {
       // Kill-switch voor een automatisch gepubliceerd overheidsbericht.
       await del(KEY_OVERHEID(id));

@@ -104,15 +104,21 @@ export default async function handler(req, res) {
     (i) => i.regime === "pers" && faitsDiversDoorlaat(i.titel)
   );
   const clusters = clusterItems(persItems, nu);
-  // Drempel op ONAFHANKELIJKE bronnen: twee kranten met (vrijwel) dezelfde titel
-  // zijn dezelfde wire/persbericht en tellen als één (auteursrechtelijk veiliger).
+  // Synthese-drempel (auteursrechtelijk hard): een verhaal moet door minstens
+  // SYNTHESE_MIN_BRONNEN VERSCHILLENDE kranten zijn gebracht (aantalBronnen), én
+  // door evenveel ONAFHANKELIJKE (niet-wire-copy) berichten (onafhankelijkeBronnen).
+  //   - aantalBronnen >= 2  -> niet uit één krant (twee artikelen van Le Figaro
+  //     over hetzelfde onderwerp tellen NIET als bevestiging).
+  //   - onafhankelijkeBronnen >= 2 -> twee kranten die exact dezelfde wire
+  //     overnemen tellen samen als één (geen schijnbevestiging).
+  const geschiktVoorSynthese = (c) =>
+    c.aantalBronnen >= SYNTHESE_MIN_BRONNEN &&
+    c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN;
   // Prioriteit zit al in cluster.score verwerkt (boost), dus sorteren op score
   // brengt belangrijk nieuws vanzelf bovenaan.
   const kandidaten = force
     ? [...clusters].sort((a, b) => b.score - a.score).slice(0, 1)
-    : clusters
-        .filter((c) => c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN)
-        .sort((a, b) => b.score - a.score);
+    : clusters.filter(geschiktVoorSynthese).sort((a, b) => b.score - a.score);
 
   // Auto-prune: snoei de conceptenberg elke ronde terug tot MAX_OPENSTAANDE_
   // CONCEPTEN. Behoud de BESTE (score = bronnen × recency × prioriteitsboost) en
@@ -225,7 +231,7 @@ export default async function handler(req, res) {
     pers: {
       naZeef: persItems.length,
       clusters: clusters.length,
-      geschiktVoorSynthese: clusters.filter((c) => c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN).length,
+      geschiktVoorSynthese: clusters.filter(geschiktVoorSynthese).length,
       openstaandeConcepten: openstaand,
       gesnoeid,
       ruimteVoorNieuwe: force ? "force" : ruimte,

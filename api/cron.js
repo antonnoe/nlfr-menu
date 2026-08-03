@@ -13,19 +13,21 @@
 
 import { haalAlleItems, faitsDiversDoorlaat, hashId } from "../lib/feeds.js";
 import { clusterItems } from "../lib/cluster.js";
-import { getJSON, setJSON, kvBeschikbaar } from "../lib/store.js";
+import { getJSON, setJSON, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { synthetiseer, samenvatOverheid } from "../lib/synthese.js";
 import {
   CONCEPT_TTL_S,
   OVERHEID_TTL_S,
   MAX_SYNTHESE_PER_RONDE,
   MAX_OVERHEID_PER_RONDE,
+  MAX_OPENSTAANDE_CONCEPTEN,
   SYNTHESE_MIN_BRONNEN,
   OVERHEID_THEMAS,
   KEY_CONCEPT,
   KEY_PUBLICATIE,
   KEY_AFGEWEZEN,
   KEY_OVERHEID,
+  SCAN_CONCEPT,
 } from "../lib/config.js";
 
 function leesForce(req) {
@@ -109,7 +111,11 @@ export default async function handler(req, res) {
     : clusters
         .filter((c) => c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN)
         .sort((a, b) => b.score - a.score);
-  const limiet = force ? 1 : MAX_SYNTHESE_PER_RONDE;
+  // Rem: geen nieuwe concepten meer boven MAX_OPENSTAANDE_CONCEPTEN (voorkomt
+  // een onbehandelbare berg). Force negeert de rem (test).
+  const openstaand = (await listJSON(SCAN_CONCEPT)).length;
+  const ruimte = Math.max(0, MAX_OPENSTAANDE_CONCEPTEN - openstaand);
+  const limiet = force ? 1 : Math.min(MAX_SYNTHESE_PER_RONDE, ruimte);
 
   const persVerwerkt = [];
   let nieuwConcept = 0;
@@ -165,6 +171,8 @@ export default async function handler(req, res) {
       naZeef: persItems.length,
       clusters: clusters.length,
       geschiktVoorSynthese: clusters.filter((c) => c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN).length,
+      openstaandeConcepten: openstaand,
+      ruimteVoorNieuwe: force ? "force" : ruimte,
       nieuweConcepten: nieuwConcept,
       verwerkt: persVerwerkt,
     },

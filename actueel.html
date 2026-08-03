@@ -39,6 +39,7 @@
                       background:var(--brand-soft); color:var(--brand); border:1px solid var(--brand-line); }
   .regelbalk button:hover { background:rgba(128,0,0,.14); }
   .regelbalk button:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+  .regelbalk .bijwerk { margin-left:auto; align-self:center; font-size:12px; color:var(--ink-zacht); white-space:nowrap; }
 
   .body { flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 16px 8px; }
   #inner { display:flex; flex-direction:column; gap:14px; }
@@ -147,13 +148,10 @@
 </head>
 <body>
 <div class="card">
-  <div class="head">
-    <h1>Actueel — Frankrijknieuws</h1>
-    <div class="sub" id="sub">wordt geladen…</div>
-  </div>
-  <div class="regelbalk" id="regelbalk" style="display:none">
+  <div class="regelbalk" id="regelbalk">
     <button type="button" id="allesUit">Alles uitklappen</button>
     <button type="button" id="allesIn">Alles inklappen</button>
+    <span class="bijwerk" id="sub">wordt geladen…</span>
   </div>
   <div class="body" id="body">
     <div id="inner"><div class="laden">Nieuws wordt opgehaald…</div></div>
@@ -257,7 +255,6 @@
       html = '<div class="leeg">Op dit moment is er geen nieuws opgehaald.</div>';
     }
     innerEl.innerHTML = html;
-    regelbalk.style.display = tegels.length ? "" : "none";
     subEl.textContent = "Bijgewerkt " + datum(data.bijgewerkt);
     renderStatus(data.bronStatus||[]);
     report();
@@ -318,25 +315,38 @@
   });
 
   // ---- Hoogte-sync naar de moederpagina (postMessage + ResizeObserver) ----
-  // De iframe-hoogte wordt gecapt zodat kop + knoppenbalk altijd zichtbaar
-  // blijven en de inhoud intern scrollt (interne scrollbalk) als het niet past.
-  var CAP = Math.max(520, Math.min(900, Math.round(((window.screen && window.screen.height) || 800) * 0.82)));
+  // De knoppenbalk + bronstatus blijven vastgepind; de inhoud scrollt ertussen.
+  // De iframe-hoogte is gecapt op de beschikbare vensterhoogte, zodat het paneel
+  // zo hoog mogelijk is zónder dat de knoppenbalk uit beeld scrollt. De
+  // moederpagina mag die hoogte doorgeven via postMessage({nlfrViewport}); zo
+  // niet, dan valt hij terug op een schatting uit de schermhoogte.
+  var parentVenster = 0; // door de moederpagina gemeld (px)
+  function cap(){
+    if (parentVenster > 0) return Math.max(420, parentVenster - 8);
+    var s = (window.screen && window.screen.height) || 900;
+    return Math.max(640, Math.min(1200, Math.round(s * 0.9)));
+  }
   var lastH = 0;
   function natuurlijkeHoogte(){
-    var head = document.querySelector(".head");
-    return (head ? head.offsetHeight : 0) +
-           (regelbalk.offsetHeight || 0) +
+    return (regelbalk.offsetHeight || 0) +
            (innerEl.scrollHeight || 0) +
            (statusEl.offsetHeight || 0) + 26; // body-padding + randen
   }
   function report(){
     try {
       if (window.parent && window.parent !== window){
-        var h = Math.min(natuurlijkeHoogte(), CAP);
+        var h = Math.min(natuurlijkeHoogte(), cap());
         if (h !== lastH){ lastH = h; window.parent.postMessage({ nlfrActueelHeight: h }, "*"); }
       }
     } catch(e){}
   }
+  window.addEventListener("message", function(e){
+    if (e.data && typeof e.data.nlfrViewport === "number" && e.data.nlfrViewport > 0){
+      parentVenster = e.data.nlfrViewport;
+      lastH = 0; // forceer een nieuwe melding
+      report();
+    }
+  });
   if (window.ResizeObserver){
     var ro = new ResizeObserver(function(){ report(); });
     ro.observe(innerEl);

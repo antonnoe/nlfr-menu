@@ -58,9 +58,9 @@
       "regime": "overheid",
       "taal": "fr",
       "prioriteit": 2,
-      "actief": true,
-      "verificatie": "te-testen",
-      "_opmerking": "Officieel bulletin sociale zekerheid (cotisations, regelingen). Directe RSS aangeleverd door Anton, 03-08-2026. Verifieer op Vercel via de bron-status."
+      "actief": false,
+      "verificatie": "geblokkeerd",
+      "_opmerking": "Uitgezet: de feed gaf herhaaldelijk een timeout vanaf Vercel (bron-status http=timeout op 03-08-2026). Server-side niet betrouwbaar bereikbaar. Later opnieuw proberen of een alternatieve URL zoeken."
     },
     {
       "naam": "NOS — Buitenland",

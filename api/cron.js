@@ -190,6 +190,14 @@ export default async function handler(req, res) {
         persVerwerkt.push({ id, status: "buitenland-geweigerd" });
         continue;
       }
+      // Het model gaf aan welke bronnen het echt gebruikte. Blijven er minder dan
+      // SYNTHESE_MIN_BRONNEN VERSCHILLENDE kranten over, dan was het cluster
+      // vervuild/één-bron (bv. losse faits-divers) -> geen concept.
+      if ((synth.onafhankelijkeGebruikt || 0) < SYNTHESE_MIN_BRONNEN) {
+        await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "te-smal" }, CONCEPT_TTL_S);
+        persVerwerkt.push({ id, status: "te-smal-geweigerd", gebruikt: synth.onafhankelijkeGebruikt || 0 });
+        continue;
+      }
       const concept = {
         id,
         sleutel: id,
@@ -197,7 +205,7 @@ export default async function handler(req, res) {
         tekst: synth.tekst,
         bronnen: synth.bronnen,
         model: synth.model,
-        aantalBronnen: cluster.aantalBronnen,
+        aantalBronnen: synth.bronnen.length, // daadwerkelijk gebruikte bronlinks
         onafhankelijkeBronnen: cluster.onafhankelijkeBronnen, // voor prune-score
         prioriteit: cluster.prioriteit, // prune-bescherming + markering
         kernTokens: cluster.kernTokens, // vingerafdruk voor cross-ronde dedup

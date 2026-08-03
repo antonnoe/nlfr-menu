@@ -11,7 +11,7 @@
 // `?force=1` negeert de bronnendrempel voor het best scorende perscluster (max.
 // 1), zodat je vóór de merge gegarandeerd één concept kunt testen.
 
-import { haalAlleItems, faitsDiversDoorlaat, hashId } from "../lib/feeds.js";
+import { haalAlleItems, faitsDiversDoorlaat, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
 import { clusterItems } from "../lib/cluster.js";
 import { getJSON, setJSON, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { synthetiseer, samenvatOverheid } from "../lib/synthese.js";
@@ -131,8 +131,23 @@ export default async function handler(req, res) {
       persVerwerkt.push({ id, status: "overgeslagen" });
       continue;
     }
+    // Buitenland-zeef vóór de synthese (bespaart een API-call): clusters waarvan
+    // de gezamenlijke brontitels het buitenland betreffen zonder Frankrijk-link.
+    const koppenBlob = cluster.items.map((i) => i.titel || "").join(" · ");
+    if (!buitenlandDoorlaatNL(koppenBlob)) {
+      await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "buitenland" }, CONCEPT_TTL_S);
+      persVerwerkt.push({ id, status: "buitenland-geweigerd" });
+      continue;
+    }
     try {
       const synth = await synthetiseer(cluster);
+      // Tweede laag: de NL-synthese kan een land noemen dat in de Franse titels
+      // ontbrak. Dan geen concept, en onthouden als afwijzing (geen regeneratie).
+      if (!buitenlandDoorlaatNL(`${synth.kop || ""} ${synth.tekst || ""}`)) {
+        await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "buitenland" }, CONCEPT_TTL_S);
+        persVerwerkt.push({ id, status: "buitenland-geweigerd" });
+        continue;
+      }
       const concept = {
         id,
         sleutel: id,

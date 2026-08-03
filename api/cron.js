@@ -11,9 +11,9 @@
 // `?force=1` negeert de bronnendrempel voor het best scorende perscluster (max.
 // 1), zodat je vóór de merge gegarandeerd één concept kunt testen.
 
-import { haalAlleItems, faitsDiversDoorlaat, hashId } from "../lib/feeds.js";
-import { clusterItems } from "../lib/cluster.js";
-import { getJSON, setJSON, listJSON, kvBeschikbaar } from "../lib/store.js";
+import { haalAlleItems, faitsDiversDoorlaat, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
+import { clusterItems, zelfdeVerhaal } from "../lib/cluster.js";
+import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { synthetiseer, samenvatOverheid } from "../lib/synthese.js";
 import {
   CONCEPT_TTL_S,
@@ -106,14 +106,44 @@ export default async function handler(req, res) {
   const clusters = clusterItems(persItems, nu);
   // Drempel op ONAFHANKELIJKE bronnen: twee kranten met (vrijwel) dezelfde titel
   // zijn dezelfde wire/persbericht en tellen als één (auteursrechtelijk veiliger).
+  // Prioriteit zit al in cluster.score verwerkt (boost), dus sorteren op score
+  // brengt belangrijk nieuws vanzelf bovenaan.
   const kandidaten = force
     ? [...clusters].sort((a, b) => b.score - a.score).slice(0, 1)
     : clusters
         .filter((c) => c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN)
         .sort((a, b) => b.score - a.score);
-  // Rem: geen nieuwe concepten meer boven MAX_OPENSTAANDE_CONCEPTEN (voorkomt
-  // een onbehandelbare berg). Force negeert de rem (test).
-  const openstaand = (await listJSON(SCAN_CONCEPT)).length;
+
+  // Auto-prune: snoei de conceptenberg elke ronde terug tot MAX_OPENSTAANDE_
+  // CONCEPTEN. Behoud de BESTE (score = bronnen × recency × prioriteitsboost) en
+  // altijd de handmatig bewerkte concepten; gooi de rest weg. Zo blijft de
+  // reviewlijst behapbaar zonder belangrijk nieuws te verliezen.
+  const CONCEPT_MS = CONCEPT_TTL_S * 1000;
+  const pruneScore = (c) => {
+    const basis = c.onafhankelijkeBronnen || c.aantalBronnen || 1;
+    const t = Date.parse(c.clusterLaatste || c.aangemaaktOp) || 0;
+    const rec = Math.max(0, 1 - (nu - t) / CONCEPT_MS);
+    return basis * (0.4 + 0.6 * rec) * (c.prioriteit ? 2 : 1);
+  };
+  let bestaande = await listJSON(SCAN_CONCEPT);
+  let gesnoeid = 0;
+  if (!force && bestaande.length > MAX_OPENSTAANDE_CONCEPTEN) {
+    const gesorteerd = [...bestaande].sort((a, b) => {
+      const ea = a.bewerktOp ? 1 : 0;
+      const eb = b.bewerktOp ? 1 : 0;
+      if (ea !== eb) return eb - ea; // bewerkte concepten altijd behouden
+      return pruneScore(b) - pruneScore(a);
+    });
+    const weg = gesorteerd.slice(MAX_OPENSTAANDE_CONCEPTEN);
+    for (const c of weg) if (c && c.id) await del(KEY_CONCEPT(c.id));
+    bestaande = gesorteerd.slice(0, MAX_OPENSTAANDE_CONCEPTEN);
+    gesnoeid = weg.length;
+  }
+
+  // Vingerafdrukken van de overgebleven concepten, voor dedup over rondes heen.
+  const bestaandeKernen = bestaande.map((c) => c.kernTokens).filter(Boolean);
+
+  const openstaand = bestaande.length;
   const ruimte = Math.max(0, MAX_OPENSTAANDE_CONCEPTEN - openstaand);
   const limiet = force ? 1 : Math.min(MAX_SYNTHESE_PER_RONDE, ruimte);
 
@@ -131,8 +161,29 @@ export default async function handler(req, res) {
       persVerwerkt.push({ id, status: "overgeslagen" });
       continue;
     }
+    // "Laatste productie wint": betreft dit cluster hetzelfde verhaal als een
+    // bestaand concept (ook al is de sleutel gedrift)? Dan geen tweede concept.
+    if (bestaandeKernen.some((k) => zelfdeVerhaal(cluster.kernTokens, k))) {
+      persVerwerkt.push({ id, status: "duplicaat-overgeslagen" });
+      continue;
+    }
+    // Buitenland-zeef vóór de synthese (bespaart een API-call): clusters waarvan
+    // de gezamenlijke brontitels het buitenland betreffen zonder Frankrijk-link.
+    const koppenBlob = cluster.items.map((i) => i.titel || "").join(" · ");
+    if (!buitenlandDoorlaatNL(koppenBlob)) {
+      await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "buitenland" }, CONCEPT_TTL_S);
+      persVerwerkt.push({ id, status: "buitenland-geweigerd" });
+      continue;
+    }
     try {
       const synth = await synthetiseer(cluster);
+      // Tweede laag: de NL-synthese kan een land noemen dat in de Franse titels
+      // ontbrak. Dan geen concept, en onthouden als afwijzing (geen regeneratie).
+      if (!buitenlandDoorlaatNL(`${synth.kop || ""} ${synth.tekst || ""}`)) {
+        await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "buitenland" }, CONCEPT_TTL_S);
+        persVerwerkt.push({ id, status: "buitenland-geweigerd" });
+        continue;
+      }
       const concept = {
         id,
         sleutel: id,
@@ -141,11 +192,15 @@ export default async function handler(req, res) {
         bronnen: synth.bronnen,
         model: synth.model,
         aantalBronnen: cluster.aantalBronnen,
+        onafhankelijkeBronnen: cluster.onafhankelijkeBronnen, // voor prune-score
+        prioriteit: cluster.prioriteit, // prune-bescherming + markering
+        kernTokens: cluster.kernTokens, // vingerafdruk voor cross-ronde dedup
         clusterLaatste: cluster.laatste, // voor de versheids-dot bij weergave
         aangemaaktOp: new Date().toISOString(),
         gepubliceerd: false,
       };
       await setJSON(KEY_CONCEPT(id), concept, CONCEPT_TTL_S);
+      bestaandeKernen.push(cluster.kernTokens); // volgende kandidaten dedupen hiertegen
       nieuwConcept += 1;
       persVerwerkt.push({ id, status: "concept-aangemaakt", bronnen: cluster.aantalBronnen });
     } catch (e) {
@@ -172,6 +227,7 @@ export default async function handler(req, res) {
       clusters: clusters.length,
       geschiktVoorSynthese: clusters.filter((c) => c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN).length,
       openstaandeConcepten: openstaand,
+      gesnoeid,
       ruimteVoorNieuwe: force ? "force" : ruimte,
       nieuweConcepten: nieuwConcept,
       verwerkt: persVerwerkt,

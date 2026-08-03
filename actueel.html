@@ -126,6 +126,7 @@
   /* ---- Niveau 3: volledige NL-tekst ---- */
   .uitleg{ display:none; padding:0 14px 14px; }
   .artikel.open .uitleg{ display:block; }
+  .artikel.open .asum{ display:none; } /* teaser is voor de dichte staat; open toont de volledige tekst — geen dubbeling */
   .uitleg .tekst{ border-left:1px solid var(--hair); padding-left:12px; display:grid; gap:10px; }
   .redlabel{ font-family:var(--body); font-weight:600; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--groen); }
   .uitleg p{ margin:0; font-size:16px; line-height:26px; color:var(--ink-body); max-width:68ch; text-wrap:pretty; }
@@ -309,10 +310,10 @@
     if (t.plat){ body = t.plat; }
     else {
       var arts = t.artikelen||[];
-      var bullets = arts.slice(0,6).map(function(a){ return "<li>"+esc(a.titel)+"</li>"; }).join("");
       var intro = t.soort==="archief" ? '<div class="archief-intro">Dit zijn de ‘oude’ artikelen die maximaal 14 dagen in het archief blijven staan.</div>' : "";
-      body = intro + '<ul class="bullets">'+bullets+'</ul>'+
-             '<div class="artikelen">'+arts.map(function(a){ return artikelHTML(cat,t,a); }).join("")+'</div>';
+      // Geen aparte bullet-lijst meer: die herhaalde exact de titels van de
+      // artikelen eronder. De artikellijst zelf ís nu het overzicht.
+      body = intro + '<div class="artikelen">'+arts.map(function(a){ return artikelHTML(cat,t,a); }).join("")+'</div>';
     }
     var catLabel = (CATS.filter(function(c){return c.key===cat;})[0]||{}).label || "";
     var telling = t.plat ? esc(t.meta||"") : meerv((t.artikelen||[]).length);

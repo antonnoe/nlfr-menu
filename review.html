@@ -47,6 +47,9 @@
   .wegbtn:hover { background:rgba(128,0,0,.12); }
   .bewaarbtn { background:rgba(128,0,0,.06); color:var(--brand); border:1px solid rgba(128,0,0,.2); }
 
+  .kop-balk { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .nb-link { flex:none; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; text-decoration:none; border-radius:999px; padding:8px 14px; min-height:40px; display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(47,107,58,.3); background:rgba(47,107,58,.08); color:var(--actueel); white-space:nowrap; margin-top:4px; }
+  .nb-link:hover { background:rgba(47,107,58,.15); }
   .melding { padding:12px 14px; border-radius:10px; margin-bottom:14px; font-size:14px; }
   .fout { background:rgba(128,0,0,.08); color:var(--brand); border:1px solid rgba(128,0,0,.25); }
   .info { background:rgba(47,107,58,.08); color:var(--actueel); border:1px solid rgba(47,107,58,.25); }
@@ -54,16 +57,27 @@
 </style>
 </head>
 <body>
-  <h1>Redactie — Actueel</h1>
-  <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 48 uur. Beoordeel ze één voor één; bewerk de tekst gerust vóór publicatie.</div>
+  <div class="kop-balk">
+    <div>
+      <h1>Redactie — Actueel</h1>
+      <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 48 uur. Beoordeel ze één voor één; bewerk de tekst gerust vóór publicatie.</div>
+    </div>
+    <a id="nbLink" class="nb-link" target="_blank" rel="noopener">Nieuwsbrief ↗</a>
+  </div>
   <div id="melding"></div>
   <div id="inhoud"><div class="leeg">Laden…</div></div>
 
 <script>
 (function(){
   "use strict";
+  // Bestemming van de "Nieuwsbrief"-knop. Wijzig alleen deze regel als de
+  // nieuwsbrief op een ander adres draait.
+  var NIEUWSBRIEF_URL = "https://nlfr-nieuwsbrief.vercel.app";
+
   var params = new URLSearchParams(location.search);
   var token = params.get("token") || "";
+  var nbEl = document.getElementById("nbLink");
+  if (nbEl){ if (NIEUWSBRIEF_URL){ nbEl.href = NIEUWSBRIEF_URL; } else { nbEl.style.display = "none"; } }
   var meldingEl = document.getElementById("melding");
   var inhoudEl = document.getElementById("inhoud");
   var state = { concepten: [], index: 0, duplicaten: 0, totaal: 0, publicaties: [], overheid: [] };
@@ -135,11 +149,14 @@
     if (!(state.publicaties||[]).length){ html += '<div class="leeg">Nog niets gepubliceerd.</div>'; }
     (state.publicaties||[]).forEach(function(p){
       html += '<div class="kaart pub" data-id="'+esc(p.id)+'">'+
-        '<div class="meta">gepubliceerd '+esc(datum(p.gepubliceerdOp))+'</div>'+
+        '<div class="meta">gepubliceerd '+esc(datum(p.gepubliceerdOp))+(p.gearchiveerd?' · <b>in archief</b>':'')+'</div>'+
         (p.kop?'<div class="kop">'+esc(p.kop)+'</div>':'')+
         '<div class="tekst">'+esc(p.tekst)+'</div>'+
         bronnenHtml(p.bronnen)+
-        '<div class="knoppen"><button class="actie wegbtn" data-act="depubliceer">Van de site halen</button></div>'+
+        '<div class="knoppen">'+
+          (p.gearchiveerd?'':'<button class="actie bewaarbtn" data-act="archiveer">Toevoegen aan archief</button>')+
+          '<button class="actie wegbtn" data-act="depubliceer">Van de site halen</button>'+
+        '</div>'+
       '</div>';
     });
 
@@ -195,7 +212,7 @@
         btn.disabled = true; btn.textContent = "…";
         api("POST", body).then(function(res){
           if (res.ok && res.data.ok){
-            melding(act==="publiceer"?"Gepubliceerd.":act==="weg"?"Verwijderd.":act==="depubliceer"?"Van de site gehaald.":act==="verwijder-overheid"?"Van de site gehaald.":"Bewaard.", "info");
+            melding(act==="publiceer"?"Gepubliceerd.":act==="weg"?"Verwijderd.":act==="depubliceer"?"Van de site gehaald.":act==="verwijder-overheid"?"Van de site gehaald.":act==="archiveer"?"Naar archief verplaatst.":"Bewaard.", "info");
             if (act === "publiceer" || act === "weg"){
               state.concepten = state.concepten.filter(function(x){ return x.id !== id; });
               state.totaal = Math.max(0, state.totaal - 1);

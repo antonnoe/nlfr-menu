@@ -12,6 +12,7 @@
 
 import crypto from "node:crypto";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
+import { buitenlandDoorlaatNL } from "../lib/feeds.js";
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
@@ -149,11 +150,24 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const [concepten, publicaties, overheid] = await Promise.all([
+    const [ruweConcepten, publicaties, overheid] = await Promise.all([
       listJSON(SCAN_CONCEPT),
       listJSON(SCAN_PUBLICATIE),
       listJSON(SCAN_OVERHEID),
     ]);
+    // Buitenland-opschoning: concepten die niet over Frankrijk gaan (bv. Israël/
+    // Hamas) horen hier niet. Ze zijn vaak vóór de tweede filterlaag gemaakt; we
+    // verwijderen ze meteen uit de opslag (zelfherstellend) en tonen ze niet.
+    const concepten = [];
+    let buitenlandVerwijderd = 0;
+    for (const c of ruweConcepten) {
+      if (buitenlandDoorlaatNL(`${c.kop || ""} ${c.tekst || ""}`)) {
+        concepten.push(c);
+      } else if (c && c.id) {
+        await del(KEY_CONCEPT(c.id));
+        buitenlandVerwijderd += 1;
+      }
+    }
     // Ontdubbelen: alleen de beste per verhaal tonen (van ~300 naar 30-60).
     const { besten, duplicaten } = ontdubbel(concepten);
     besten.sort(
@@ -173,6 +187,7 @@ export default async function handler(req, res) {
       concepten: besten,
       totaalConcepten: concepten.length,
       duplicatenAantal: duplicaten.length,
+      buitenlandVerwijderd,
       publicaties,
       overheid,
     });
@@ -246,6 +261,22 @@ export default async function handler(req, res) {
     if (actie === "depubliceer") {
       await del(KEY_PUBLICATIE(id));
       return res.status(200).json({ ok: true });
+    }
+
+    if (actie === "archiveer") {
+      // Handmatig naar de Archief-tegel schuiven (i.p.v. wachten op de
+      // automatische 48 u). De originele publicatietijd blijft staan, zodat de
+      // "blijft nog X dagen" en de 14-daagse TTL ongewijzigd doorlopen.
+      const pub = await getJSON(KEY_PUBLICATIE(id));
+      if (!pub) {
+        return res.status(404).json({ ok: false, fout: "Publicatie niet gevonden." });
+      }
+      pub.gearchiveerd = true;
+      pub.gearchiveerdOp = new Date().toISOString();
+      const gepubT = Date.parse(pub.gepubliceerdOp) || Date.now();
+      const rest = Math.max(60, Math.round(PUBLICATIE_TTL_S - (Date.now() - gepubT) / 1000));
+      await setJSON(KEY_PUBLICATIE(id), pub, rest); // TTL blijft op het 14-daagse eindpunt
+      return res.status(200).json({ ok: true, publicatie: pub });
     }
 
     if (actie === "verwijder-overheid") {

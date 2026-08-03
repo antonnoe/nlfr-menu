@@ -83,6 +83,58 @@ async function leesBody(req) {
   }
 }
 
+// ---- Ontdubbelen van concepten ---------------------------------------------
+// Veel concepten gaan over hetzelfde verhaal (opeenvolgende cron-rondes). We
+// groeperen bijna-gelijke concepten (op kop + tekst) en houden de BESTE over:
+// meeste bronnen -> recentst -> meest compleet.
+function tokens(s) {
+  return new Set(
+    String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 4)
+  );
+}
+function jaccard(a, b) {
+  if (!a.size || !b.size) return 0;
+  let i = 0;
+  for (const w of a) if (b.has(w)) i += 1;
+  return i / (a.size + b.size - i);
+}
+function beterDan(a, b) {
+  const ba = a.aantalBronnen || 0;
+  const bb = b.aantalBronnen || 0;
+  if (ba !== bb) return ba > bb;
+  const ta = Date.parse(a.aangemaaktOp) || 0;
+  const tb = Date.parse(b.aangemaaktOp) || 0;
+  if (ta !== tb) return ta > tb;
+  return String(a.tekst || "").length >= String(b.tekst || "").length;
+}
+function ontdubbel(concepten) {
+  const groepen = [];
+  for (const c of concepten) {
+    const t = tokens(`${c.kop || ""} ${c.tekst || ""}`);
+    let g = null;
+    for (const x of groepen) {
+      if (jaccard(t, x.rep) >= 0.55) {
+        g = x;
+        break;
+      }
+    }
+    if (!g) groepen.push({ rep: t, beste: c, leden: [c] });
+    else {
+      g.leden.push(c);
+      if (beterDan(c, g.beste)) g.beste = c;
+    }
+  }
+  const besten = groepen.map((g) => g.beste);
+  const duplicaten = [];
+  for (const g of groepen) for (const c of g.leden) if (c !== g.beste) duplicaten.push(c);
+  return { besten, duplicaten };
+}
+
 export default async function handler(req, res) {
   res.setHeader("X-Robots-Tag", "noindex, nofollow");
   res.setHeader("Cache-Control", "no-store");
@@ -102,7 +154,9 @@ export default async function handler(req, res) {
       listJSON(SCAN_PUBLICATIE),
       listJSON(SCAN_OVERHEID),
     ]);
-    concepten.sort(
+    // Ontdubbelen: alleen de beste per verhaal tonen (van ~300 naar 30-60).
+    const { besten, duplicaten } = ontdubbel(concepten);
+    besten.sort(
       (a, b) => (Date.parse(b.aangemaaktOp) || 0) - (Date.parse(a.aangemaaktOp) || 0)
     );
     publicaties.sort(
@@ -114,13 +168,36 @@ export default async function handler(req, res) {
         (Date.parse(b.gepubliceerdOp) || 0) - (Date.parse(a.gepubliceerdOp) || 0)
     );
     // overheid staat automatisch live; hier alleen als kill-switch (verwijderen).
-    return res.status(200).json({ ok: true, concepten, publicaties, overheid });
+    return res.status(200).json({
+      ok: true,
+      concepten: besten,
+      totaalConcepten: concepten.length,
+      duplicatenAantal: duplicaten.length,
+      publicaties,
+      overheid,
+    });
   }
 
   if (req.method === "POST") {
     const body = await leesBody(req);
     const actie = body.actie;
     const id = body.id;
+
+    // Bulk-acties zonder id: opruimen van de conceptenberg.
+    if (actie === "wis-alles") {
+      const alle = await listJSON(SCAN_CONCEPT);
+      for (const c of alle) if (c && c.id) await del(KEY_CONCEPT(c.id));
+      return res.status(200).json({ ok: true, verwijderd: alle.length });
+    }
+    if (actie === "ontdubbel") {
+      const alle = await listJSON(SCAN_CONCEPT);
+      const { duplicaten } = ontdubbel(alle);
+      for (const c of duplicaten) if (c && c.id) await del(KEY_CONCEPT(c.id));
+      return res
+        .status(200)
+        .json({ ok: true, verwijderd: duplicaten.length, over: alle.length - duplicaten.length });
+    }
+
     if (!actie || !id) {
       return res.status(400).json({ ok: false, fout: "actie en id vereist." });
     }

@@ -9,41 +9,53 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --brand: #800000; --actueel: #2f6b3a; }
-  * { box-sizing: border-box; }
-  body { font-family: 'Mulish', system-ui, sans-serif; line-height: 1.7; color: #3a3330; background: #fdf9f8; margin: 0; padding: 12px; max-width: 760px; margin: 0 auto; }
-  h1 { font-family: 'Poppins',sans-serif; font-size: 20px; color: var(--brand); margin: 6px 0 2px; }
-  .sub { color: #8a7f7c; font-size: 13px; margin-bottom: 16px; }
-  h2 { font-family: 'Poppins',sans-serif; font-size: 15px; color: var(--brand); border-bottom: 1px solid rgba(128,0,0,.12); padding-bottom: 6px; margin: 22px 0 12px; }
+  :root { --brand:#800000; --actueel:#2f6b3a; }
+  * { box-sizing:border-box; }
+  body { font-family:'Mulish',system-ui,sans-serif; line-height:1.7; color:#3a3330; background:#fdf9f8; margin:0; padding:12px; max-width:760px; margin:0 auto; }
+  h1 { font-family:'Poppins',sans-serif; font-size:20px; color:var(--brand); margin:6px 0 2px; }
+  .sub { color:#8a7f7c; font-size:13px; margin-bottom:14px; }
+  h2 { font-family:'Poppins',sans-serif; font-size:15px; color:var(--brand); border-bottom:1px solid rgba(128,0,0,.12); padding-bottom:6px; margin:22px 0 12px; }
 
-  .kaart { background: #fff; border: 1px solid rgba(128,0,0,.14); border-radius: 14px; padding: 14px; margin-bottom: 14px; box-shadow: 0 10px 30px -24px rgba(90,0,0,.5); }
-  .kaart.pub { border-color: rgba(47,107,58,.4); background: rgba(47,107,58,.05); }
-  .meta { font-size: 12px; color: #8a7f7c; margin-bottom: 8px; }
-  .meta b { font-family: 'Poppins',sans-serif; color: var(--actueel); font-weight: 600; }
-  textarea { width: 100%; min-height: 150px; font-family: 'Mulish',sans-serif; font-size: 14.5px; line-height: 1.7; color: #3a3330; border: 1px solid rgba(128,0,0,.2); border-radius: 10px; padding: 10px 12px; resize: vertical; }
-  textarea:focus { outline: none; border-color: rgba(128,0,0,.5); }
-  .tekst { white-space: pre-wrap; font-size: 14.5px; }
-  .bronnen { margin-top: 10px; font-size: 12.5px; color: #6d6360; }
-  .bronnen b { font-family: 'Poppins',sans-serif; font-weight: 600; color: var(--actueel); font-size: 11.5px; display: block; margin-bottom: 3px; }
-  .bronnen a { display: block; padding: 1px 0; color: var(--brand); text-decoration: none; }
+  .balk { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
+  .balk .tel { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:var(--brand); margin-right:auto; }
+  .balk button { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; border-radius:999px; padding:8px 14px; cursor:pointer; min-height:40px; border:1px solid rgba(128,0,0,.2); background:rgba(128,0,0,.06); color:var(--brand); }
+  .balk button:hover { background:rgba(128,0,0,.12); }
+  .balk button.gevaar { border-color:rgba(128,0,0,.3); }
 
-  .knoppen { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  button { font-family: 'Poppins',sans-serif; font-weight: 600; font-size: 14px; border-radius: 9px; padding: 10px 16px; border: none; cursor: pointer; min-height: 44px; }
-  .pubbtn { background: var(--actueel); color: #fff; }
-  .pubbtn:hover { filter: brightness(1.08); }
-  .wegbtn { background: rgba(128,0,0,.06); color: var(--brand); border: 1px solid rgba(128,0,0,.2); }
-  .wegbtn:hover { background: rgba(128,0,0,.12); }
-  .bewaarbtn { background: rgba(128,0,0,.06); color: var(--brand); border: 1px solid rgba(128,0,0,.2); }
+  .kaart { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 10px 30px -24px rgba(90,0,0,.5); }
+  .kaart.pub { border-color:rgba(47,107,58,.4); background:rgba(47,107,58,.05); }
+  .meta { font-size:12px; color:#8a7f7c; margin-bottom:8px; }
+  .meta b { font-family:'Poppins',sans-serif; color:var(--actueel); font-weight:600; }
+  .kop { font-family:'Poppins',sans-serif; font-weight:700; font-size:16px; color:#3a3330; margin:2px 0 8px; }
+  textarea { width:100%; min-height:180px; font-family:'Mulish',sans-serif; font-size:14.5px; line-height:1.7; color:#3a3330; border:1px solid rgba(128,0,0,.2); border-radius:10px; padding:10px 12px; resize:vertical; }
+  textarea:focus { outline:none; border-color:rgba(128,0,0,.5); }
+  .tekst { white-space:pre-wrap; font-size:14.5px; }
+  .bronnen { margin-top:10px; font-size:12.5px; color:#6d6360; }
+  .bronnen b { font-family:'Poppins',sans-serif; font-weight:600; color:var(--actueel); font-size:11.5px; display:block; margin-bottom:3px; }
+  .bronnen a { display:block; padding:1px 0; color:var(--brand); text-decoration:none; }
 
-  .melding { padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 14px; }
-  .fout { background: rgba(128,0,0,.08); color: var(--brand); border: 1px solid rgba(128,0,0,.25); }
-  .info { background: rgba(47,107,58,.08); color: var(--actueel); border: 1px solid rgba(47,107,58,.25); }
-  .leeg { color: #8a7f7c; font-size: 14px; }
+  .pager { display:flex; align-items:center; gap:10px; margin:12px 0 4px; }
+  .pager .nav { font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; border-radius:9px; padding:9px 14px; border:1px solid rgba(128,0,0,.2); background:#fff; color:var(--brand); cursor:pointer; min-height:44px; }
+  .pager .nav:disabled { opacity:.4; cursor:default; }
+  .pager .pos { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:#8a7f7c; margin:0 auto; }
+
+  .knoppen { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  button.actie { font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; border-radius:9px; padding:10px 16px; border:none; cursor:pointer; min-height:44px; }
+  .pubbtn { background:var(--actueel); color:#fff; }
+  .pubbtn:hover { filter:brightness(1.08); }
+  .wegbtn { background:rgba(128,0,0,.06); color:var(--brand); border:1px solid rgba(128,0,0,.2); }
+  .wegbtn:hover { background:rgba(128,0,0,.12); }
+  .bewaarbtn { background:rgba(128,0,0,.06); color:var(--brand); border:1px solid rgba(128,0,0,.2); }
+
+  .melding { padding:12px 14px; border-radius:10px; margin-bottom:14px; font-size:14px; }
+  .fout { background:rgba(128,0,0,.08); color:var(--brand); border:1px solid rgba(128,0,0,.25); }
+  .info { background:rgba(47,107,58,.08); color:var(--actueel); border:1px solid rgba(47,107,58,.25); }
+  .leeg { color:#8a7f7c; font-size:14px; }
 </style>
 </head>
 <body>
   <h1>Redactie — Actueel</h1>
-  <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 48 uur. Publiceer of verwijder ze hieronder. Bewerk de tekst gerust vóór publicatie.</div>
+  <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 48 uur. Beoordeel ze één voor één; bewerk de tekst gerust vóór publicatie.</div>
   <div id="melding"></div>
   <div id="inhoud"><div class="leeg">Laden…</div></div>
 
@@ -54,14 +66,13 @@
   var token = params.get("token") || "";
   var meldingEl = document.getElementById("melding");
   var inhoudEl = document.getElementById("inhoud");
+  var state = { concepten: [], index: 0, duplicaten: 0, totaal: 0, publicaties: [], overheid: [] };
 
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
   function melding(tekst, soort){ meldingEl.innerHTML = tekst ? '<div class="melding '+(soort||"info")+'">'+esc(tekst)+'</div>' : ""; }
 
   function api(method, body){
-    // Token in de querystring (zo leest de server hem) + als header, voor de
-    // zekerheid. Content-Type alleen bij een body (POST).
     var url = "/api/review?token=" + encodeURIComponent(token);
     var opties = { method: method, headers: { "X-Review-Token": token } };
     if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
@@ -85,58 +96,95 @@
     return '<div class="bronnen"><b>Bronnen</b>'+rijen+'</div>';
   }
 
-  function render(data){
+  function render(){
     var html = "";
-    html += '<h2>Concepten ('+(data.concepten||[]).length+')</h2>';
-    if (!(data.concepten||[]).length){
-      html += '<div class="leeg">Geen concepten. Zodra een verhaal door 3+ bronnen wordt gemeld, verschijnt hier automatisch een synthese.</div>';
-    }
-    (data.concepten||[]).forEach(function(c){
+
+    // ---- Concepten: pager (één voor één) ----
+    html += '<h2>Concepten</h2>';
+    html += '<div class="balk"><span class="tel">'+state.concepten.length+' concept'+(state.concepten.length===1?"":"en")+
+      (state.duplicaten?' · '+state.duplicaten+' duplicaten':"")+'</span>';
+    if (state.duplicaten){ html += '<button id="ontdubbel">Ontdubbelen ('+state.duplicaten+')</button>'; }
+    if (state.totaal){ html += '<button id="wisAlles" class="gevaar">Alle concepten wissen</button>'; }
+    html += '</div>';
+
+    if (!state.concepten.length){
+      html += '<div class="leeg">Geen concepten om te beoordelen. Nieuwe verschijnen zodra een verhaal door 2+ onafhankelijke bronnen wordt gemeld.</div>';
+    } else {
+      if (state.index >= state.concepten.length) state.index = state.concepten.length - 1;
+      if (state.index < 0) state.index = 0;
+      var c = state.concepten[state.index];
+      html += '<div class="pager">'+
+        '<button class="nav" id="vorige"'+(state.index<=0?" disabled":"")+'>‹ Vorige</button>'+
+        '<span class="pos">'+(state.index+1)+' / '+state.concepten.length+'</span>'+
+        '<button class="nav" id="volgende"'+(state.index>=state.concepten.length-1?" disabled":"")+'>Volgende ›</button>'+
+      '</div>';
       html += '<div class="kaart" data-id="'+esc(c.id)+'">'+
-              '<div class="meta"><b>'+(c.aantalBronnen||"?")+' bronnen</b> · gemaakt '+esc(datum(c.aangemaaktOp))+' · model '+esc(c.model||"?")+(c.afgekapt?' · <span style="color:#b58b00">mogelijk afgekapt</span>':'')+'</div>'+
-              '<textarea>'+esc(c.tekst)+'</textarea>'+
-              bronnenHtml(c.bronnen)+
-              '<div class="knoppen">'+
-                '<button class="pubbtn" data-act="publiceer">Publiceer</button>'+
-                '<button class="bewaarbtn" data-act="bewerk">Bewaar tekst</button>'+
-                '<button class="wegbtn" data-act="weg">Weg</button>'+
-              '</div></div>';
-    });
-
-    html += '<h2>Gepubliceerd — pers ('+(data.publicaties||[]).length+')</h2>';
-    if (!(data.publicaties||[]).length){
-      html += '<div class="leeg">Nog niets gepubliceerd.</div>';
+        '<div class="meta"><b>'+(c.aantalBronnen||"?")+' bronnen</b> · gemaakt '+esc(datum(c.aangemaaktOp))+' · model '+esc(c.model||"?")+(c.afgekapt?' · <span style="color:#b58b00">mogelijk afgekapt</span>':'')+'</div>'+
+        (c.kop?'<div class="kop">'+esc(c.kop)+'</div>':'')+
+        '<textarea>'+esc(c.tekst)+'</textarea>'+
+        bronnenHtml(c.bronnen)+
+        '<div class="knoppen">'+
+          '<button class="actie pubbtn" data-act="publiceer">Publiceer</button>'+
+          '<button class="actie bewaarbtn" data-act="bewerk">Bewaar tekst</button>'+
+          '<button class="actie wegbtn" data-act="weg">Weg</button>'+
+        '</div></div>';
     }
-    (data.publicaties||[]).forEach(function(p){
+
+    // ---- Gepubliceerd (pers) ----
+    html += '<h2>Gepubliceerd — pers ('+(state.publicaties||[]).length+')</h2>';
+    if (!(state.publicaties||[]).length){ html += '<div class="leeg">Nog niets gepubliceerd.</div>'; }
+    (state.publicaties||[]).forEach(function(p){
       html += '<div class="kaart pub" data-id="'+esc(p.id)+'">'+
-              '<div class="meta">gepubliceerd '+esc(datum(p.gepubliceerdOp))+'</div>'+
-              '<div class="tekst">'+esc(p.tekst)+'</div>'+
-              bronnenHtml(p.bronnen)+
-              '<div class="knoppen"><button class="wegbtn" data-act="depubliceer">Van de site halen</button></div>'+
-              '</div>';
+        '<div class="meta">gepubliceerd '+esc(datum(p.gepubliceerdOp))+'</div>'+
+        (p.kop?'<div class="kop">'+esc(p.kop)+'</div>':'')+
+        '<div class="tekst">'+esc(p.tekst)+'</div>'+
+        bronnenHtml(p.bronnen)+
+        '<div class="knoppen"><button class="actie wegbtn" data-act="depubliceer">Van de site halen</button></div>'+
+      '</div>';
     });
 
-    // Overheid: staat automatisch live (geen review) — hier alleen als
-    // kill-switch om een verkeerd bericht van de site te halen.
-    html += '<h2>Overheid — automatisch live ('+(data.overheid||[]).length+')</h2>';
-    if (!(data.overheid||[]).length){
-      html += '<div class="leeg">Nog geen NL-overheidsberichten (verschijnen automatisch zodra de cron nieuwe items verwerkt).</div>';
-    }
-    (data.overheid||[]).forEach(function(o){
+    // ---- Overheid (kill-switch) ----
+    html += '<h2>Overheid — automatisch live ('+(state.overheid||[]).length+')</h2>';
+    if (!(state.overheid||[]).length){ html += '<div class="leeg">Nog geen NL-overheidsberichten.</div>'; }
+    (state.overheid||[]).forEach(function(o){
       html += '<div class="kaart" data-id="'+esc(o.id)+'">'+
-              '<div class="meta"><b>'+esc(o.bron||"")+'</b> · '+esc(o.thema||"")+' · '+esc(datum(o.gepubliceerdOp))+'</div>'+
-              '<div class="tekst">'+esc(o.samenvatting)+'</div>'+
-              (o.url?'<div class="bronnen"><a href="'+esc(o.url)+'" target="_blank" rel="noopener">Bron →</a></div>':'')+
-              '<div class="knoppen"><button class="wegbtn" data-act="verwijder-overheid">Van de site halen</button></div>'+
-              '</div>';
+        '<div class="meta"><b>'+esc(o.bron||"")+'</b> · '+esc(o.thema||"")+' · '+esc(datum(o.gepubliceerdOp))+'</div>'+
+        (o.kop?'<div class="kop">'+esc(o.kop)+'</div>':'')+
+        '<div class="tekst">'+esc(o.samenvatting)+'</div>'+
+        (o.url?'<div class="bronnen"><a href="'+esc(o.url)+'" target="_blank" rel="noopener">Bron →</a></div>':'')+
+        '<div class="knoppen"><button class="actie wegbtn" data-act="verwijder-overheid">Van de site halen</button></div>'+
+      '</div>';
     });
 
     inhoudEl.innerHTML = html;
-    koppelKnoppen();
+    koppel();
   }
 
-  function koppelKnoppen(){
-    inhoudEl.querySelectorAll("button").forEach(function(btn){
+  function koppel(){
+    var vorige = document.getElementById("vorige");
+    var volgende = document.getElementById("volgende");
+    if (vorige) vorige.addEventListener("click", function(){ state.index--; render(); });
+    if (volgende) volgende.addEventListener("click", function(){ state.index++; render(); });
+
+    var ontdubbelBtn = document.getElementById("ontdubbel");
+    if (ontdubbelBtn) ontdubbelBtn.addEventListener("click", function(){
+      ontdubbelBtn.disabled = true; ontdubbelBtn.textContent = "…";
+      api("POST", { actie: "ontdubbel" }).then(function(res){
+        if (res.ok && res.data.ok){ melding("Duplicaten verwijderd: "+res.data.verwijderd+". Over: "+res.data.over+".", "info"); laad(); }
+        else { melding((res.data&&res.data.fout)||"Mislukt.", "fout"); ontdubbelBtn.disabled=false; }
+      });
+    });
+    var wisAllesBtn = document.getElementById("wisAlles");
+    if (wisAllesBtn) wisAllesBtn.addEventListener("click", function(){
+      if (!window.confirm("Alle concepten wissen? Dit verwijdert alle "+state.totaal+" concepten (publicaties blijven).")) return;
+      wisAllesBtn.disabled = true; wisAllesBtn.textContent = "…";
+      api("POST", { actie: "wis-alles" }).then(function(res){
+        if (res.ok && res.data.ok){ melding("Alle concepten gewist ("+res.data.verwijderd+").", "info"); laad(); }
+        else { melding((res.data&&res.data.fout)||"Mislukt.", "fout"); wisAllesBtn.disabled=false; }
+      });
+    });
+
+    inhoudEl.querySelectorAll("button[data-act]").forEach(function(btn){
       btn.addEventListener("click", function(){
         var kaart = btn.closest(".kaart");
         var id = kaart.getAttribute("data-id");
@@ -147,8 +195,16 @@
         btn.disabled = true; btn.textContent = "…";
         api("POST", body).then(function(res){
           if (res.ok && res.data.ok){
-            melding(act === "publiceer" ? "Gepubliceerd." : act === "weg" ? "Verwijderd." : act === "depubliceer" ? "Van de site gehaald." : "Bewaard.", "info");
-            laad();
+            melding(act==="publiceer"?"Gepubliceerd.":act==="weg"?"Verwijderd.":act==="depubliceer"?"Van de site gehaald.":act==="verwijder-overheid"?"Van de site gehaald.":"Bewaard.", "info");
+            if (act === "publiceer" || act === "weg"){
+              state.concepten = state.concepten.filter(function(x){ return x.id !== id; });
+              state.totaal = Math.max(0, state.totaal - 1);
+              if (act === "publiceer"){ laad(); } else { render(); }
+            } else if (act === "bewerk"){
+              btn.disabled = false; btn.textContent = "Bewaar tekst";
+            } else {
+              laad();
+            }
           } else {
             melding((res.data && res.data.fout) || "Er ging iets mis.", "fout");
             btn.disabled = false;
@@ -161,8 +217,16 @@
   function laad(){
     if (!token){ melding("Geen token in de URL. Voeg ?token=… toe.", "fout"); inhoudEl.innerHTML = ""; return; }
     api("GET").then(function(res){
-      if (res.ok && res.data.ok){ melding(""); render(res.data); }
-      else { melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout"); inhoudEl.innerHTML = ""; }
+      if (res.ok && res.data.ok){
+        melding("");
+        state.concepten = res.data.concepten || [];
+        state.duplicaten = res.data.duplicatenAantal || 0;
+        state.totaal = res.data.totaalConcepten || state.concepten.length;
+        state.publicaties = res.data.publicaties || [];
+        state.overheid = res.data.overheid || [];
+        if (state.index >= state.concepten.length) state.index = 0;
+        render();
+      } else { melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout"); inhoudEl.innerHTML = ""; }
     }).catch(function(){ melding("Netwerkfout.", "fout"); });
   }
 

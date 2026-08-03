@@ -8,433 +8,479 @@
 <!--
   NLFR ACTUEEL — Nederlandstalige nieuwspagina, embed via iframe op
   https://www.nederlanders.fr/page/actueel-frankrijknieuws (zie EMBED.md).
-  Thema-TEGELS die uitklappen: tegel (bullets) -> artikelen (titel + summary) ->
-  volledige NL-tekst -> "Bronnen". Alle tegels starten dicht. Sluiten kan met de
-  tegel-/artikelkop of met de expliciete "Sluiten"-knop. Bovenaan: alles
-  uit-/inklappen. Hoogte-sync via postMessage({nlfrActueelHeight}) + ResizeObserver.
+  Visueel herontwerp naar de Cdesign-handoff: 4 categorie-tabs (Nieuws /
+  Overheid / NL'ers in FR / Archief) filteren de tegels; per tegel 4-niveau
+  drill-down (tegel -> artikel -> NL-tekst -> Bronnen). Icoontegels (inline SVG),
+  getinte koppen, warme schaduw. Vaste-hoogte paneel met interne scroll; hoogte
+  via postMessage. Geen scrollIntoView (verschuift de host).
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Mulish:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --brand:#800000; --brand-soft:rgba(128,0,0,.10); --brand-line:rgba(128,0,0,.18); --brand-line-sterk:rgba(128,0,0,.30);
-          --groen:#2f6b3a; --groen-soft:rgba(47,107,58,.10); --groen-line:rgba(47,107,58,.30); --groen-line-sterk:rgba(47,107,58,.44);
-          --tegel:#ffffff; --tegel-open:#fdfbfa; --ink:#38312e; --ink-zacht:#7c716d; --ink-flauw:#a99e9a; }
-  * { box-sizing: border-box; }
-  html, body { margin:0; padding:0; background:transparent; height:100%; }
-  body { font-family:'Mulish',system-ui,sans-serif; line-height:1.55; color:var(--ink); padding:6px; }
-  h1,h2,h3 { font-family:'Poppins',sans-serif; line-height:1.3; }
+  :root{
+    --bg:#fdf9f8; --kaart:#fff; --kaart-archief:#fdfdfc;
+    --ink:#241c1c; --ink-body:#3d3735; --ink-body2:#4d4441; --ink-meta:#6f6663; --ink-zwak:#8a7d79;
+    --hair:#f0e8e5; --hair2:#ece4e1; --hair3:#e6dcd9;
+    --brand:#800000; --brand-dark:#5f0000;
+    --groen:#2f6b3a;
+    --sh-rust:0 1px 2px rgba(38,17,17,.05);
+    --sh-hover:0 2px 4px rgba(38,17,17,.06), 0 8px 18px -8px rgba(38,17,17,.16);
+    --disp:'Poppins',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --body:'Mulish',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  /* Categorie-tokens (op tegel én tab gezet). NL'ers deelt het groen. */
+  .cat-nieuws,.cat-nlers{ --c-main:#2f6b3a; --c-dark:#22522c; --c-tint:#eef4ef; --c-rand:#d5e4d9; --c-meta:#4b5c4f; --c-chip:#f6faf7; }
+  .cat-overheid{ --c-main:#800000; --c-dark:#5f0000; --c-tint:#fbf0ee; --c-rand:#ecd9d5; --c-meta:#6b4a46; --c-chip:#fdf6f5; }
+  .cat-archief{ --c-main:#5c5f5c; --c-dark:#4a4d4a; --c-tint:#f3f2f0; --c-rand:#e2e0dc; --c-meta:#6f6663; --c-chip:#f8f8f6; }
 
-  /* Vaste-hoogte paneel: kop + knoppenbalk staan vast bovenaan, de inhoud
-     scrollt eronder (interne scrollbalk). De iframe-hoogte wordt gecapt zodat
-     de knoppenbalk altijd zichtbaar blijft. */
-  .card { background:#fff; border:1px solid var(--brand-line); border-radius:18px; box-shadow:0 12px 40px -26px rgba(90,0,0,.55); overflow:hidden; height:100%; display:flex; flex-direction:column; }
-  .head { flex:0 0 auto; padding:16px 18px 12px; border-bottom:1px solid rgba(128,0,0,.1); }
-  .head h1 { margin:0; font-size:20px; font-weight:700; color:var(--brand); }
-  .head .sub { font-size:13px; color:var(--ink-zacht); margin-top:2px; }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; padding:0; background:transparent; -webkit-text-size-adjust:100%; }
+  body{ font-family:var(--body); color:var(--ink-body); }
+  .ic{ width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
 
-  /* Alles uit-/inklappen — blijft bovenaan staan (vastgepind). */
-  .regelbalk { flex:0 0 auto; display:flex; gap:8px; padding:10px 18px; border-bottom:1px solid rgba(128,0,0,.08); background:#fdf9f8; flex-wrap:wrap; }
-  .regelbalk button { font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; border-radius:999px; padding:7px 14px; cursor:pointer; min-height:38px;
-                      background:var(--brand-soft); color:var(--brand); border:1px solid var(--brand-line); }
-  .regelbalk button:hover { background:rgba(128,0,0,.14); }
-  .regelbalk button:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
-  .regelbalk .bijwerk { margin-left:auto; align-self:center; font-size:12px; color:var(--ink-zacht); white-space:nowrap; }
+  /* ---- Paneelraamwerk ---- */
+  .panel{ height:100%; min-height:420px; display:grid; grid-template-rows:auto auto 1fr auto; background:var(--bg);
+          border:1px solid var(--hair2); border-radius:14px; overflow:hidden; }
 
-  /* Tabbladen — vastgepind, gegroepeerd, horizontaal scrollbaar. */
-  .tabbar { flex:0 0 auto; display:flex; gap:16px; padding:8px 14px; border-bottom:1px solid rgba(128,0,0,.08); background:#fff; overflow-x:auto; align-items:center; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
-  .tabbar:empty { display:none; }
-  .tabgroep { display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; }
-  .tabgroep .glab { font-family:'Poppins',sans-serif; font-weight:700; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-flauw); }
-  .tab { flex:0 0 auto; font-family:'Poppins',sans-serif; font-weight:600; font-size:12px; white-space:nowrap; border-radius:999px; padding:5px 11px; cursor:pointer; border:1px solid var(--brand-line); background:var(--brand-soft); color:var(--brand); }
-  .tab.groen { border-color:var(--groen-line); background:var(--groen-soft); color:var(--groen); }
-  .tab.grijs { border-color:rgba(120,110,105,.28); background:rgba(120,110,105,.08); color:#6d6360; }
-  .tab:hover { filter:brightness(.97); }
-  .tab:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+  /* Knoppenbalk */
+  .bar{ display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 12px; background:#fff; border-bottom:1px solid var(--hair); }
+  .bar .knop{ display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 14px; border:1px solid var(--c-rand,#ecd9d5); border-radius:8px; background:#fff; font-family:var(--disp); font-weight:600; font-size:13px; color:var(--brand-dark); cursor:pointer; }
+  @media (hover:hover) and (pointer:fine){ .bar .knop:hover{ background:#fbf0ee; border-color:#e0c3bd; } }
+  .bar .knop:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
+  .bar .bijwerk{ display:inline-flex; align-items:center; gap:6px; font-family:var(--body); font-weight:500; font-size:12.5px; color:var(--ink-meta); white-space:nowrap; }
+  .bar .bijwerk .ic{ width:14px; height:14px; }
 
-  .archief-intro { font-size:12.5px; color:var(--ink-zacht); padding:8px 4px 2px; }
+  /* Tabbalk */
+  .tabs{ display:flex; align-items:center; gap:12px; padding:10px 12px; background:var(--bg); border-bottom:1px solid var(--hair); overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; scroll-padding-inline:12px; }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tabgroep{ display:inline-flex; gap:4px; flex:none; background:#fff; border:1px solid var(--hair2); border-radius:999px; padding:4px; }
+  .tabgroep.archiefgroep{ border-color:var(--hair3); }
+  .tabsplit{ flex:none; width:1px; height:24px; background:var(--hair3); }
+  .tab{ display:inline-flex; align-items:center; gap:6px; flex:none; min-height:40px; padding:0 14px; border:0; border-radius:999px; background:transparent; cursor:pointer; white-space:nowrap;
+        font-family:var(--disp); font-weight:500; font-size:13px; color:var(--ink-body2); scroll-snap-align:center;
+        transition:background 180ms cubic-bezier(.2,.6,.3,1), color 180ms; }
+  .tab .ic{ width:15px; height:15px; color:var(--c-main); }
+  .tab[aria-selected="true"]{ background:var(--c-main); color:#fff; font-weight:600; box-shadow:0 1px 2px rgba(38,17,17,.14); }
+  .tab[aria-selected="true"] .ic{ color:#fff; }
+  .tab:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
+  @media (min-width:600px){ .tab{ min-height:36px; } }
 
-  .body { flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 16px 8px; }
-  #inner { display:flex; flex-direction:column; gap:14px; }
+  /* Scroller (enige scrollcontainer) */
+  .scroller{ overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:10px; padding:12px; animation:paneelin 120ms ease; }
+  .scroller > *{ flex:none; }
+  @media (min-width:600px){ .scroller{ padding:20px; gap:12px; } }
+  @keyframes paneelin{ from{opacity:0;} to{opacity:1;} }
 
-  /* ---- Tegel (niveau 0) ---- */
-  .tegel { background:var(--tegel); border:1px solid var(--brand-line); border-radius:16px; position:relative; overflow:hidden; }
-  .tegel::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--brand); opacity:.85; z-index:2; }
-  .tegel.groen { border-color:var(--groen-line); }
-  .tegel.groen::before { background:var(--groen); }
-  .tegel.open { background:var(--tegel-open); border-color:var(--brand-line-sterk); }
-  .tegel.groen.open { border-color:var(--groen-line-sterk); }
-  /* Archief: gedempt grijs. */
-  .tegel.archief { border-color:rgba(120,110,105,.28); }
-  .tegel.archief::before { background:#9a8f8a; }
-  .tegel.archief .tkop h2 { color:#6d6360; }
-  .t1 .rest { display:block; font-family:'Poppins',sans-serif; font-weight:600; font-size:11.5px; color:var(--ink-flauw); margin-top:3px; }
+  /* ---- Tegel (niveau 1) ---- */
+  .tegel{ background:var(--kaart); border:1px solid var(--c-rand); border-radius:12px; overflow:hidden; box-shadow:var(--sh-rust); transition:box-shadow 180ms cubic-bezier(.2,.6,.3,1); }
+  .tegel.cat-archief{ background:var(--kaart-archief); }
+  @media (hover:hover) and (pointer:fine){ .tegel:hover{ box-shadow:var(--sh-hover); } }
+  .kop{ display:flex; align-items:flex-start; gap:12px; width:100%; min-height:56px; padding:14px 16px; background:var(--c-tint); border:0; text-align:left; cursor:pointer; font:inherit; color:inherit; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .tegel.open .kop{ border-bottom:1px solid var(--c-rand); }
+  .kop:focus-visible{ outline:2px solid var(--brand); outline-offset:-2px; }
+  .icotegel{ flex:none; width:32px; height:32px; border-radius:8px; background:#fff; border:1px solid var(--c-rand); display:grid; place-items:center; color:var(--c-main); }
+  .icotegel .ic{ width:18px; height:18px; }
+  .koptekst{ flex:1; min-width:0; display:grid; gap:2px; }
+  .catlabel{ display:flex; align-items:center; gap:8px; font-family:var(--body); font-weight:600; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--c-dark); }
+  .kop h3{ margin:0; font-family:var(--disp); font-weight:600; font-size:15px; line-height:21px; color:var(--ink); }
+  .kopmeta{ font-family:var(--body); font-weight:500; font-size:12.5px; line-height:17px; color:var(--c-meta); }
+  .chevbox{ flex:none; width:32px; height:32px; display:grid; place-items:center; color:var(--c-meta); }
+  .chevbox .ic{ width:18px; height:18px; transition:transform 180ms cubic-bezier(.2,.6,.3,1); }
+  [aria-expanded="true"] .chevbox .ic{ transform:rotate(90deg); }
 
-  .t0 { display:block; width:100%; text-align:left; background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:15px 18px 5px; -webkit-tap-highlight-color:transparent; }
-  .t0:focus-visible { outline:2px solid var(--brand); outline-offset:-3px; border-radius:16px; }
-  .groen .t0:focus-visible { outline-color:var(--groen); }
-  .tkop { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
-  .tkop h2 { font-size:15.5px; font-weight:700; margin:0; color:var(--brand); flex:1 1 auto; }
-  .groen .tkop h2 { color:var(--groen); }
-  .tkop .telling { font-size:11.5px; color:var(--ink-flauw); white-space:nowrap; flex:0 0 auto; align-self:center; }
+  /* Hot-markering */
+  .hot{ display:inline-flex; align-items:center; gap:5px; font-family:var(--body); font-weight:600; font-size:11px; color:var(--brand); }
+  .hotdot{ width:7px; height:7px; border-radius:999px; background:var(--brand); animation:hotpuls 2.4s ease-out infinite; }
+  @keyframes hotpuls{ 0%{box-shadow:0 0 0 0 rgba(128,0,0,.30);} 70%{box-shadow:0 0 0 7px rgba(128,0,0,0);} 100%{box-shadow:0 0 0 0 rgba(128,0,0,0);} }
 
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.3;transform:scale(1.5);} }
-  .dot { width:8px; height:8px; border-radius:999px; background:var(--groen); display:inline-block; animation:pulse 1.7s ease-in-out infinite; flex:0 0 auto; align-self:center; }
-  @media (prefers-reduced-motion:reduce){ .dot{animation:none;} }
+  /* Body van de tegel */
+  .body{ display:none; padding:14px 16px; }
+  .tegel.open > .body{ display:grid; gap:12px; }
+  ul.bullets{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  ul.bullets li{ position:relative; padding-left:18px; font-size:15px; line-height:24px; color:var(--ink-body2); }
+  ul.bullets li::before{ content:""; position:absolute; left:2px; top:9px; width:6px; height:6px; border-radius:2px; background:var(--c-main); opacity:.6; }
+  .archief-intro{ font-size:13px; line-height:20px; color:var(--ink-meta); }
+  .platblok{ font-size:15px; line-height:24px; color:var(--ink-body2); display:grid; gap:8px; }
+  .platlink a, .agendalink a{ font-family:var(--disp); font-weight:600; font-size:13px; color:var(--c-main); text-decoration:none; }
+  .platlink a:hover, .agendalink a:hover{ text-decoration:underline; }
+  .agrij{ display:flex; gap:12px; padding:6px 0; border-bottom:1px solid var(--hair); }
+  .agrij:last-child{ border-bottom:none; }
+  .agrij .dat{ flex:0 0 108px; font-family:var(--disp); font-weight:600; font-size:12px; color:var(--c-main); }
+  .agrij .wat{ font-size:13.5px; }
+  .agrij .wat .sub{ color:var(--ink-zwak); font-size:11.5px; }
 
-  ul.bullets { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-  ul.bullets li { position:relative; padding-left:16px; font-size:14px; color:var(--ink); }
-  ul.bullets li::before { content:""; position:absolute; left:0; top:8px; width:6px; height:6px; border-radius:2px; background:var(--brand); opacity:.55; }
-  .groen ul.bullets li::before { background:var(--groen); }
-  ul.bullets li.meer { color:var(--ink-flauw); font-style:italic; }
-  ul.bullets li.meer::before { display:none; }
+  /* ---- Artikel (niveau 2) ---- */
+  .artikelen{ display:grid; gap:10px; }
+  .artikel{ border:1px solid var(--hair2); border-radius:8px; background:#fff; overflow:hidden; }
+  .artkop{ display:flex; gap:10px; align-items:flex-start; width:100%; min-height:56px; padding:12px 14px; background:none; border:0; text-align:left; cursor:pointer; font:inherit; color:inherit; -webkit-tap-highlight-color:transparent; }
+  .artkop:focus-visible{ outline:2px solid var(--brand); outline-offset:-2px; }
+  .artkop .tk{ flex:1; min-width:0; display:grid; gap:3px; }
+  .artkop .att{ font-family:var(--disp); font-weight:600; font-size:14.5px; line-height:20px; color:var(--ink); }
+  .artkop .asum{ font-size:15px; line-height:24px; color:var(--ink-body2); }
+  .artkop .ameta{ font-family:var(--body); font-weight:500; font-size:12.5px; color:var(--ink-meta); }
+  .artkop .rest{ font-weight:600; color:var(--ink-zwak); }
+  .artkop .chevbox{ margin-top:-4px; }
+  .artkop .chevbox .ic{ color:var(--ink-zwak); }
 
-  .balk { display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:11px; border-top:1px solid var(--brand-line); font-family:'Poppins',sans-serif; font-weight:600; font-size:12px; color:var(--brand); }
-  .groen .balk { border-top-color:var(--groen-line); color:var(--groen); }
-  .chev { transition:transform .2s; font-size:11px; display:inline-block; }
-  [aria-expanded="true"] .chev { transform:rotate(180deg); }
+  /* ---- Niveau 3: volledige NL-tekst ---- */
+  .uitleg{ display:none; padding:0 14px 14px; }
+  .artikel.open .uitleg{ display:block; }
+  .uitleg .tekst{ border-left:1px solid var(--hair); padding-left:12px; display:grid; gap:10px; }
+  .redlabel{ font-family:var(--body); font-weight:600; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--groen); }
+  .uitleg p{ margin:0; font-size:16px; line-height:26px; color:var(--ink-body); max-width:68ch; text-wrap:pretty; }
 
-  /* Uitklappen zonder hoogte-cap: gewoon tonen/verbergen (nooit afgekapt). */
-  .reveal { display:none; }
-  .reveal.open { display:block; animation:vouwin .22s ease; }
-  @keyframes vouwin { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
-  @media (prefers-reduced-motion:reduce){ .reveal.open{ animation:none; } }
+  /* ---- Niveau 4: bronnen ---- */
+  .bronknop{ display:inline-flex; align-items:center; gap:6px; margin-top:10px; min-height:36px; padding:0 10px; border-radius:4px; border:1px solid var(--c-rand); background:var(--c-chip); color:var(--c-main); font-family:var(--body); font-weight:600; font-size:12.5px; cursor:pointer; }
+  .bronknop .ic{ width:13px; height:13px; }
+  .bronknop:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
+  .bronknop.leeg{ color:var(--ink-zwak); background:#fff; cursor:default; }
+  .bronlijst{ display:none; list-style:none; margin:10px 0 0; padding:0; }
+  .artikel .bronwrap.open .bronlijst{ display:grid; gap:6px; }
+  .bronlijst li{ display:grid; gap:2px; background:var(--bg); border:1px solid var(--hair); border-radius:4px; padding:8px 10px; }
+  .bronlijst a{ font-family:var(--body); font-weight:600; font-size:13px; line-height:18px; color:var(--ink-body); text-decoration:none; }
+  .bronlijst a:hover{ text-decoration:underline; }
+  .bronlijst .uitg{ font-family:var(--body); font-weight:500; font-size:12px; color:var(--ink-meta); }
 
-  /* ---- Artikel (niveau 1) ---- */
-  .artikelen { padding:2px 14px 6px; }
-  .artikel { border:1px solid var(--brand-line); border-radius:12px; margin-top:10px; overflow:hidden; background:#fff; }
-  .groen .artikel { border-color:var(--groen-line); }
-  .t1 { display:block; width:100%; text-align:left; background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:12px 14px; }
-  .t1:focus-visible { outline:2px solid var(--brand); outline-offset:-3px; }
-  .groen .t1:focus-visible { outline-color:var(--groen); }
-  .t1 .atitel { font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; color:var(--ink); display:flex; gap:8px; align-items:baseline; }
-  .t1 .atitel .att { flex:1 1 auto; }
-  .t1 .atitel .chev { flex:0 0 auto; color:var(--ink-flauw); align-self:flex-start; margin-top:3px; }
-  .t1 .asum { font-size:13px; color:var(--ink-zacht); margin-top:3px; }
+  /* Sluitknop onder de tegel */
+  .sluitrij{ padding:2px 16px 14px; }
+  .sluit{ display:inline-flex; align-items:center; gap:6px; background:none; border:0; cursor:pointer; font-family:var(--disp); font-weight:600; font-size:11.5px; color:var(--ink-zwak); padding:6px 2px; }
+  .sluit:hover{ color:var(--c-main); }
+  .sluit .ic{ width:14px; height:14px; }
 
-  /* ---- Volledige NL-tekst (niveau 2) ---- */
-  .uitleg .binnen { padding:2px 14px 12px; }
-  .synthese { font-size:13.5px; color:var(--ink); line-height:1.62; }
-  .synthese p { margin:0 0 9px; }
-  .synthese p:last-child { margin-bottom:0; }
-  .redlabel { font-family:'Poppins',sans-serif; font-weight:600; font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:var(--groen); margin-bottom:7px; }
+  /* ---- Lege staat ---- */
+  .leeg{ border:1px dashed var(--hair3); border-radius:12px; background:var(--bg); padding:28px 20px; display:grid; justify-items:center; gap:8px; text-align:center; }
+  .leeg .rond{ width:40px; height:40px; border-radius:999px; background:#fff; border:1px solid var(--hair2); display:grid; place-items:center; color:var(--ink-zwak); }
+  .leeg .rond .ic{ width:20px; height:20px; }
+  .leeg h3{ margin:0; font-family:var(--disp); font-weight:600; font-size:15px; color:var(--ink-body); }
+  .leeg p{ margin:0; font-size:14px; line-height:22px; color:var(--ink-meta); max-width:34ch; }
+  .leeg .gecheckt{ font-family:var(--body); font-weight:500; font-size:12.5px; color:var(--ink-zwak); }
 
-  /* ---- Franse/eigen bronnen (niveau 3) ---- */
-  .t2 { display:inline-flex; align-items:center; gap:7px; margin-top:10px; background:var(--brand-soft); border:1px solid var(--brand-line); color:var(--brand); font-family:'Poppins',sans-serif; font-weight:600; font-size:11.5px; border-radius:999px; padding:6px 12px; cursor:pointer; }
-  .groen .t2 { background:var(--groen-soft); border-color:var(--groen-line); color:var(--groen); }
-  .t2:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
-  .bronnen .binnen { padding:8px 2px 2px; }
-  .bron { display:flex; flex-direction:column; gap:1px; padding:7px 0; border-bottom:1px solid var(--brand-line); }
-  .groen .bron { border-bottom-color:var(--groen-line); }
-  .bron:last-child { border-bottom:none; }
-  .bron a { font-size:12.5px; color:var(--ink); text-decoration:none; font-weight:600; }
-  .bron a:hover, .bron a:focus-visible { color:var(--brand); text-decoration:underline; outline:none; }
-  .groen .bron a:hover, .groen .bron a:focus-visible { color:var(--groen); }
-  .bron .m { font-size:11px; color:var(--ink-flauw); }
-  .bron .m .bn { font-family:'Poppins',sans-serif; font-weight:600; color:var(--ink-zacht); }
+  /* ---- Skeleton ---- */
+  .skelkaart{ background:#fff; border:1px solid var(--hair2); border-radius:12px; padding:16px; display:grid; gap:10px; }
+  .skel{ height:12px; border-radius:4px; background:#f7f1ef; }
+  .skel.k{ height:14px; width:60%; background:#f3ece9; }
+  .skel.m{ width:92%; } .skel.s{ width:78%; }
 
-  /* Sluiten-knopjes. */
-  .sluit { display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-family:'Poppins',sans-serif; font-weight:600; font-size:11.5px; color:var(--ink-zacht); padding:6px 2px; }
-  .sluit:hover { color:var(--brand); }
-  .groen .sluit:hover { color:var(--groen); }
-  .sluit:focus-visible { outline:2px solid var(--brand); outline-offset:2px; border-radius:6px; }
-  .sluit-tegel-wrap { padding:2px 16px 14px; }
-  .art-sluit { margin-top:6px; }
+  /* ---- Bron-statusbalk ---- */
+  .status{ background:var(--bg); border-top:1px solid var(--hair); padding:10px 14px; display:flex; flex-wrap:wrap; gap:6px 14px; font-family:var(--body); font-weight:500; font-size:12.5px; color:var(--ink-meta); }
+  .status .b{ display:inline-flex; align-items:center; gap:6px; }
+  .status .sd{ width:6px; height:6px; border-radius:999px; flex:none; }
+  .status .ok .sd{ background:var(--groen); } .status .nok .sd{ background:var(--brand); }
 
-  /* ---- Agenda (plat) ---- */
-  .plat { padding:15px 18px 14px; }
-  .agenda-rij { display:flex; gap:12px; padding:7px 0; border-bottom:1px solid var(--groen-line); }
-  .agenda-rij:last-child { border-bottom:none; }
-  .agenda-rij .dat { font-family:'Poppins',sans-serif; font-weight:600; font-size:12px; color:var(--groen); flex:0 0 118px; }
-  .agenda-rij .watt { font-size:13.5px; }
-  .agenda-rij .watt .sub { color:var(--ink-flauw); font-size:11.5px; }
-  .agenda-link { margin-top:11px; padding-top:10px; border-top:1px solid var(--groen-line); font-size:12.5px; }
-  .agenda-link a { color:var(--groen); font-family:'Poppins',sans-serif; font-weight:600; }
-
-  /* ---- Schoolvakanties ---- */
-  .vak .plat h2 { color:var(--groen); margin:0 0 6px; font-size:15px; }
-  .vak .link { margin-top:8px; font-size:12.5px; }
-  .vak a { color:var(--groen); }
-
-  .bronstatus { flex:0 0 auto; border-top:1px solid rgba(128,0,0,.1); padding:10px 18px 14px; font-size:12px; color:var(--ink-zacht); display:flex; flex-wrap:wrap; gap:6px 14px; background:#fdf9f8; line-height:1.5; }
-  .bronstatus .b { display:inline-flex; align-items:center; gap:5px; }
-  .bronstatus .ok { color:var(--groen); }
-  .bronstatus .nok { color:var(--brand); }
-  .leeg { color:var(--ink-zacht); font-size:13.5px; padding:4px 0; }
-  .laden { color:var(--ink-zacht); font-size:14px; padding:24px 0; text-align:center; }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{ animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+    .hotdot{ animation:none; box-shadow:0 0 0 3px rgba(128,0,0,.12); }
+  }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="regelbalk" id="regelbalk">
-    <button type="button" id="allesUit">Alles uitklappen</button>
-    <button type="button" id="allesIn">Alles inklappen</button>
-    <span class="bijwerk" id="sub">wordt geladen…</span>
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
+  <symbol id="ic-nieuws" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><rect x="6" y="8.5" width="6" height="5" rx="1"></rect><path d="M14.5 8.5h4M14.5 12h4M6 16.5h12"></path></symbol>
+  <symbol id="ic-overheid" viewBox="0 0 24 24"><path d="M3.5 10 12 5l8.5 5"></path><path d="M5.5 10.5v7.5M9.5 10.5v7.5M14.5 10.5v7.5M18.5 10.5v7.5"></path><path d="M3 18.5h18"></path></symbol>
+  <symbol id="ic-nlers" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"></circle><path d="M3.5 18.5c0-3 2.5-4.6 5.5-4.6s5.5 1.6 5.5 4.6"></path><circle cx="17.2" cy="10.6" r="2.2"></circle><path d="M15.2 14.7c3 .2 5.1 1.8 5.1 3.8"></path></symbol>
+  <symbol id="ic-archief" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="4.5" rx="1"></rect><path d="M4.7 9.5v8.4a1 1 0 0 0 1 1h12.6a1 1 0 0 0 1-1V9.5"></path><path d="M10 13h4"></path></symbol>
+  <symbol id="ic-geld" viewBox="0 0 24 24"><rect x="3" y="6.5" width="18" height="11" rx="2"></rect><circle cx="12" cy="12" r="2.6"></circle><path d="M6.4 12h.6M17 12h.6"></path></symbol>
+  <symbol id="ic-praktisch" viewBox="0 0 24 24"><rect x="4.5" y="4" width="15" height="16.5" rx="2"></rect><path d="M9 4V2.8h6V4"></path><path d="M8.5 10.2l2 2 3.6-3.7"></path><path d="M8.5 15.6h7"></path></symbol>
+  <symbol id="ic-verkeer" viewBox="0 0 24 24"><path d="M8.6 3.5 5 20.5M15.4 3.5 19 20.5"></path><path d="M12 5.2v2.6M12 10.7v2.8M12 16.4v2.8"></path></symbol>
+  <symbol id="ic-verenigingen" viewBox="0 0 24 24"><circle cx="12" cy="6" r="2.5"></circle><circle cx="5.6" cy="17.4" r="2.5"></circle><circle cx="18.4" cy="17.4" r="2.5"></circle><path d="M10.4 8 7.2 15.2M13.6 8l3.2 7.2M8.1 17.4h7.8"></path></symbol>
+  <symbol id="ic-agenda" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="15" rx="2"></rect><path d="M3.5 10.2h17M8 3.5v4M16 3.5v4"></path><path d="M7.6 13.6h3M13.4 13.6h3M7.6 17h3"></path></symbol>
+  <symbol id="ic-vakanties" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.9 5.9l1.6 1.6M16.5 16.5l1.6 1.6M18.1 5.9l-1.6 1.6M7.5 16.5l-1.6 1.6"></path></symbol>
+  <symbol id="ic-bronnen" viewBox="0 0 24 24"><path d="M10.2 13.6a3.6 3.6 0 0 0 5.1 0l2.8-2.8a3.6 3.6 0 0 0-5.1-5.1l-1 1"></path><path d="M13.8 10.4a3.6 3.6 0 0 0-5.1 0l-2.8 2.8a3.6 3.6 0 0 0 5.1 5.1l1-1"></path></symbol>
+  <symbol id="ic-klok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"></circle><path d="M12 7.4V12l3.2 2.1"></path></symbol>
+  <symbol id="ic-uitklap" viewBox="0 0 24 24"><path d="M7 10l5-5 5 5M7 14l5 5 5-5"></path></symbol>
+  <symbol id="ic-inklap" viewBox="0 0 24 24"><path d="M7 5l5 5 5-5M7 19l5-5 5 5"></path></symbol>
+  <symbol id="ic-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></symbol>
+  <symbol id="ic-leeg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"></circle><path d="M8.4 13.8h7.2"></path></symbol>
+</svg>
+
+<div class="panel">
+  <div class="bar">
+    <button type="button" class="knop" id="allesBtn"><svg class="ic" aria-hidden="true"><use href="#ic-uitklap"/></svg><span id="allesLabel">Alles uitklappen</span></button>
+    <span class="bijwerk"><svg class="ic" aria-hidden="true"><use href="#ic-klok"/></svg><span id="bijwerk">wordt geladen…</span></span>
   </div>
-  <div class="tabbar" id="tabbar"></div>
-  <div class="body" id="body">
-    <div id="inner"><div class="laden">Nieuws wordt opgehaald…</div></div>
-  </div>
-  <div class="bronstatus" id="bronstatus"></div>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Categorieën"></div>
+  <div class="scroller" id="scroller"></div>
+  <div class="status" id="status"></div>
 </div>
 
 <script>
 (function(){
   "use strict";
   var VERENIGINGEN_PAGINA = "https://www.nederlanders.fr/page/nederlandse-verenigingen-in-frankrijk";
-  var bodyEl = document.getElementById("body");
-  var innerEl = document.getElementById("inner");
-  var subEl = document.getElementById("sub");
-  var statusEl = document.getElementById("bronstatus");
-  var regelbalk = document.getElementById("regelbalk");
-  var tabbarEl = document.getElementById("tabbar");
+  var scrollerEl = document.getElementById("scroller");
+  var tabsEl = document.getElementById("tabs");
+  var statusEl = document.getElementById("status");
+  var bijwerkEl = document.getElementById("bijwerk");
+  var allesBtn = document.getElementById("allesBtn");
+  var allesLabel = document.getElementById("allesLabel");
 
+  // Categorieën (vaste volgorde) + iconen + labels.
+  var CATS = [
+    { key:"nieuws",   label:"Nieuws",       ic:"ic-nieuws" },
+    { key:"overheid", label:"Overheid",     ic:"ic-overheid" },
+    { key:"nlers",    label:"NL'ers in FR", ic:"ic-nlers" },
+    { key:"archief",  label:"Archief",      ic:"ic-archief" }
+  ];
+  var THEMA_IC = {
+    "geld-belasting":"ic-geld", economie:"ic-geld", ondernemen:"ic-geld", douane:"ic-overheid", praktisch:"ic-praktisch",
+    verkeer:"ic-verkeer", verenigingen:"ic-verenigingen", agenda:"ic-agenda", schoolvakanties:"ic-vakanties",
+    infofrankrijk:"ic-nlers", bosbranden:"ic-nieuws", landelijk:"ic-nieuws", regionaal:"ic-nieuws"
+  };
+
+  var laatste = null;         // laatste data (tegels per cat)
+  var actief = "nieuws";      // actieve tab
+  var open = load("nlfr_open", {});   // { tegelId: true }
+  var artOpen = load("nlfr_art", {});  // { tegelId/artId: true }
+  var bronOpen = {};                   // niveau 4, niet bewaard
+  actief = load("nlfr_tab", "nieuws");
+
+  function load(k, def){ try{ var v=sessionStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
+  function save(k, v){ try{ sessionStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-  function datum(iso){ try{ var d=new Date(iso); return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
+  function ico(id, cls){ return '<svg class="ic'+(cls?" "+cls:"")+'" aria-hidden="true"><use href="#'+id+'"/></svg>'; }
+  function tijd(iso){ try{ var d=new Date(iso); return d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
+  function datum(iso){ try{ var d=new Date(iso); return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"})+" "+tijd(iso); }catch(e){ return ""; } }
   function agendaDag(iso){ try{ return new Date(iso+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"long"}); }catch(e){ return iso; } }
-  function meerv(n){ return n===1 ? "artikel" : "artikelen"; }
+  function meerv(n){ return n+" "+(n===1?"artikel":"artikelen"); }
 
-  // ---- Tabbladen: gegroepeerd, afgeleid van de tegels die er nú zijn ----
-  function groepVan(soort){
-    if (soort==="pers") return "Nieuws";
-    if (soort==="overheid") return "Overheid";
-    if (soort==="archief") return "Archief";
-    return "NLers"; // infofrankrijk, verenigingen, agenda, schoolvakanties
+  function catVan(soort){
+    if(soort==="pers") return "nieuws";
+    if(soort==="overheid") return "overheid";
+    if(soort==="archief") return "archief";
+    return "nlers";
   }
-  var GROEP_VOLGORDE = ["Nieuws","Overheid","NLers","Archief"];
-  var GROEP_LABEL = { Nieuws:"Nieuws", Overheid:"Overheid", NLers:"NL'ers in FR", Archief:"Archief" };
-  function tabklasse(accent){ return accent==="groen"?"groen":accent==="archief"?"grijs":""; }
+  function themaIco(t){ return THEMA_IC[t] || (CATS.filter(function(c){return c.key===catVan(t.soort);})[0]||{}).ic || "ic-nieuws"; }
 
-  function bouwTabs(tegels, heeftAgenda, heeftVak){
-    var items = [];
-    tegels.forEach(function(t, ti){
-      items.push({ groep: groepVan(t.soort), label: t.label, id: "sec-"+ti, accent: t.accent });
-    });
-    if (heeftAgenda) items.push({ groep:"NLers", label:"Agenda", id:"sec-agenda", accent:"groen" });
-    if (heeftVak) items.push({ groep:"NLers", label:"Schoolvakanties", id:"sec-vak", accent:"groen" });
-    var out = "";
-    GROEP_VOLGORDE.forEach(function(g){
-      var inGroep = items.filter(function(x){ return x.groep===g; });
-      if (!inGroep.length) return;
-      var chips = inGroep.map(function(x){
-        return '<button class="tab '+tabklasse(x.accent)+'" data-target="'+x.id+'">'+esc(x.label)+'</button>';
-      }).join("");
-      out += '<span class="tabgroep"><span class="glab">'+esc(GROEP_LABEL[g])+'</span>'+chips+'</span>';
-    });
-    return out;
+  // Bouw per-categorie lijst van "tegels" (incl. agenda/schoolvakanties als platte tegels).
+  function bouwCats(data, vak){
+    var perCat = { nieuws:[], overheid:[], nlers:[], archief:[] };
+    (data.tegels||[]).forEach(function(t){ perCat[catVan(t.soort)].push(t); });
+    if (data.agenda && data.agenda.length){
+      perCat.nlers.push({ soort:"agenda", id:"agenda", thema:"agenda", label:"Agenda — komende twee weken",
+        meta:data.agenda.length+" activiteiten", plat:agendaBody(data.agenda) });
+    }
+    if (vak && vak.zin){
+      perCat.nlers.push({ soort:"schoolvakanties", id:"schoolvakanties", thema:"schoolvakanties", label:"Schoolvakanties",
+        meta:"", plat:vakBody(vak) });
+    }
+    return perCat;
+  }
+
+  function agendaBody(agenda){
+    var rijen = agenda.map(function(a){
+      var det=[a.tijd,a.plaats].filter(Boolean).join(" · ");
+      return '<div class="agrij"><span class="dat">'+esc(agendaDag(a.datum))+'</span><span class="wat">'+esc(a.titel)+
+        '<span class="sub">'+(a.vereniging?" · "+esc(a.vereniging):"")+(det?" · "+esc(det):"")+'</span></span></div>';
+    }).join("");
+    return '<div class="platblok">'+rijen+'<div class="agendalink"><a href="'+VERENIGINGEN_PAGINA+'" target="_top" rel="noopener">Alle Nederlandse verenigingen in Frankrijk →</a></div></div>';
+  }
+  function vakBody(v){
+    return '<div class="platblok"><div>'+esc(v.zin)+'</div><div class="platlink"><a href="'+esc(v.servicePublic)+'" target="_blank" rel="noopener">Officiële kalender &amp; regels (service-public.gouv.fr) →</a></div></div>';
   }
 
   function bronHTML(b){
-    var t = b.titel || b.naam || "bron";
-    return '<div class="bron"><a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(t)+'</a>'+
-           '<span class="m"><span class="bn">'+esc(b.naam||"")+'</span>'+(b.datum?" · "+esc(datum(b.datum)):"")+'</span></div>';
+    var t=b.titel||b.naam||"bron";
+    return '<li><a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(t)+'</a>'+(b.naam?'<span class="uitg">'+esc(b.naam)+(b.datum?" · "+esc(datum(b.datum)):"")+'</span>':'')+'</li>';
   }
 
-  function artikelHTML(t, ti, a, ai){
-    var uid = "u-"+ti+"-"+ai, bid = "b-"+ti+"-"+ai;
+  function artikelHTML(cat, t, a){
+    var aid = t.id+"/"+a.id, isOpen = !!artOpen[aid];
     var paras = String(a.tekst||"").split(/\n\n+/).filter(Boolean).map(function(p){ return "<p>"+esc(p)+"</p>"; }).join("");
-    if (!paras) paras = "<p>"+esc(a.summary||"")+"</p>";
-    var bronnen = a.bronnen || [];
-    var bronLabel = t.soort === "pers" ? ("Bronnen ("+bronnen.length+")") : "Bron";
+    if(!paras) paras="<p>"+esc(a.summary||"")+"</p>";
+    var bronnen=a.bronnen||[];
     var bronBlok = bronnen.length
-      ? '<button class="t2" type="button" aria-expanded="false" aria-controls="'+bid+'"><span class="chev">▾</span> '+bronLabel+'</button>'+
-        '<div class="reveal bronnen" id="'+bid+'"><div class="binnen">'+bronnen.map(bronHTML).join("")+'</div></div>'
-      : "";
-    return '<div class="artikel">'+
-      '<button class="t1" type="button" aria-expanded="false" aria-controls="'+uid+'">'+
-        '<span class="atitel"><span class="att">'+esc(a.titel)+'</span> <span class="chev">▾</span></span>'+
-        (a.summary?'<span class="asum">'+esc(a.summary)+'</span>':'')+
-        (a.restDagen?'<span class="rest">Archief · blijft nog '+a.restDagen+' dag'+(a.restDagen===1?'':'en')+' staan</span>':'')+
+      ? '<div class="bronwrap"><button type="button" class="bronknop" data-bron="'+esc(aid)+'" aria-expanded="false">'+ico("ic-bronnen")+' Bronnen ('+bronnen.length+')</button><ul class="bronlijst">'+bronnen.map(bronHTML).join("")+'</ul></div>'
+      : '<div class="bronknop leeg">'+ico("ic-bronnen")+' Geen externe bron</div>';
+    var meta = a.restDagen ? ('<span class="rest">Blijft nog '+a.restDagen+' dag'+(a.restDagen===1?'':'en')+' in het archief</span>')
+             : (bronnen.length ? esc((bronnen[0].naam||""))+(bronnen[0].datum?" · "+esc(datum(bronnen[0].datum)):"") : "");
+    return '<div class="artikel'+(isOpen?" open":"")+'" data-art="'+esc(aid)+'">'+
+      '<button type="button" class="artkop" aria-expanded="'+(isOpen?"true":"false")+'">'+
+        '<span class="tk"><span class="att">'+esc(a.titel)+'</span>'+(a.summary?'<span class="asum">'+esc(a.summary)+'</span>':'')+(meta?'<span class="ameta">'+meta+'</span>':'')+'</span>'+
+        '<span class="chevbox">'+ico("ic-chevron")+'</span>'+
       '</button>'+
-      '<div class="reveal uitleg" id="'+uid+'"><div class="binnen">'+
-        (t.soort==="pers" && a.label ? '<div class="redlabel">'+esc(a.label)+'</div>' : "")+
-        '<div class="synthese">'+paras+'</div>'+
-        bronBlok+
-        '<div class="art-sluit"><button class="sluit sluit-art" type="button">▲ Sluiten</button></div>'+
-      '</div></div>'+
+      '<div class="uitleg"><div class="tekst">'+(cat==="nieuws"&&a.label?'<div class="redlabel">'+esc(a.label)+'</div>':'')+paras+bronBlok+'</div></div>'+
     '</div>';
   }
 
-  function tegelHTML(t, ti){
-    var arts = t.artikelen || [];
-    var bullets = arts.slice(0,6).map(function(a){ return "<li>"+esc(a.titel)+"</li>"; }).join("");
-    if (arts.length>6) bullets += '<li class="meer">+'+(arts.length-6)+" meer</li>";
-    var intro = t.soort==="archief"
-      ? '<div class="archief-intro">Dit zijn de ‘oude’ artikelen die maximaal 14 dagen blijven staan in het archief.</div>'
-      : "";
-    return '<article id="sec-'+ti+'" class="tegel '+(t.accent==="groen"?"groen":t.accent==="archief"?"archief":"")+'">'+
-      '<button class="t0" type="button" aria-expanded="false" aria-controls="l1-'+ti+'">'+
-        '<div class="tkop">'+(t.hot?'<span class="dot"></span>':"")+
-          '<h2>'+esc(t.label)+'</h2>'+
-          '<span class="telling">'+arts.length+" "+meerv(arts.length)+'</span>'+
-        '</div>'+
-        '<ul class="bullets">'+bullets+'</ul>'+
-        '<div class="balk"><span class="chev">▾</span><span>Toon de '+arts.length+" "+meerv(arts.length)+'</span></div>'+
+  function tegelHTML(cat, t){
+    var isOpen = !!open[t.id];
+    var body;
+    if (t.plat){ body = t.plat; }
+    else {
+      var arts = t.artikelen||[];
+      var bullets = arts.slice(0,6).map(function(a){ return "<li>"+esc(a.titel)+"</li>"; }).join("");
+      var intro = t.soort==="archief" ? '<div class="archief-intro">Dit zijn de ‘oude’ artikelen die maximaal 14 dagen in het archief blijven staan.</div>' : "";
+      body = intro + '<ul class="bullets">'+bullets+'</ul>'+
+             '<div class="artikelen">'+arts.map(function(a){ return artikelHTML(cat,t,a); }).join("")+'</div>';
+    }
+    var catLabel = (CATS.filter(function(c){return c.key===cat;})[0]||{}).label || "";
+    var telling = t.plat ? esc(t.meta||"") : meerv((t.artikelen||[]).length);
+    var hot = t.hot ? '<span class="hot"><span class="hotdot"></span>Actueel</span>' : "";
+    return '<article class="tegel cat-'+cat+(isOpen?" open":"")+'" data-tegel="'+esc(t.id)+'">'+
+      '<button type="button" class="kop" aria-expanded="'+(isOpen?"true":"false")+'">'+
+        '<span class="icotegel">'+ico(themaIco(t.thema||t.soort))+'</span>'+
+        '<span class="koptekst"><span class="catlabel">'+esc(catLabel)+hot+'</span>'+
+          '<h3>'+esc(t.label)+'</h3><span class="kopmeta">'+telling+'</span></span>'+
+        '<span class="chevbox">'+ico("ic-chevron")+'</span>'+
       '</button>'+
-      '<div class="reveal artikelen" id="l1-'+ti+'">'+
-        intro+
-        arts.map(function(a,ai){ return artikelHTML(t,ti,a,ai); }).join("")+
-        '<div class="sluit-tegel-wrap"><button class="sluit sluit-tegel" type="button">▲ Tegel sluiten</button></div>'+
-      '</div>'+
+      '<div class="body">'+body+(t.plat?"":'<div class="sluitrij"><button type="button" class="sluit" data-sluit="'+esc(t.id)+'">'+ico("ic-inklap")+' Inklappen</button></div>')+'</div>'+
     '</article>';
   }
 
-  function agendaHTML(agenda){
-    if (!agenda || !agenda.length) return "";
-    var rijen = agenda.map(function(a){
-      var detail = [a.tijd, a.plaats].filter(Boolean).join(" · ");
-      return '<div class="agenda-rij"><span class="dat">'+esc(agendaDag(a.datum))+'</span>'+
-        '<span class="watt">'+esc(a.titel)+'<span class="sub">'+(a.vereniging?" · "+esc(a.vereniging):"")+(detail?" · "+esc(detail):"")+'</span></span></div>';
+  function leegHTML(){
+    return '<div class="leeg"><span class="rond">'+ico("ic-leeg")+'</span>'+
+      '<h3>Geen nieuwe berichten</h3>'+
+      '<p>In deze categorie is op dit moment niets verschenen. We controleren elke 5 minuten.</p>'+
+      '<span class="gecheckt">Laatst gecontroleerd '+esc(bijwerkEl.textContent)+'</span></div>';
+  }
+
+  function renderTabs(perCat){
+    var g1 = ["nieuws","overheid","nlers"].map(function(k){
+      var c = CATS.filter(function(x){return x.key===k;})[0];
+      return '<button type="button" role="tab" class="tab cat-'+k+'" data-tab="'+k+'" aria-selected="'+(actief===k?"true":"false")+'">'+ico(c.ic)+esc(c.label)+'</button>';
     }).join("");
-    return '<article id="sec-agenda" class="tegel groen"><div class="plat">'+
-      '<div class="tkop"><h2>Agenda — komende twee weken</h2><span class="telling">'+agenda.length+' activiteiten</span></div>'+
-      rijen+
-      '<div class="agenda-link"><a href="'+VERENIGINGEN_PAGINA+'" target="_top" rel="noopener">Alle Nederlandse verenigingen in Frankrijk →</a></div>'+
-      '</div></article>';
+    var arch = '<button type="button" role="tab" class="tab cat-archief" data-tab="archief" aria-selected="'+(actief==="archief"?"true":"false")+'">'+ico("ic-archief")+'Archief</button>';
+    tabsEl.innerHTML = '<span class="tabgroep">'+g1+'</span><span class="tabsplit"></span><span class="tabgroep archiefgroep">'+arch+'</span>';
   }
 
-  function vakantieHTML(v){
-    if (!v || !v.zin) return "";
-    return '<article id="sec-vak" class="tegel groen vak"><div class="plat">'+
-      '<h2>Schoolvakanties</h2><div style="font-size:14px">'+esc(v.zin)+'</div>'+
-      '<div class="link"><a href="'+esc(v.servicePublic)+'" target="_blank" rel="noopener">Officiële kalender &amp; regels (service-public.gouv.fr) →</a></div>'+
-      '</div></article>';
+  function renderScroller(perCat){
+    var lijst = perCat[actief] || [];
+    if (!lijst.length){ scrollerEl.innerHTML = leegHTML(); }
+    else { scrollerEl.innerHTML = lijst.map(function(t){ return tegelHTML(actief, t); }).join(""); }
+    werkAllesLabelBij();
   }
 
-  function render(data, vak){
-    var tegels = data.tegels || [];
-    var html = tegels.map(tegelHTML).join("");
-    html += agendaHTML(data.agenda);
-    html += vakantieHTML(vak);
-    if (!tegels.length && !(data.agenda||[]).length && !(vak&&vak.zin)){
-      html = '<div class="leeg">Op dit moment is er geen nieuws opgehaald.</div>';
-    }
-    innerEl.innerHTML = html;
-    tabbarEl.innerHTML = bouwTabs(tegels, !!(data.agenda && data.agenda.length), !!(vak && vak.zin));
-    subEl.textContent = "Bijgewerkt " + datum(data.bijgewerkt);
-    renderStatus(data.bronStatus||[]);
-    report();
+  function render(){
+    if(!laatste){ return; }
+    renderTabs(laatste);
+    renderScroller(laatste);
+    meldHoogte();
   }
 
   function renderStatus(lijst){
-    if (!lijst.length){ statusEl.innerHTML = ""; return; }
+    if(!lijst || !lijst.length){ statusEl.innerHTML=""; return; }
     statusEl.innerHTML = '<span class="b" style="font-weight:600">Bronnen:</span>' + lijst.map(function(b){
-      var cls = b.ok ? "ok" : "nok";
-      var teken = b.ok ? "●" : "○";
-      return '<span class="b '+cls+'">'+teken+' '+esc(b.naam)+' ('+(b.aantal||0)+')</span>';
+      return '<span class="b '+(b.ok?"ok":"nok")+'"><span class="sd"></span>'+esc(b.naam)+' ('+(b.aantal||0)+')</span>';
     }).join("");
   }
 
-  function zetOpen(btn, open){
-    var doel = document.getElementById(btn.getAttribute("aria-controls"));
-    if (!doel) return;
-    doel.classList.toggle("open", open);
-    btn.setAttribute("aria-expanded", open ? "true" : "false");
-    if (btn.classList.contains("t0")){
-      var tegel = btn.closest(".tegel");
-      if (tegel) tegel.classList.toggle("open", open);
-    }
+  function werkAllesLabelBij(){
+    var koppen = scrollerEl.querySelectorAll(".kop");
+    var allesOpen = koppen.length>0 && Array.prototype.every.call(koppen, function(k){ return k.getAttribute("aria-expanded")==="true"; });
+    allesLabel.textContent = allesOpen ? "Alles inklappen" : "Alles uitklappen";
+    allesBtn.querySelector("use").setAttribute("href", allesOpen ? "#ic-inklap" : "#ic-uitklap");
+    allesBtn.setAttribute("aria-expanded", allesOpen?"true":"false");
   }
 
-  bodyEl.addEventListener("click", function(e){
-    var sluitTegel = e.target.closest(".sluit-tegel");
-    if (sluitTegel){
-      var tg = sluitTegel.closest(".tegel");
-      var t0 = tg && tg.querySelector(".t0");
-      if (t0) zetOpen(t0, false);
-      if (tg) tg.scrollIntoView({ block:"nearest" });
-      report(); return;
+  // ---- Interactie ----
+  tabsEl.addEventListener("click", function(e){
+    var tab = e.target.closest(".tab"); if(!tab) return;
+    actief = tab.getAttribute("data-tab"); save("nlfr_tab", actief);
+    scrollerEl.scrollTop = 0;
+    render();
+  });
+  tabsEl.addEventListener("keydown", function(e){
+    if(e.key!=="ArrowRight" && e.key!=="ArrowLeft") return;
+    var order = ["nieuws","overheid","nlers","archief"];
+    var i = order.indexOf(actief);
+    i = e.key==="ArrowRight" ? Math.min(order.length-1,i+1) : Math.max(0,i-1);
+    actief = order[i]; save("nlfr_tab", actief); render();
+    var t = tabsEl.querySelector('[data-tab="'+actief+'"]'); if(t) t.focus();
+  });
+
+  scrollerEl.addEventListener("click", function(e){
+    var sluit = e.target.closest(".sluit");
+    if(sluit){ zetTegel(sluit.getAttribute("data-sluit"), false); return; }
+    var bron = e.target.closest(".bronknop");
+    if(bron && !bron.classList.contains("leeg")){
+      var wrap = bron.closest(".bronwrap"); var nu = wrap.classList.toggle("open");
+      bron.setAttribute("aria-expanded", nu?"true":"false");
+      bron.lastChild.textContent = nu ? " Bronnen verbergen" : (" Bronnen ("+wrap.querySelectorAll(".bronlijst li").length+")");
+      meldHoogte(); return;
     }
-    var sluitArt = e.target.closest(".sluit-art");
-    if (sluitArt){
-      var art = sluitArt.closest(".artikel");
-      var t1 = art && art.querySelector(".t1");
-      if (t1) zetOpen(t1, false);
-      report(); return;
+    var artkop = e.target.closest(".artkop");
+    if(artkop){
+      var art = artkop.closest(".artikel"); var aid = art.getAttribute("data-art");
+      var nu2 = art.classList.toggle("open"); artkop.setAttribute("aria-expanded", nu2?"true":"false");
+      if(nu2) artOpen[aid]=true; else delete artOpen[aid]; save("nlfr_art", artOpen);
+      meldHoogte(); return;
     }
-    var btn = e.target.closest("[aria-controls]");
-    if (!btn || !bodyEl.contains(btn)) return;
-    var doel = document.getElementById(btn.getAttribute("aria-controls"));
-    if (!doel) return;
-    zetOpen(btn, !doel.classList.contains("open"));
-    report();
+    var kop = e.target.closest(".kop");
+    if(kop){ var tg=kop.closest(".tegel"); zetTegel(tg.getAttribute("data-tegel"), !tg.classList.contains("open")); }
   });
 
-  // Tab-klik: soepel naar de tegel scrollen én 'm openklappen.
-  tabbarEl.addEventListener("click", function(e){
-    var tab = e.target.closest(".tab");
-    if (!tab) return;
-    var el = document.getElementById(tab.getAttribute("data-target"));
-    if (!el) return;
-    var t0 = el.querySelector(".t0"); // agenda/schoolvakanties hebben er geen
-    if (t0) zetOpen(t0, true);
-    report();
-    el.scrollIntoView({ behavior:"smooth", block:"start" });
+  function zetTegel(id, wantOpen){
+    var tg = scrollerEl.querySelector('.tegel[data-tegel="'+CSS.escape(id)+'"]'); if(!tg) return;
+    tg.classList.toggle("open", wantOpen);
+    tg.querySelector(".kop").setAttribute("aria-expanded", wantOpen?"true":"false");
+    if(wantOpen) open[id]=true; else delete open[id];
+    save("nlfr_open", open);
+    werkAllesLabelBij(); meldHoogte();
+  }
+
+  allesBtn.addEventListener("click", function(){
+    var allesOpen = allesBtn.getAttribute("aria-expanded")==="true";
+    scrollerEl.querySelectorAll(".tegel").forEach(function(tg){
+      var id=tg.getAttribute("data-tegel");
+      tg.classList.toggle("open", !allesOpen);
+      tg.querySelector(".kop").setAttribute("aria-expanded", (!allesOpen)?"true":"false");
+      if(!allesOpen) open[id]=true; else delete open[id];
+    });
+    save("nlfr_open", open);
+    werkAllesLabelBij(); meldHoogte();
   });
 
-  // Alles uit-/inklappen (tegels + artikelen; bronnen blijven dicht).
-  document.getElementById("allesUit").addEventListener("click", function(){
-    bodyEl.querySelectorAll(".t0, .t1").forEach(function(b){ zetOpen(b, true); });
-    report();
-  });
-  document.getElementById("allesIn").addEventListener("click", function(){
-    bodyEl.querySelectorAll(".t0, .t1, .t2").forEach(function(b){ zetOpen(b, false); });
-    report();
-  });
-
-  // ---- Hoogte-sync naar de moederpagina (postMessage + ResizeObserver) ----
-  // De knoppenbalk + bronstatus blijven vastgepind; de inhoud scrollt ertussen.
-  // De iframe-hoogte is gecapt op de beschikbare vensterhoogte, zodat het paneel
-  // zo hoog mogelijk is zónder dat de knoppenbalk uit beeld scrollt. De
-  // moederpagina mag die hoogte doorgeven via postMessage({nlfrViewport}); zo
-  // niet, dan valt hij terug op een schatting uit de schermhoogte.
-  var parentVenster = 0; // door de moederpagina gemeld (px)
+  // ---- Hoogte-handshake (postMessage), gedebounced + afgerond op 8px ----
+  var parentVenster = 0, lastH = 0, hTimer = null;
   function cap(){
-    if (parentVenster > 0) return Math.max(420, parentVenster - 8);
-    var s = (window.screen && window.screen.height) || 900;
-    return Math.max(640, Math.min(1200, Math.round(s * 0.9)));
+    if(parentVenster>0) return Math.max(420, parentVenster);
+    var s=(window.screen&&window.screen.height)||900;
+    return Math.max(640, Math.min(1200, Math.round(s*0.9)));
   }
-  var lastH = 0;
-  function natuurlijkeHoogte(){
-    return (regelbalk.offsetHeight || 0) +
-           (tabbarEl.offsetHeight || 0) +
-           (innerEl.scrollHeight || 0) +
-           (statusEl.offsetHeight || 0) + 26; // body-padding + randen
+  function natuur(){
+    var bar=document.querySelector(".bar"), st=statusEl;
+    return (bar?bar.offsetHeight:0)+(tabsEl.offsetHeight||0)+(scrollerEl.scrollHeight||0)+(st.offsetHeight||0)+4;
   }
-  function report(){
-    try {
-      if (window.parent && window.parent !== window){
-        var h = Math.min(natuurlijkeHoogte(), cap());
-        if (h !== lastH){ lastH = h; window.parent.postMessage({ nlfrActueelHeight: h }, "*"); }
-      }
-    } catch(e){}
+  function meldHoogte(){
+    if(hTimer) return;
+    hTimer = setTimeout(function(){
+      hTimer=null;
+      try{
+        if(window.parent && window.parent!==window){
+          var h = Math.min(natuur(), cap());
+          h = Math.round(h/8)*8;
+          if(Math.abs(h-lastH)>=8){ lastH=h; window.parent.postMessage({ nlfrActueelHeight:h }, "*"); }
+        }
+      }catch(e){}
+    }, 100);
   }
   window.addEventListener("message", function(e){
-    if (e.data && typeof e.data.nlfrViewport === "number" && e.data.nlfrViewport > 0){
-      parentVenster = e.data.nlfrViewport;
-      lastH = 0; // forceer een nieuwe melding
-      report();
+    if(e.data && typeof e.data.nlfrViewport==="number" && e.data.nlfrViewport>0){
+      parentVenster=e.data.nlfrViewport; lastH=0; meldHoogte();
     }
   });
-  if (window.ResizeObserver){
-    var ro = new ResizeObserver(function(){ report(); });
-    ro.observe(innerEl);
-  }
+  if(window.ResizeObserver){ new ResizeObserver(function(){ meldHoogte(); }).observe(scrollerEl); }
+  scrollerEl.addEventListener("scroll", function(){ save("nlfr_scroll", scrollerEl.scrollTop); });
 
   function laad(){
     Promise.all([
-      fetch("/api/actueel", { cache:"no-store" }).then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }),
-      fetch("/api/schoolvakanties", { cache:"no-store" }).then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; })
+      fetch("/api/actueel",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      fetch("/api/schoolvakanties",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
     ]).then(function(res){
       var data = res[0] || { bijgewerkt:new Date().toISOString(), tegels:[], agenda:[], bronStatus:[] };
-      render(data, res[1]);
+      bijwerkEl.textContent = tijd(data.bijgewerkt);
+      laatste = bouwCats(data, res[1]);
+      renderStatus(data.bronStatus||[]);
+      render();
+      var sc = load("nlfr_scroll", 0); if(sc){ scrollerEl.scrollTop = sc; }
     });
   }
 
-  window.addEventListener("load", report);
-  window.addEventListener("resize", report);
+  // Eerste, rustige skeleton.
+  scrollerEl.innerHTML = '<div class="skelkaart"><div class="skel k"></div><div class="skel m"></div><div class="skel s"></div></div>';
   laad();
-  setInterval(laad, 5 * 60 * 1000);
+  setInterval(laad, 5*60*1000);
 })();
 </script>
 </body>

@@ -11,7 +11,7 @@
 // `?force=1` negeert de bronnendrempel voor het best scorende perscluster (max.
 // 1), zodat je vóór de merge gegarandeerd één concept kunt testen.
 
-import { haalAlleItems, faitsDiversDoorlaat, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
+import { haalAlleItems, faitsDiversDoorlaat, voetbalDoorlaat, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
 import { clusterItems, zelfdeVerhaal } from "../lib/cluster.js";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { synthetiseer, samenvatOverheid } from "../lib/synthese.js";
@@ -101,7 +101,7 @@ export default async function handler(req, res) {
 
   // ---- 2) PERS: faits-divers-zeef -> clusteren -> concept bij >= 2 bronnen --
   const persItems = items.filter(
-    (i) => i.regime === "pers" && faitsDiversDoorlaat(i.titel)
+    (i) => i.regime === "pers" && faitsDiversDoorlaat(i.titel) && voetbalDoorlaat(i.titel)
   );
   const clusters = clusterItems(persItems, nu);
   // Synthese-drempel (auteursrechtelijk hard): een verhaal moet door minstens
@@ -183,6 +183,13 @@ export default async function handler(req, res) {
     }
     try {
       const synth = await synthetiseer(cluster);
+      // "GEEN": het model vond geen enkel onderwerp met >= 2 kranten in dit
+      // (vervuilde) cluster. Geen concept, geen excuustekst.
+      if (synth.geenVerhaal) {
+        await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "geen-verhaal" }, CONCEPT_TTL_S);
+        persVerwerkt.push({ id, status: "geen-verhaal-geweigerd" });
+        continue;
+      }
       // Tweede laag: de NL-synthese kan een land noemen dat in de Franse titels
       // ontbrak. Dan geen concept, en onthouden als afwijzing (geen regeneratie).
       if (!buitenlandDoorlaatNL(`${synth.kop || ""} ${synth.tekst || ""}`)) {

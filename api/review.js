@@ -13,7 +13,13 @@
 import crypto from "node:crypto";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { buitenlandDoorlaatNL } from "../lib/feeds.js";
-import { beoordeelPublicatie, structureelGeldig, isPersConcept } from "../lib/poort.js";
+import {
+  beoordeelPublicatie,
+  structureelGeldig,
+  isPersConcept,
+  zachteSignalen,
+} from "../lib/poort.js";
+import { vindGelijkenis, gelijkenis } from "../lib/gelijkenis.js";
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
@@ -182,7 +188,12 @@ export default async function handler(req, res) {
         outletNamen: s.outlets || [],
         publiceerbaar: s.ok !== false,
         code: s.ok === false ? s.code : null,
+        // Zachte signalen: wel tonen, niet blokkeren.
+        outletnamenInTekst: zachteSignalen(c).outletnamen,
       };
+      // Lijkt dit concept op een ander openstaand concept of op iets dat al live
+      // staat? De server rekent, de UI toont alleen.
+      c.gelijkenis = vindGelijkenis(c, besten, publicaties);
     }
     besten.sort(
       (a, b) => (Date.parse(b.aangemaaktOp) || 0) - (Date.parse(a.aangemaaktOp) || 0)
@@ -271,6 +282,49 @@ export default async function handler(req, res) {
           fout: oordeel.fout,
           details: oordeel.details,
         });
+      }
+      // VANGNET tegen per ongeluk dubbel publiceren. Geen harde blokkade: bij
+      // doorlopend nieuws is een vervolgverhaal legitiem. De redacteur krijgt de
+      // reden te zien en kan dezelfde actie herhalen met bevestigd:true.
+      if (body.bevestigd !== true && isPersConcept(concept)) {
+        const live = await listJSON(SCAN_PUBLICATIE);
+        let lijkendste = null;
+        for (const p of live) {
+          if (!p || p.id === id) continue;
+          const g = gelijkenis({ ...concept, tekst }, p);
+          if (!g.sterk) continue;
+          if (!lijkendste || g.gedeeldeUrls > lijkendste.g.gedeeldeUrls || g.jaccard > lijkendste.g.jaccard) {
+            lijkendste = { p, g };
+          }
+        }
+        if (lijkendste) {
+          const sinds = lijkendste.p.gepubliceerdOp
+            ? new Date(lijkendste.p.gepubliceerdOp).toLocaleString("nl-NL", {
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "onbekend";
+          return res.status(409).json({
+            ok: false,
+            geweigerd: true,
+            bevestigingNodig: true,
+            code: "lijkt-op-live",
+            fout:
+              `Er staat al een vergelijkbaar verhaal live sinds ${sinds}: “${lijkendste.p.kop || "zonder kop"}” ` +
+              `(${lijkendste.g.reden === "bron-urls"
+                ? `${lijkendste.g.gedeeldeUrls} dezelfde bronlinks`
+                : `${Math.round(lijkendste.g.jaccard * 100)}% woordoverlap`}). ` +
+              `Is dit een vervolg op doorlopend nieuws, dan is publiceren prima — bevestig dat dan.`,
+            details: {
+              id: lijkendste.p.id,
+              kop: lijkendste.p.kop || "",
+              gepubliceerdOp: lijkendste.p.gepubliceerdOp || null,
+              ...lijkendste.g,
+            },
+          });
+        }
       }
       const publicatie = {
         ...concept,

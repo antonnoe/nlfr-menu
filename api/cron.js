@@ -14,7 +14,7 @@
 // onverkort. Elke ronde ruimt bovendien concepten op die de huidige huisregels
 // niet meer doorstaan (zie lib/poort.js).
 
-import { haalAlleItems, faitsDiversDoorlaat, voetbalDoorlaat, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
+import { haalAlleItems, faitsDiversDoorlaat, sportDoorlaat, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
 import { clusterItems, zelfdeVerhaal, outletNamen } from "../lib/cluster.js";
 import { structureelGeldig } from "../lib/poort.js";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
@@ -133,7 +133,7 @@ export default async function handler(req, res) {
 
   // ---- 2) PERS: faits-divers-zeef -> clusteren -> concept bij >= 2 bronnen --
   const persItems = items.filter(
-    (i) => i.regime === "pers" && faitsDiversDoorlaat(i.titel) && voetbalDoorlaat(i.titel)
+    (i) => i.regime === "pers" && faitsDiversDoorlaat(i.titel) && sportDoorlaat(i.titel)
   );
   const clusters = clusterItems(persItems, nu);
   // Synthese-drempel (auteursrechtelijk hard): een verhaal moet door minstens

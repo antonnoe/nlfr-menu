@@ -72,7 +72,7 @@
       <h1>Redactie — Actueel</h1>
       <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 48 uur. Beoordeel ze één voor één; bewerk de tekst gerust vóór publicatie.</div>
     </div>
-    <a id="nbLink" class="nb-link" target="_blank" rel="noopener">Nieuwsbrief ↗</a>
+    <a id="nbLink" class="nb-link" href="/actueel" target="_blank" rel="noopener">Bekijk nieuwspagina ↗</a>
   </div>
   <div id="melding"></div>
   <div id="inhoud"><div class="leeg">Laden…</div></div>
@@ -80,14 +80,15 @@
 <script>
 (function(){
   "use strict";
-  // Bestemming van de "Nieuwsbrief"-knop. Wijzig alleen deze regel als de
-  // nieuwsbrief op een ander adres draait.
-  var NIEUWSBRIEF_URL = "https://nlfr-nieuwsbrief.vercel.app";
+  // Bestemming van de previewknop rechtsboven: de nieuwspagina zelf, relatief
+  // zodat hij op elke omgeving (preview-deploy, productie) meegaat. Opent in een
+  // nieuw tabblad, zodat de reviewsessie niet verloren gaat.
+  var PREVIEW_URL = "/actueel";
 
   var params = new URLSearchParams(location.search);
   var token = params.get("token") || "";
   var nbEl = document.getElementById("nbLink");
-  if (nbEl){ if (NIEUWSBRIEF_URL){ nbEl.href = NIEUWSBRIEF_URL; } else { nbEl.style.display = "none"; } }
+  if (nbEl){ nbEl.href = PREVIEW_URL; }
   var meldingEl = document.getElementById("melding");
   var inhoudEl = document.getElementById("inhoud");
   var state = { concepten: [], index: 0, duplicaten: 0, totaal: 0, publicaties: [], overheid: [] };
@@ -155,6 +156,40 @@
       'die dezelfde persbureaukop overnemen — tellen samen als één bron.</div>';
   }
 
+  // Gelijkenis met een ander openstaand concept of met een live artikel. De
+  // server rekent (lib/gelijkenis.js); hier alleen tonen.
+  function gelijkenisHtml(c){
+    var g = c.gelijkenis || {};
+    var uit = "";
+    if (g.concept){
+      uit += '<div class="waarschuwing"><b>Lijkt op concept</b>'+
+        '“'+esc(g.concept.kop || "zonder kop")+'” — '+esc(uitleg(g.concept))+
+        '. Publiceer er één, of scherp het onderscheid aan.</div>';
+    }
+    if (g.publicatie){
+      uit += '<div class="waarschuwing"><b>Vergelijkbaar verhaal staat live</b>'+
+        '“'+esc(g.publicatie.kop || "zonder kop")+'”, sinds '+esc(datum(g.publicatie.gepubliceerdOp))+
+        ' — '+esc(uitleg(g.publicatie))+
+        '. Vervolg op doorlopend nieuws mag; anders niet nogmaals publiceren.</div>';
+    }
+    return uit;
+  }
+  function uitleg(g){
+    return g.reden === "bron-urls"
+      ? g.gedeeldeUrls+" dezelfde bronlinks"
+      : Math.round((g.jaccard||0)*100)+"% woordoverlap";
+  }
+
+  // Zacht signaal: een medium bij naam in de lopende tekst. De bronnenlijst is
+  // de attributie; de redacteur haalt de naam er hier direct uit.
+  function outletnaamHtml(c){
+    var namen = (c.poort && c.poort.outletnamenInTekst) || [];
+    if (!namen.length) return "";
+    return '<div class="waarschuwing"><b>Medium bij naam in de tekst</b>'+
+      esc(namen.join(", "))+' — de bronnenlijst onder het artikel is de attributie. '+
+      'Vervang dit door een generieke formulering ("volgens meerdere Franse media") en bewaar de tekst.</div>';
+  }
+
   function render(){
     var html = "";
 
@@ -184,6 +219,8 @@
         '<textarea>'+esc(c.tekst)+'</textarea>'+
         bronnenHtml(c.bronnen)+
         outletWaarschuwing(c)+
+        gelijkenisHtml(c)+
+        outletnaamHtml(c)+
         '<div class="poortmelding"></div>'+
         '<div class="knoppen">'+
           '<button class="actie pubbtn" data-act="publiceer">Publiceer</button>'+
@@ -260,6 +297,8 @@
         var ta = kaart.querySelector("textarea");
         var body = { actie: act, id: id };
         if (ta && (act === "publiceer" || act === "bewerk")) body.tekst = ta.value;
+        // Tweede klik ná een gelijkenis-weigering: dezelfde actie mét bevestiging.
+        if (act === "publiceer" && btn.getAttribute("data-bevestig") === "1") body.bevestigd = true;
         var oudLabel = btn.textContent;
         btn.disabled = true; btn.textContent = "…";
         api("POST", body).then(function(res){
@@ -268,7 +307,9 @@
             if (act === "publiceer" || act === "weg"){
               state.concepten = state.concepten.filter(function(x){ return x.id !== id; });
               state.totaal = Math.max(0, state.totaal - 1);
-              if (act === "publiceer"){ laad(); } else { render(); }
+              // Herladen, maar de bevestiging laten staan: anders wist laad()
+              // de melding meteen en ziet de redacteur niet dát er gepubliceerd is.
+              if (act === "publiceer"){ laad(true); } else { render(); }
             } else if (act === "bewerk"){
               btn.disabled = false; btn.textContent = "Bewaar tekst";
             } else {
@@ -286,18 +327,27 @@
                 : "";
             }
             btn.disabled = false;
-            btn.textContent = oudLabel;
+            // Overrulebare weigering (lijkt op een live artikel): de knop wordt
+            // een bewuste tweede stap. De harde weigeringen — te weinig outlets,
+            // faits divers, kopoverlap — hebben geen bevestigingNodig en blijven
+            // dus gewoon geblokkeerd.
+            if (res.data && res.data.bevestigingNodig && act === "publiceer"){
+              btn.setAttribute("data-bevestig", "1");
+              btn.textContent = "Toch publiceren";
+            } else {
+              btn.textContent = oudLabel;
+            }
           }
         }).catch(function(){ melding("Netwerkfout.", "fout"); btn.disabled = false; btn.textContent = oudLabel; });
       });
     });
   }
 
-  function laad(){
+  function laad(behoudMelding){
     if (!token){ melding("Geen token in de URL. Voeg ?token=… toe.", "fout"); inhoudEl.innerHTML = ""; return; }
     api("GET").then(function(res){
       if (res.ok && res.data.ok){
-        melding("");
+        if (!behoudMelding) melding("");
         state.concepten = res.data.concepten || [];
         state.duplicaten = res.data.duplicatenAantal || 0;
         state.totaal = res.data.totaalConcepten || state.concepten.length;

@@ -147,13 +147,14 @@
     },
     {
       "naam": "vie-publique.fr",
-      "feed": "https://www.vie-publique.fr/rss.xml",
+      "feed": "https://www.vie-publique.fr/actualites-feeds.xml",
       "thema": "wetgeving",
       "regime": "overheid",
       "taal": "fr",
       "prioriteit": 3,
       "actief": true,
-      "verificatie": "te-testen"
+      "verificatie": "te-testen",
+      "_opmerking": "Actualités-feed (brèves, articles, dossiers). Juiste RSS-URL door Anton aangeleverd op 03-08-2026; de oude rss.xml gaf 0 items. Verifieer op Vercel via de bron-status."
     },
     {
       "naam": "Infofrankrijk",

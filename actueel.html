@@ -227,7 +227,7 @@
     "geld-belasting":"ic-geld", economie:"ic-geld", ondernemen:"ic-geld", douane:"ic-overheid", praktisch:"ic-praktisch",
     verkeer:"ic-verkeer", verenigingen:"ic-verenigingen", agenda:"ic-agenda", schoolvakanties:"ic-vakanties",
     infofrankrijk:"ic-nlers", bosbranden:"ic-nieuws", landelijk:"ic-nieuws", regionaal:"ic-nieuws",
-    vastgoed:"ic-geld"
+    vastgoed:"ic-geld", ambassade:"ic-nlers"
   };
 
   var laatste = null;         // laatste data (tegels per cat)
@@ -266,12 +266,30 @@
       perCat.nlers.push({ soort:"schoolvakanties", id:"schoolvakanties", thema:"schoolvakanties", label:"Schoolvakanties",
         meta:"", plat:vakBody(vak) });
     }
+    // Vaste link-tegel: Nederlandse ambassade + reisadvies (Buitenlandse Zaken).
+    // Social kanalen hebben geen feed; hier alleen als doorklik-links.
+    perCat.nlers.push({ soort:"links", id:"ambassade", thema:"ambassade", label:"Nederlandse ambassade & reisadvies",
+      meta:"", plat:ambassadeBody() });
     // Vaste link-tegel: officiële/handige links voor vastgoed en notariszaken.
     // Bewust ALLEEN links (geen overgenomen tekst): notaires.fr is redactionele
     // content en geen Licence Ouverte, dus we linken door i.p.v. te kopiëren.
     perCat.nlers.push({ soort:"links", id:"vastgoed-notaris", thema:"vastgoed", label:"Vastgoed & notaris",
       meta:"", plat:linksBody() });
     return perCat;
+  }
+
+  function ambassadeBody(){
+    var links = [
+      ["Reisadvies Frankrijk (Buitenlandse Zaken)", "https://www.nederlandwereldwijd.nl/reisadvies/frankrijk"],
+      ["Nederlandse ambassade Parijs — contact &amp; info", "https://www.nederlandwereldwijd.nl/contact/ambassades-consulaten-generaal/frankrijk/ambassade-parijs"],
+      ["Facebook — consulaire &amp; algemene info", "https://www.facebook.com/AmbassadePaysBasFrance"],
+      ["LinkedIn — Embassy of the Netherlands in France", "https://www.linkedin.com/company/ambassadeparijs"],
+      ["Instagram — cultuur (@culturepaysbas)", "https://www.instagram.com/culturepaysbas"]
+    ];
+    var rijen = links.map(function(l){
+      return '<div class="platlink"><a href="'+esc(l[1])+'" target="_blank" rel="noopener">'+l[0]+' →</a></div>';
+    }).join("");
+    return '<div class="platblok"><div>De Nederlandse ambassade in Frankrijk en het officiële reisadvies. Links openen in een nieuw tabblad.</div>'+rijen+'</div>';
   }
 
   function linksBody(){

@@ -41,6 +41,19 @@
   .regelbalk button:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
   .regelbalk .bijwerk { margin-left:auto; align-self:center; font-size:12px; color:var(--ink-zacht); white-space:nowrap; }
 
+  /* Tabbladen — vastgepind, gegroepeerd, horizontaal scrollbaar. */
+  .tabbar { flex:0 0 auto; display:flex; gap:16px; padding:8px 14px; border-bottom:1px solid rgba(128,0,0,.08); background:#fff; overflow-x:auto; align-items:center; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+  .tabbar:empty { display:none; }
+  .tabgroep { display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; }
+  .tabgroep .glab { font-family:'Poppins',sans-serif; font-weight:700; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-flauw); }
+  .tab { flex:0 0 auto; font-family:'Poppins',sans-serif; font-weight:600; font-size:12px; white-space:nowrap; border-radius:999px; padding:5px 11px; cursor:pointer; border:1px solid var(--brand-line); background:var(--brand-soft); color:var(--brand); }
+  .tab.groen { border-color:var(--groen-line); background:var(--groen-soft); color:var(--groen); }
+  .tab.grijs { border-color:rgba(120,110,105,.28); background:rgba(120,110,105,.08); color:#6d6360; }
+  .tab:hover { filter:brightness(.97); }
+  .tab:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+
+  .archief-intro { font-size:12.5px; color:var(--ink-zacht); padding:8px 4px 2px; }
+
   .body { flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 16px 8px; }
   #inner { display:flex; flex-direction:column; gap:14px; }
 
@@ -158,6 +171,7 @@
     <button type="button" id="allesIn">Alles inklappen</button>
     <span class="bijwerk" id="sub">wordt geladen…</span>
   </div>
+  <div class="tabbar" id="tabbar"></div>
   <div class="body" id="body">
     <div id="inner"><div class="laden">Nieuws wordt opgehaald…</div></div>
   </div>
@@ -173,11 +187,42 @@
   var subEl = document.getElementById("sub");
   var statusEl = document.getElementById("bronstatus");
   var regelbalk = document.getElementById("regelbalk");
+  var tabbarEl = document.getElementById("tabbar");
 
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function datum(iso){ try{ var d=new Date(iso); return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
   function agendaDag(iso){ try{ return new Date(iso+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"long"}); }catch(e){ return iso; } }
   function meerv(n){ return n===1 ? "artikel" : "artikelen"; }
+
+  // ---- Tabbladen: gegroepeerd, afgeleid van de tegels die er nú zijn ----
+  function groepVan(soort){
+    if (soort==="pers") return "Nieuws";
+    if (soort==="overheid") return "Overheid";
+    if (soort==="archief") return "Archief";
+    return "NLers"; // infofrankrijk, verenigingen, agenda, schoolvakanties
+  }
+  var GROEP_VOLGORDE = ["Nieuws","Overheid","NLers","Archief"];
+  var GROEP_LABEL = { Nieuws:"Nieuws", Overheid:"Overheid", NLers:"NL'ers in FR", Archief:"Archief" };
+  function tabklasse(accent){ return accent==="groen"?"groen":accent==="archief"?"grijs":""; }
+
+  function bouwTabs(tegels, heeftAgenda, heeftVak){
+    var items = [];
+    tegels.forEach(function(t, ti){
+      items.push({ groep: groepVan(t.soort), label: t.label, id: "sec-"+ti, accent: t.accent });
+    });
+    if (heeftAgenda) items.push({ groep:"NLers", label:"Agenda", id:"sec-agenda", accent:"groen" });
+    if (heeftVak) items.push({ groep:"NLers", label:"Schoolvakanties", id:"sec-vak", accent:"groen" });
+    var out = "";
+    GROEP_VOLGORDE.forEach(function(g){
+      var inGroep = items.filter(function(x){ return x.groep===g; });
+      if (!inGroep.length) return;
+      var chips = inGroep.map(function(x){
+        return '<button class="tab '+tabklasse(x.accent)+'" data-target="'+x.id+'">'+esc(x.label)+'</button>';
+      }).join("");
+      out += '<span class="tabgroep"><span class="glab">'+esc(GROEP_LABEL[g])+'</span>'+chips+'</span>';
+    });
+    return out;
+  }
 
   function bronHTML(b){
     var t = b.titel || b.naam || "bron";
@@ -214,7 +259,10 @@
     var arts = t.artikelen || [];
     var bullets = arts.slice(0,6).map(function(a){ return "<li>"+esc(a.titel)+"</li>"; }).join("");
     if (arts.length>6) bullets += '<li class="meer">+'+(arts.length-6)+" meer</li>";
-    return '<article class="tegel '+(t.accent==="groen"?"groen":t.accent==="archief"?"archief":"")+'">'+
+    var intro = t.soort==="archief"
+      ? '<div class="archief-intro">Dit zijn de ‘oude’ artikelen die maximaal 14 dagen blijven staan in het archief.</div>'
+      : "";
+    return '<article id="sec-'+ti+'" class="tegel '+(t.accent==="groen"?"groen":t.accent==="archief"?"archief":"")+'">'+
       '<button class="t0" type="button" aria-expanded="false" aria-controls="l1-'+ti+'">'+
         '<div class="tkop">'+(t.hot?'<span class="dot"></span>':"")+
           '<h2>'+esc(t.label)+'</h2>'+
@@ -224,6 +272,7 @@
         '<div class="balk"><span class="chev">▾</span><span>Toon de '+arts.length+" "+meerv(arts.length)+'</span></div>'+
       '</button>'+
       '<div class="reveal artikelen" id="l1-'+ti+'">'+
+        intro+
         arts.map(function(a,ai){ return artikelHTML(t,ti,a,ai); }).join("")+
         '<div class="sluit-tegel-wrap"><button class="sluit sluit-tegel" type="button">▲ Tegel sluiten</button></div>'+
       '</div>'+
@@ -237,7 +286,7 @@
       return '<div class="agenda-rij"><span class="dat">'+esc(agendaDag(a.datum))+'</span>'+
         '<span class="watt">'+esc(a.titel)+'<span class="sub">'+(a.vereniging?" · "+esc(a.vereniging):"")+(detail?" · "+esc(detail):"")+'</span></span></div>';
     }).join("");
-    return '<article class="tegel groen"><div class="plat">'+
+    return '<article id="sec-agenda" class="tegel groen"><div class="plat">'+
       '<div class="tkop"><h2>Agenda — komende twee weken</h2><span class="telling">'+agenda.length+' activiteiten</span></div>'+
       rijen+
       '<div class="agenda-link"><a href="'+VERENIGINGEN_PAGINA+'" target="_top" rel="noopener">Alle Nederlandse verenigingen in Frankrijk →</a></div>'+
@@ -246,7 +295,7 @@
 
   function vakantieHTML(v){
     if (!v || !v.zin) return "";
-    return '<article class="tegel groen vak"><div class="plat">'+
+    return '<article id="sec-vak" class="tegel groen vak"><div class="plat">'+
       '<h2>Schoolvakanties</h2><div style="font-size:14px">'+esc(v.zin)+'</div>'+
       '<div class="link"><a href="'+esc(v.servicePublic)+'" target="_blank" rel="noopener">Officiële kalender &amp; regels (service-public.gouv.fr) →</a></div>'+
       '</div></article>';
@@ -261,6 +310,7 @@
       html = '<div class="leeg">Op dit moment is er geen nieuws opgehaald.</div>';
     }
     innerEl.innerHTML = html;
+    tabbarEl.innerHTML = bouwTabs(tegels, !!(data.agenda && data.agenda.length), !!(vak && vak.zin));
     subEl.textContent = "Bijgewerkt " + datum(data.bijgewerkt);
     renderStatus(data.bronStatus||[]);
     report();
@@ -310,6 +360,18 @@
     report();
   });
 
+  // Tab-klik: soepel naar de tegel scrollen én 'm openklappen.
+  tabbarEl.addEventListener("click", function(e){
+    var tab = e.target.closest(".tab");
+    if (!tab) return;
+    var el = document.getElementById(tab.getAttribute("data-target"));
+    if (!el) return;
+    var t0 = el.querySelector(".t0"); // agenda/schoolvakanties hebben er geen
+    if (t0) zetOpen(t0, true);
+    report();
+    el.scrollIntoView({ behavior:"smooth", block:"start" });
+  });
+
   // Alles uit-/inklappen (tegels + artikelen; bronnen blijven dicht).
   document.getElementById("allesUit").addEventListener("click", function(){
     bodyEl.querySelectorAll(".t0, .t1").forEach(function(b){ zetOpen(b, true); });
@@ -335,6 +397,7 @@
   var lastH = 0;
   function natuurlijkeHoogte(){
     return (regelbalk.offsetHeight || 0) +
+           (tabbarEl.offsetHeight || 0) +
            (innerEl.scrollHeight || 0) +
            (statusEl.offsetHeight || 0) + 26; // body-padding + randen
   }

@@ -130,8 +130,9 @@
       "regime": "pers",
       "taal": "fr",
       "prioriteit": 3,
-      "actief": true,
-      "verificatie": "te-testen"
+      "actief": false,
+      "verificatie": "geblokkeerd",
+      "_opmerking": "Uitgezet op verzoek: ici (France Bleu / France 3) hanteert een strikte auteursrechtelijke blokkade op hergebruik. Feed leverde bovendien 0 items. Niet gebruiken."
     },
     {
       "naam": "info.gouv.fr — Gouvernement",

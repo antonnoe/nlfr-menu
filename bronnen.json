@@ -52,6 +52,17 @@
       "verificatie": "geverifieerd"
     },
     {
+      "naam": "BOSS — Bulletin Officiel de la Sécurité Sociale",
+      "feed": "https://boss.gouv.fr/portail/fil-rss/pagecontent/flux-actualites.rss",
+      "thema": "sociale-zekerheid",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "te-testen",
+      "_opmerking": "Officieel bulletin sociale zekerheid (cotisations, regelingen). Directe RSS aangeleverd door Anton, 03-08-2026. Verifieer op Vercel via de bron-status."
+    },
+    {
       "naam": "NOS — Buitenland",
       "feed": "https://feeds.nos.nl/nosnieuwsbuitenland",
       "thema": "nl-nieuws",

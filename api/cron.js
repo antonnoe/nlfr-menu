@@ -241,7 +241,12 @@ export default async function handler(req, res) {
         sleutel: id,
         kop: synth.kop, // korte NL-kop voor de artikelweergave
         tekst: synth.tekst,
+        // Uitsluitend de bronnen die de synthese echt heeft gebruikt (gematcht
+        // op URL tegen de clusteritems). Clusterbijvangst valt hier weg; alleen
+        // als de opgave van het model onbruikbaar was staat de volledige lijst
+        // er nog, en dan is bronnenTerugval waar.
         bronnen: synth.bronnen,
+        bronnenTerugval: !!synth.bronnenTerugval,
         model: synth.model,
         aantalBronnen: synth.bronnen.length, // daadwerkelijk gebruikte bronlinks
         // Onafhankelijke OUTLETS achter de gebruikte bronlinks — niet het aantal

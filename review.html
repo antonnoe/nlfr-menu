@@ -59,6 +59,9 @@
   .waarschuwing b { font-family:'Poppins',sans-serif; font-weight:700; display:block; margin-bottom:2px; }
   .geweigerd { background:rgba(128,0,0,.08); border-color:rgba(128,0,0,.3); color:var(--brand); }
   .outlets { font-family:'Poppins',sans-serif; font-weight:600; }
+  /* Markering: de synthese leverde geen bruikbare bronopgave, dus onder dit
+     concept staat nog de volledige clusterlijst (mogelijk met bijvangst). */
+  .terugval { font-family:'Poppins',sans-serif; font-weight:600; color:#8a4500; }
   .info { background:rgba(47,107,58,.08); color:var(--actueel); border:1px solid rgba(47,107,58,.25); }
   .leeg { color:#8a7f7c; font-size:14px; }
 </style>
@@ -128,7 +131,10 @@
     if (!p.persconcept) return '<b>overheid/vereniging</b>';
     var n = (p.onafhankelijkeOutlets == null) ? "?" : p.onafhankelijkeOutlets;
     var namen = (p.outletNamen || []).join(", ");
-    return '<b>'+n+' onafhankelijke outlet'+(n===1?"":"s")+'</b>'+(namen?' <span class="outlets">('+esc(namen)+')</span>':'');
+    // Teller en namen komen van de GEFILTERDE bronnenlijst — precies wat de
+    // lezer onder het artikel te zien krijgt.
+    return '<b>'+n+' onafhankelijke outlet'+(n===1?"":"s")+'</b>'+(namen?' <span class="outlets">('+esc(namen)+')</span>':'')+
+      (c.bronnenTerugval?' · <span class="terugval">bronnenlijst ongefilterd</span>':'');
   }
 
   // Waarschuwingsblok bij een te smalle bronbasis. Zo'n concept hoort door de

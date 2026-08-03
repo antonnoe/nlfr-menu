@@ -13,6 +13,7 @@
 import crypto from "node:crypto";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { buitenlandDoorlaatNL } from "../lib/feeds.js";
+import { beoordeelPublicatie, structureelGeldig } from "../lib/poort.js";
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
@@ -170,6 +171,19 @@ export default async function handler(req, res) {
     }
     // Ontdubbelen: alleen de beste per verhaal tonen (van ~300 naar 30-60).
     const { besten, duplicaten } = ontdubbel(concepten);
+    // Elk concept krijgt de actuele poort-uitslag mee (aantal onafhankelijke
+    // outlets + namen, en of het zou worden geweigerd). Ook oude concepten uit KV
+    // worden zo NU beoordeeld, niet volgens de regels van toen.
+    for (const c of besten) {
+      const s = structureelGeldig(c);
+      c.poort = {
+        persconcept: !s.overgeslagen,
+        onafhankelijkeOutlets: s.onafhankelijk == null ? null : s.onafhankelijk,
+        outletNamen: s.outlets || [],
+        publiceerbaar: s.ok !== false,
+        code: s.ok === false ? s.code : null,
+      };
+    }
     besten.sort(
       (a, b) => (Date.parse(b.aangemaaktOp) || 0) - (Date.parse(a.aangemaaktOp) || 0)
     );
@@ -226,6 +240,21 @@ export default async function handler(req, res) {
         typeof body.tekst === "string" && body.tekst.trim()
           ? body.tekst.trim()
           : concept.tekst;
+      // POORTWACHTER: de huisregels opnieuw toetsen op het moment van
+      // publiceren, op de tekst zoals die live zou gaan. Vangt ook concepten die
+      // vóór een regelwijziging in KV zijn beland. Overheid/verenigingen vallen
+      // hierbuiten (zie lib/poort.js).
+      const oordeel = beoordeelPublicatie(concept, tekst);
+      if (!oordeel.ok) {
+        console.warn(`[review] publicatie geweigerd (${oordeel.code}) voor concept ${id}`);
+        return res.status(409).json({
+          ok: false,
+          geweigerd: true,
+          code: oordeel.code,
+          fout: oordeel.fout,
+          details: oordeel.details,
+        });
+      }
       const publicatie = {
         ...concept,
         tekst,

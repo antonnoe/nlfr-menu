@@ -8,11 +8,15 @@
 // 2) PERS: items eerst door de faits-divers-zeef; daarna clusteren. Een cluster
 //    met >= SYNTHESE_MIN_BRONNEN (2) onafhankelijke bronnen krijgt een NL-
 //    synthese als CONCEPT (48 u TTL) -> reviewtool -> pas na akkoord live.
-// `?force=1` negeert de bronnendrempel voor het best scorende perscluster (max.
-// 1), zodat je vóór de merge gegarandeerd één concept kunt testen.
+// `?force=1` beperkt de ronde tot het best scorende perscluster (max. 1), zodat
+// je gericht één concept kunt testen. Force beïnvloedt ALLEEN de sortering en de
+// limiet: de faits-divers-zeef en de eis van >= 2 onafhankelijke outlets gelden
+// onverkort. Elke ronde ruimt bovendien concepten op die de huidige huisregels
+// niet meer doorstaan (zie lib/poort.js).
 
 import { haalAlleItems, faitsDiversDoorlaat, voetbalDoorlaat, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
-import { clusterItems, zelfdeVerhaal } from "../lib/cluster.js";
+import { clusterItems, zelfdeVerhaal, outletNamen } from "../lib/cluster.js";
+import { structureelGeldig } from "../lib/poort.js";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { synthetiseer, samenvatOverheid } from "../lib/synthese.js";
 import {
@@ -108,7 +112,8 @@ export default async function handler(req, res) {
   // SYNTHESE_MIN_BRONNEN VERSCHILLENDE kranten zijn gebracht (aantalBronnen), én
   // door evenveel ONAFHANKELIJKE (niet-wire-copy) berichten (onafhankelijkeBronnen).
   //   - aantalBronnen >= 2  -> niet uit één krant (twee artikelen van Le Figaro
-  //     over hetzelfde onderwerp tellen NIET als bevestiging).
+  //     over hetzelfde onderwerp tellen NIET als bevestiging; ook niet als ze uit
+  //     twee rubrieksfeeds van diezelfde krant komen — zie outletId).
   //   - onafhankelijkeBronnen >= 2 -> twee kranten die exact dezelfde wire
   //     overnemen tellen samen als één (geen schijnbevestiging).
   const geschiktVoorSynthese = (c) =>
@@ -116,9 +121,13 @@ export default async function handler(req, res) {
     c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN;
   // Prioriteit zit al in cluster.score verwerkt (boost), dus sorteren op score
   // brengt belangrijk nieuws vanzelf bovenaan.
-  const kandidaten = force
-    ? [...clusters].sort((a, b) => b.score - a.score).slice(0, 1)
-    : clusters.filter(geschiktVoorSynthese).sort((a, b) => b.score - a.score);
+  // FORCE: mag alleen de SORTERING/limiet beïnvloeden (één cluster, het best
+  // scorende), nooit de inhoudelijke drempels. De faits-divers-zeef (hierboven,
+  // op persItems) en de eis van >= 2 onafhankelijke outlets gelden dus ook in
+  // force-modus. Levert de selectie niets op, dan maakt force géén concept —
+  // beter geen testconcept dan een concept dat de huisregels breekt.
+  const geschikt = clusters.filter(geschiktVoorSynthese).sort((a, b) => b.score - a.score);
+  const kandidaten = force ? geschikt.slice(0, 1) : geschikt;
 
   // Auto-prune: snoei de conceptenberg elke ronde terug tot MAX_OPENSTAANDE_
   // CONCEPTEN. Behoud de BESTE (score = bronnen × recency × prioriteitsboost) en
@@ -132,6 +141,28 @@ export default async function handler(req, res) {
     return basis * (0.4 + 0.6 * rec) * (c.prioriteit ? 2 : 1);
   };
   let bestaande = await listJSON(SCAN_CONCEPT);
+
+  // KV-opschoning: concepten die de HUIDIGE huisregels niet doorstaan, worden
+  // verwijderd — ook als ze onder oudere regels zijn aangemaakt. Getoetst wordt
+  // op de opgeslagen bronkoppen: faits-divers-zeef en >= 2 onafhankelijke
+  // outlets (zie lib/poort.js). De gelijkenistoets op de TEKST hoort hier niet
+  // bij: die kan de redactie nog wegschrijven. Overheid/verenigingen blijven
+  // buiten schot. Draait elke ronde, dus ook zelfherstellend.
+  let opgeruimd = 0;
+  const opgeruimdeRedenen = {};
+  const schoon = [];
+  for (const c of bestaande) {
+    const oordeel = structureelGeldig(c);
+    if (oordeel.ok) {
+      schoon.push(c);
+      continue;
+    }
+    if (c && c.id) await del(KEY_CONCEPT(c.id));
+    opgeruimd += 1;
+    opgeruimdeRedenen[oordeel.code] = (opgeruimdeRedenen[oordeel.code] || 0) + 1;
+  }
+  bestaande = schoon;
+
   let gesnoeid = 0;
   if (!force && bestaande.length > MAX_OPENSTAANDE_CONCEPTEN) {
     const gesorteerd = [...bestaande].sort((a, b) => {
@@ -213,6 +244,13 @@ export default async function handler(req, res) {
         bronnen: synth.bronnen,
         model: synth.model,
         aantalBronnen: synth.bronnen.length, // daadwerkelijk gebruikte bronlinks
+        // Onafhankelijke OUTLETS achter de gebruikte bronlinks — niet het aantal
+        // links. Twee artikelen van dezelfde krant leveren twee links maar één
+        // outlet; de reviewtool toont dit getal, niet aantalBronnen.
+        onafhankelijkeOutlets: synth.onafhankelijkeGebruikt || 0,
+        outletNamen: outletNamen(
+          (synth.bronnen || []).map((b) => ({ titel: b.titel, bron: b.naam }))
+        ),
         onafhankelijkeBronnen: cluster.onafhankelijkeBronnen, // voor prune-score
         prioriteit: cluster.prioriteit, // prune-bescherming + markering
         kernTokens: cluster.kernTokens, // vingerafdruk voor cross-ronde dedup
@@ -248,6 +286,8 @@ export default async function handler(req, res) {
       clusters: clusters.length,
       geschiktVoorSynthese: clusters.filter(geschiktVoorSynthese).length,
       openstaandeConcepten: openstaand,
+      opgeruimd, // concepten die de huidige huisregels niet meer doorstaan
+      opgeruimdeRedenen,
       gesnoeid,
       ruimteVoorNieuwe: force ? "force" : ruimte,
       nieuweConcepten: nieuwConcept,

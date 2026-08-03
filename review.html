@@ -52,6 +52,13 @@
   .nb-link:hover { background:rgba(47,107,58,.15); }
   .melding { padding:12px 14px; border-radius:10px; margin-bottom:14px; font-size:14px; }
   .fout { background:rgba(128,0,0,.08); color:var(--brand); border:1px solid rgba(128,0,0,.25); }
+  /* Waarschuwing binnen een conceptkaart: te smalle bronbasis of een door de
+     server geweigerde publicatie. */
+  .waarschuwing { margin:10px 0 0; padding:10px 12px; border-radius:10px; font-size:13.5px;
+    background:rgba(176,90,0,.09); border:1px solid rgba(176,90,0,.35); color:#8a4500; }
+  .waarschuwing b { font-family:'Poppins',sans-serif; font-weight:700; display:block; margin-bottom:2px; }
+  .geweigerd { background:rgba(128,0,0,.08); border-color:rgba(128,0,0,.3); color:var(--brand); }
+  .outlets { font-family:'Poppins',sans-serif; font-weight:600; }
   .info { background:rgba(47,107,58,.08); color:var(--actueel); border:1px solid rgba(47,107,58,.25); }
   .leeg { color:#8a7f7c; font-size:14px; }
 </style>
@@ -110,6 +117,38 @@
     return '<div class="bronnen"><b>Bronnen</b>'+rijen+'</div>';
   }
 
+  // Aantal ONAFHANKELIJKE outlets achter een concept (verschillende kranten én
+  // verschillende koppen; wire-copy telt als één). De server rekent dit uit in
+  // /api/review, ook voor oude concepten uit de opslag.
+  function outletMeta(c){
+    // Geen poort-uitslag meegekregen (oude serverversie)? Val terug op het
+    // aantal bronlinks in plaats van een misleidend outletgetal te tonen.
+    if (!c.poort) return '<b>'+(c.aantalBronnen||"?")+' bronnen</b>';
+    var p = c.poort;
+    if (!p.persconcept) return '<b>overheid/vereniging</b>';
+    var n = (p.onafhankelijkeOutlets == null) ? "?" : p.onafhankelijkeOutlets;
+    var namen = (p.outletNamen || []).join(", ");
+    return '<b>'+n+' onafhankelijke outlet'+(n===1?"":"s")+'</b>'+(namen?' <span class="outlets">('+esc(namen)+')</span>':'');
+  }
+
+  // Waarschuwingsblok bij een te smalle bronbasis. Zo'n concept hoort door de
+  // serverpoort niet meer publiceerbaar te zijn; de teller staat er sowieso.
+  function outletWaarschuwing(c){
+    var p = c.poort || {};
+    if (!p.persconcept || p.publiceerbaar !== false) return "";
+    if (p.code === "faits-divers"){
+      return '<div class="waarschuwing geweigerd"><b>Publiceren geblokkeerd — faits divers</b>'+
+        'Minstens één bronkop komt niet door de faits-divers-zeef (misdaad, vermissing, verdrinking). '+
+        'Dit concept hoort niet op de feed.</div>';
+    }
+    var n = (p.onafhankelijkeOutlets == null) ? "?" : p.onafhankelijkeOutlets;
+    return '<div class="waarschuwing geweigerd"><b>Publiceren geblokkeerd — één bron</b>'+
+      'Dit concept steunt op '+esc(String(n))+' onafhankelijke outlet'+(n===1?"":"s")+
+      ((p.outletNamen||[]).length?' ('+esc(p.outletNamen.join(", "))+')':"")+
+      '. De huisregel eist er minstens twee: twee berichten van dezelfde krant — of twee kranten '+
+      'die dezelfde persbureaukop overnemen — tellen samen als één bron.</div>';
+  }
+
   function render(){
     var html = "";
 
@@ -133,10 +172,13 @@
         '<button class="nav" id="volgende"'+(state.index>=state.concepten.length-1?" disabled":"")+'>Volgende ›</button>'+
       '</div>';
       html += '<div class="kaart" data-id="'+esc(c.id)+'">'+
-        '<div class="meta"><b>'+(c.aantalBronnen||"?")+' bronnen</b> · gemaakt '+esc(datum(c.aangemaaktOp))+' · model '+esc(c.model||"?")+(c.afgekapt?' · <span style="color:#b58b00">mogelijk afgekapt</span>':'')+'</div>'+
+        '<div class="meta">'+outletMeta(c)+' · '+(c.aantalBronnen||"?")+' bronlink'+((c.aantalBronnen===1)?"":"s")+
+          ' · gemaakt '+esc(datum(c.aangemaaktOp))+' · model '+esc(c.model||"?")+(c.afgekapt?' · <span style="color:#b58b00">mogelijk afgekapt</span>':'')+'</div>'+
         (c.kop?'<div class="kop">'+esc(c.kop)+'</div>':'')+
         '<textarea>'+esc(c.tekst)+'</textarea>'+
         bronnenHtml(c.bronnen)+
+        outletWaarschuwing(c)+
+        '<div class="poortmelding"></div>'+
         '<div class="knoppen">'+
           '<button class="actie pubbtn" data-act="publiceer">Publiceer</button>'+
           '<button class="actie bewaarbtn" data-act="bewerk">Bewaar tekst</button>'+
@@ -209,6 +251,7 @@
         var ta = kaart.querySelector("textarea");
         var body = { actie: act, id: id };
         if (ta && (act === "publiceer" || act === "bewerk")) body.tekst = ta.value;
+        var oudLabel = btn.textContent;
         btn.disabled = true; btn.textContent = "…";
         api("POST", body).then(function(res){
           if (res.ok && res.data.ok){
@@ -223,10 +266,20 @@
               laad();
             }
           } else {
-            melding((res.data && res.data.fout) || "Er ging iets mis.", "fout");
+            var reden = (res.data && res.data.fout) || "Er ging iets mis.";
+            melding(reden, "fout");
+            // Weigering door de publicatiepoort: de reden ook bij het concept
+            // zelf tonen, zodat hij niet wegvalt bij het scrollen.
+            var vak = kaart.querySelector(".poortmelding");
+            if (vak){
+              vak.innerHTML = (res.data && res.data.geweigerd)
+                ? '<div class="waarschuwing geweigerd"><b>Publicatie geweigerd door de server</b>'+esc(reden)+'</div>'
+                : "";
+            }
             btn.disabled = false;
+            btn.textContent = oudLabel;
           }
-        }).catch(function(){ melding("Netwerkfout.", "fout"); btn.disabled = false; });
+        }).catch(function(){ melding("Netwerkfout.", "fout"); btn.disabled = false; btn.textContent = oudLabel; });
       });
     });
   }

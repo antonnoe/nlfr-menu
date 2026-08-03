@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "NLFR hoofdmenu + route /actueel (live Frankrijknieuws) — statische site met Vercel serverless functions.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0"
   }

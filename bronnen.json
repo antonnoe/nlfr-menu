@@ -1,5 +1,5 @@
 {
-  "_uitleg": "Bronnenlijst voor de route /actueel (live Frankrijknieuws). De API-route /api/actueel haalt UITSLUITEND de feeds hieronder op, parseert ze (RSS 2.0 + Atom), normaliseert en respecteert per bron het regime. Velden per bron: naam, feed (RSS/Atom-URL), thema, regime ('overheid' of 'pers'), taal ('fr' of 'nl'), prioriteit (1=hoog .. 3=laag), actief (true/false). Extra veld 'verificatie': 'geverifieerd' = door Anton/Claude bevestigd op 31-07-2026; 'te-testen' = vanaf Vercel verifiëren (werkt niet -> in de bron-status melden, niet gissen). Regime-regel: overheid = titel + samenvatting uit de feed + bronvermelding met URL; pers = UITSLUITEND titel + bron + datum + link (geen samenvatting, geen vertaling). Een kapotte feed wordt overgeslagen; de rest blijft werken.",
+  "_uitleg": "Bronnenlijst voor de route /actueel (live Frankrijknieuws). De API-route /api/actueel haalt UITSLUITEND de feeds hieronder op, parseert ze (RSS 2.0 + Atom), normaliseert en respecteert per bron het regime. Velden per bron: naam, feed (RSS/Atom-URL), thema, regime ('overheid', 'pers', 'eigen' of 'verenigingen'), taal ('fr' of 'nl'), prioriteit (1=hoog .. 3=laag), actief (true/false). Extra veld 'verificatie': 'geverifieerd' = door Anton/Claude bevestigd op 31-07-2026; 'te-testen' = vanaf Vercel verifiëren (werkt niet -> in de bron-status melden, niet gissen). Regime-regel: overheid = titel + samenvatting uit de feed + bronvermelding met URL; pers = UITSLUITEND titel + bron + datum + link (geen samenvatting, geen vertaling); eigen = eigen redactionele bron (Infofrankrijk), zelfde behandeling als overheid: titel + samenvatting + link; verenigingen = agenda-/nieuwsitems van Nederlandse verenigingen (JSON-aggregaat), ook titel + samenvatting + link. Alleen 'pers' doorloopt de clustering, de AI-synthese en de publicatie-gate van de reviewtool; overheid, eigen en verenigingen gaan buiten die poort om rechtstreeks naar /actueel en krijgen het ruime datumvenster. Een kapotte feed wordt overgeslagen; de rest blijft werken.",
   "bronnen": [
     {
       "naam": "Bercy — Ministère de l'Économie",
@@ -186,7 +186,7 @@
       "feed": "https://antonnoe.github.io/verenigingen-kalender/data/nieuws.json",
       "type": "json-verenigingen",
       "thema": "verenigingen",
-      "regime": "overheid",
+      "regime": "verenigingen",
       "taal": "nl",
       "prioriteit": 3,
       "actief": true,

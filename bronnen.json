@@ -42,6 +42,17 @@
       "verificatie": "geverifieerd"
     },
     {
+      "naam": "OFB — Office français de la biodiversité",
+      "feed": "https://ofb.gouv.fr/rss.xml",
+      "thema": "natuur-milieu",
+      "regime": "overheid",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-05"
+    },
+    {
       "naam": "DG Trésor",
       "feed": "https://www.tresor.economie.gouv.fr/Flux/Atom/Articles/Home",
       "thema": "economie",

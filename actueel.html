@@ -122,6 +122,8 @@
   ul.bullets li{ position:relative; padding-left:18px; font-size:15px; line-height:24px; color:var(--ink-body2); }
   ul.bullets li::before{ content:""; position:absolute; left:2px; top:9px; width:6px; height:6px; border-radius:2px; background:var(--c-main); opacity:.6; }
   .archief-intro{ font-size:13px; line-height:20px; color:var(--ink-meta); }
+  .archief-intro a{ color:var(--brand); font-weight:600; text-decoration:none; border-bottom:1px solid rgba(128,0,0,.3); }
+  .archief-intro a:hover{ border-bottom-color:var(--brand); }
   .platblok{ font-size:15px; line-height:24px; color:var(--ink-body2); display:grid; gap:8px; }
   .platlink a, .agendalink a{ font-family:var(--disp); font-weight:600; font-size:13px; color:var(--c-main); text-decoration:none; }
   .platlink a:hover, .agendalink a:hover{ text-decoration:underline; }
@@ -212,6 +214,7 @@
   <symbol id="ic-klok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"></circle><path d="M12 7.4V12l3.2 2.1"></path></symbol>
   <symbol id="ic-uitklap" viewBox="0 0 24 24"><path d="M7 10l5-5 5 5M7 14l5 5 5-5"></path></symbol>
   <symbol id="ic-inklap" viewBox="0 0 24 24"><path d="M7 5l5 5 5-5M7 19l5-5 5 5"></path></symbol>
+  <symbol id="ic-natuur" viewBox="0 0 24 24"><path d="M12 20.5V11"></path><path d="M12 13.5c-3.4 0-6.2-2.6-6.2-6 2.1-.6 4-.3 5.4.8 1 .8 1.6 1.9 1.9 3.1"></path><path d="M12.6 11.4c.3-1.2.9-2.3 1.9-3.1 1.4-1.1 3.3-1.4 5.4-.8 0 3.4-2.8 6-6.2 6"></path></symbol>
   <symbol id="ic-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></symbol>
   <symbol id="ic-leeg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"></circle><path d="M8.4 13.8h7.2"></path></symbol>
 </svg>
@@ -253,7 +256,7 @@
   ];
   var THEMA_IC = {
     "geld-belasting":"ic-geld", economie:"ic-geld", ondernemen:"ic-geld", douane:"ic-overheid", praktisch:"ic-praktisch",
-    "sociale-zekerheid":"ic-praktisch", wetgeving:"ic-overheid",
+    "sociale-zekerheid":"ic-praktisch", wetgeving:"ic-overheid", "natuur-milieu":"ic-natuur",
     verkeer:"ic-verkeer", verenigingen:"ic-verenigingen", agenda:"ic-agenda", schoolvakanties:"ic-vakanties",
     infofrankrijk:"ic-nlers", bosbranden:"ic-nieuws", landelijk:"ic-nieuws", regionaal:"ic-nieuws",
     vastgoed:"ic-geld", ambassade:"ic-nlers"
@@ -375,7 +378,12 @@
     if (t.plat){ body = t.plat; }
     else {
       var arts = t.artikelen||[];
-      var intro = t.soort==="archief" ? '<div class="archief-intro">Dit zijn de ‘oude’ artikelen die maximaal 14 dagen in het archief blijven staan.</div>' : "";
+      // De archief-tegel bevat alleen nog perssyntheses; wet- en regelgeving
+      // gaat naar het duurzame register op /archief.
+      var intro = t.soort==="archief"
+        ? '<div class="archief-intro">Verlopen nieuwsberichten, blijven hier maximaal 14 dagen staan. '+
+          'Wet- en regelgeving verhuist naar het <a href="/archief" target="_top">Regelgevingsarchief</a>.</div>'
+        : "";
       // Geen aparte bullet-lijst meer: die herhaalde exact de titels van de
       // artikelen eronder. De artikellijst zelf ís nu het overzicht.
       body = intro + '<div class="artikelen">'+arts.map(function(a){ return artikelHTML(cat,t,a); }).join("")+'</div>';

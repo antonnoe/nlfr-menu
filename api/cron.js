@@ -33,8 +33,12 @@ import {
   KEY_OVERHEID,
   SCAN_CONCEPT,
   SCAN_OVERHEID,
+  SCAN_REGISTER,
+  KEY_REGISTER,
+  OVERHEID_ARCHIEF_NA_DAGEN,
 } from "../lib/config.js";
 import { dedupOverheid, alBekend, overheidSleutel } from "../lib/overheid.js";
+import { maakRegisterRecord, zoekKeten } from "../lib/register.js";
 
 function leesForce(req) {
   let f = req && req.query ? req.query.force : undefined;
@@ -81,10 +85,14 @@ export default async function handler(req, res) {
   for (const d of overheidWeg) if (d && d.id) await del(KEY_OVERHEID(d.id));
   const overheidSamengevoegd = overheidWeg.length;
 
+  // Het register is de ketencontext: nieuwe berichten worden hiertegen getoetst.
+  const registerVoorraad = await listJSON(SCAN_REGISTER);
+
   const overheidItems = items.filter((i) => OVERHEID_THEMAS.includes(i.thema));
   const overheidVerwerkt = [];
   let nieuwOverheid = 0;
   let overheidDubbelOvergeslagen = 0;
+  let ketenVragen = 0;
   for (const item of overheidItems) {
     if (nieuwOverheid >= MAX_OVERHEID_PER_RONDE) break;
     const id = hashId(item.url);
@@ -118,6 +126,18 @@ export default async function handler(req, res) {
         model,
         gepubliceerdOp: new Date().toISOString(),
       };
+      // KETEN-DETECTIE. Toetst dit bericht tegen het register én de live
+      // overheidsvoorraad in dezelfde rubriek. Een match BLOKKEERT DE LIVEGANG
+      // NIET — het bericht gaat gewoon live — maar zet een vraagvlag die de
+      // redacteur in de reviewtool beantwoordt (zie lib/register.js).
+      const vraag = zoekKeten(
+        { ...doc, rubriek: doc.thema, titel: doc.kop, tekst: doc.samenvatting },
+        [...registerVoorraad, ...overheidBehouden]
+      );
+      if (vraag) {
+        doc.ketenVraag = vraag;
+        ketenVragen += 1;
+      }
       await setJSON(KEY_OVERHEID(id), doc, OVERHEID_TTL_S);
       overheidBehouden.push(doc); // volgende items in deze ronde hiertegen dedupen
       nieuwOverheid += 1;
@@ -129,6 +149,41 @@ export default async function handler(req, res) {
         reden: e instanceof Error ? e.message : String(e),
       });
     }
+  }
+
+  // ---- 1b) REGISTEROPNAME: overheid na zijn live periode -------------------
+  // De oude opruimlogica (na de archiefperiode verdwijnen) is vervangen door
+  // opname in het duurzame register. Een bericht dat OVERHEID_ARCHIEF_NA_DAGEN
+  // dagen live is geweest, verhuist: het registerrecord wordt aangemaakt (zonder
+  // TTL, dus permanent) en het live record verdwijnt uit de overheidsvoorraad.
+  // Dit is meteen de eenmalige migratie: alles wat nu in het weergave-archief
+  // staat, is per definitie ouder dan die grens en gaat bij deze ronde mee.
+  // Alleen de OVERHEIDSSTROOM; pers, Infofrankrijk en verenigingen raakt dit niet.
+  const registerBekend = new Set(registerVoorraad.map((r) => r && r.id).filter(Boolean));
+  const OPNAME_GRENS_MS = OVERHEID_ARCHIEF_NA_DAGEN * 24 * 60 * 60 * 1000;
+  let naarRegister = 0;
+  let registerOvergeslagen = 0;
+  const overheidLive = [];
+  for (const d of overheidBehouden) {
+    if (!d || !d.id) continue;
+    const t = Date.parse(d.datum || d.gepubliceerdOp) || 0;
+    if (!t || nu - t < OPNAME_GRENS_MS) {
+      overheidLive.push(d);
+      continue;
+    }
+    if (registerBekend.has(d.id)) {
+      // Al opgenomen (bv. een eerdere ronde die halverwege afbrak): alleen het
+      // live record opruimen, het registerrecord blijft zoals het is.
+      await del(KEY_OVERHEID(d.id));
+      registerOvergeslagen += 1;
+      continue;
+    }
+    const record = maakRegisterRecord(d, nu);
+    await setJSON(KEY_REGISTER(record.id), record); // GEEN TTL: nooit weggooien
+    registerVoorraad.push(record);
+    registerBekend.add(record.id);
+    await del(KEY_OVERHEID(d.id)); // pas verwijderen ná een geslaagde opname
+    naarRegister += 1;
   }
 
   // ---- 2) PERS: faits-divers-zeef -> clusteren -> concept bij >= 2 bronnen --
@@ -314,8 +369,14 @@ export default async function handler(req, res) {
       nieuwLive: nieuwOverheid,
       samengevoegd: overheidSamengevoegd, // dubbele records uit de voorraad gehaald
       dubbelOvergeslagen: overheidDubbelOvergeslagen, // instroom die al bestond
-      voorraad: overheidBehouden.length,
+      ketenVragen, // nieuwe berichten met een openstaande keten-vraag
+      voorraad: overheidLive.length,
       verwerkt: overheidVerwerkt,
+    },
+    register: {
+      naarRegister, // deze ronde opgenomen (incl. de eenmalige migratie)
+      overgeslagen: registerOvergeslagen, // stond al in het register
+      totaal: registerVoorraad.length,
     },
     pers: {
       naZeef: persItems.length,

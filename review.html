@@ -62,6 +62,17 @@
   /* Markering: de synthese leverde geen bruikbare bronopgave, dus onder dit
      concept staat nog de volledige clusterlijst (mogelijk met bijvangst). */
   .terugval { font-family:'Poppins',sans-serif; font-weight:600; color:#8a4500; }
+  /* Keten-vraag bij een overheidsbericht (regelgevingsregister). */
+  .keten { margin:10px 0 0; padding:10px 12px; border-radius:10px; font-size:13.5px;
+           background:rgba(128,0,0,.05); border:1px solid rgba(128,0,0,.2); color:#4d4441; }
+  .keten > b { font-family:'Poppins',sans-serif; font-weight:700; display:block; margin-bottom:6px; color:var(--brand); }
+  .keten .ketenrij { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:4px 0; }
+  .keten .ketenrij.tweede { border-top:1px dashed rgba(128,0,0,.18); margin-top:6px; padding-top:8px; }
+  .keten .ketenknoppen { display:inline-flex; gap:6px; flex:none; }
+  .keten button.actie { min-height:36px; padding:6px 14px; font-size:13px; }
+  .keten .ketenbtn { background:var(--actueel); color:#fff; }
+  .keten .ketennee { background:#fff; color:var(--brand); border:1px solid rgba(128,0,0,.25); }
+  .keten.klaar { background:rgba(47,107,58,.07); border-color:rgba(47,107,58,.3); color:var(--actueel); font-weight:600; }
   .info { background:rgba(47,107,58,.08); color:var(--actueel); border:1px solid rgba(47,107,58,.25); }
   .leeg { color:#8a7f7c; font-size:14px; }
 </style>
@@ -190,6 +201,45 @@
       'Vervang dit door een generieke formulering ("volgens meerdere Franse media") en bewaar de tekst.</div>';
   }
 
+  // ---- Keten-vraag bij een overheidsbericht ------------------------------
+  // De cron zet een vraagvlag als een nieuw bericht lijkt te horen bij iets dat
+  // er al is. Twee smaken, in precies deze bewoording; bij twijfel tonen we ze
+  // allebei. De server beslist wat er daarna verandert (actie "keten").
+  function ketenRegel(soort, v){
+    var rub = esc(v.doelRubriek || "");
+    var oud = esc(v.doelTitel || "eerder bericht");
+    if (soort === "vervangen"){
+      return 'Dit lijkt <b>'+oud+'</b> uit rubriek <b>'+rub+'</b> te vervangen. Zal ik het vervangen?';
+    }
+    return 'Dit lijkt een aanvulling op <b>'+oud+'</b> uit rubriek <b>'+rub+'</b>. '+
+      'Zal ik het toevoegen naast <b>'+oud+'</b>?';
+  }
+  function ketenKnoppen(soort){
+    return '<span class="ketenknoppen">'+
+      '<button type="button" class="actie ketenbtn" data-keten="ja" data-soort="'+soort+'">Ja</button>'+
+      '<button type="button" class="actie ketennee" data-keten="nee" data-soort="'+soort+'">Nee</button>'+
+    '</span>';
+  }
+  function ketenHtml(o){
+    if (o.ketenAntwoord){
+      var a = o.ketenAntwoord;
+      return '<div class="keten klaar">'+(a.antwoord==="ja"
+        ? (a.soort==="vervangen" ? "Verwerkt: vervangt het eerdere bericht." : "Verwerkt: toegevoegd naast het eerdere bericht.")
+        : "Geen keten gelegd.")+'</div>';
+    }
+    var v = o.ketenVraag;
+    if (!v) return "";
+    // De meest waarschijnlijke smaak eerst; bij twijfel de andere eronder.
+    var eerste = v.soort === "aanvulling" ? "aanvulling" : "vervangen";
+    var tweede = eerste === "vervangen" ? "aanvulling" : "vervangen";
+    var uit = '<div class="keten"><b>Hoort dit bij een eerder bericht?</b>'+
+      '<div class="ketenrij">'+ketenRegel(eerste, v)+' '+ketenKnoppen(eerste)+'</div>';
+    if (v.beideOpties){
+      uit += '<div class="ketenrij tweede">'+ketenRegel(tweede, v)+' '+ketenKnoppen(tweede)+'</div>';
+    }
+    return uit + '</div>';
+  }
+
   function render(){
     var html = "";
 
@@ -254,6 +304,7 @@
         (o.kop?'<div class="kop">'+esc(o.kop)+'</div>':'')+
         '<div class="tekst">'+esc(o.samenvatting)+'</div>'+
         (o.url?'<div class="bronnen"><a href="'+esc(o.url)+'" target="_blank" rel="noopener">Bron →</a></div>':'')+
+        ketenHtml(o)+
         '<div class="knoppen"><button class="actie wegbtn" data-act="verwijder-overheid">Van de site halen</button></div>'+
       '</div>';
     });
@@ -286,6 +337,36 @@
           laad();
         }
         else { melding((res.data&&res.data.fout)||"Mislukt.", "fout"); wisAllesBtn.disabled=false; }
+      });
+    });
+
+    // Keten-antwoorden: de UI stuurt alleen ja/nee + de smaak; de server bepaalt
+    // wat er met de records gebeurt (zie actie "keten" in api/review.js).
+    inhoudEl.querySelectorAll("button[data-keten]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var kaart = btn.closest(".kaart");
+        var id = kaart.getAttribute("data-id");
+        var vak = kaart.querySelector(".keten");
+        if (vak) vak.querySelectorAll("button").forEach(function(b){ b.disabled = true; });
+        btn.textContent = "…";
+        api("POST", {
+          actie: "keten",
+          id: id,
+          antwoord: btn.getAttribute("data-keten"),
+          soort: btn.getAttribute("data-soort"),
+        }).then(function(res){
+          if (res.ok && res.data.ok){
+            melding(res.data.keten === "geen"
+              ? "Geen keten gelegd."
+              : res.data.keten === "vervangen"
+                ? "Verwerkt: het eerdere bericht is vervangen en staat niet meer in het publieke archief."
+                : "Verwerkt: beide berichten staan naast elkaar in het archief.", "info");
+            laad(true);
+          } else {
+            melding((res.data && res.data.fout) || "Mislukt.", "fout");
+            if (vak) vak.querySelectorAll("button").forEach(function(b){ b.disabled = false; });
+          }
+        }).catch(function(){ melding("Netwerkfout.", "fout"); });
       });
     });
 

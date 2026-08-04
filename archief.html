@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Regelgevingsarchief — Nederlanders.fr</title>
+<!--
+  NLFR REGELGEVINGSARCHIEF — publieke inhoudsopgave van het duurzame register
+  met Franse wet- en regelgeving. Zelfde vormtaal en hoogte-handshake als
+  /actueel (zie EMBED.md), zodat de pagina in hetzelfde iframe past.
+
+  PUBLIEK ZIJN ALLEEN TITELS. Per item precies één regel: datumtag · bron ·
+  titel. De teksten komen hier niet eens naartoe — /api/register stuurt ze niet
+  mee. Klikken opent geen inhoud maar de abonnee-melding.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Mulish:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fdf9f8; --kaart:#fff;
+    --ink:#241c1c; --ink-body:#3d3735; --ink-body2:#4d4441; --ink-meta:#6f6663; --ink-zwak:#8a7d79;
+    --hair:#f0e8e5; --hair2:#ece4e1; --hair3:#e6dcd9;
+    --brand:#800000; --brand-dark:#5f0000;
+    --groen:#2f6b3a;
+    --sh-rust:0 1px 2px rgba(38,17,17,.05);
+    --disp:'Poppins',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --body:'Mulish',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; padding:0; background:transparent; -webkit-text-size-adjust:100%; }
+  body{ font-family:var(--body); color:var(--ink-body); }
+  .ic{ width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+
+  .panel{ height:100%; min-height:420px; display:grid; grid-template-rows:auto 1fr auto; background:var(--bg);
+          border:1px solid var(--hair2); border-radius:14px; overflow:hidden; }
+  .bar{ display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 14px; background:#fff; border-bottom:1px solid var(--hair); }
+  .bar h1{ margin:0; font-family:var(--disp); font-weight:600; font-size:15px; color:var(--brand-dark); }
+  .bar .sub{ font-family:var(--body); font-weight:500; font-size:12.5px; color:var(--ink-meta); }
+  .terug{ font-family:var(--disp); font-weight:600; font-size:13px; text-decoration:none; color:var(--brand-dark);
+          border:1px solid var(--hair3); border-radius:8px; padding:8px 12px; min-height:40px; display:inline-flex; align-items:center; }
+  @media (hover:hover) and (pointer:fine){ .terug:hover{ background:#fbf0ee; } }
+
+  .scrollwrap{ position:relative; min-height:0; display:grid; }
+  .scroller{ overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:10px; padding:12px; }
+  .scroller > *{ flex:none; }
+  @media (min-width:600px){ .scroller{ padding:20px; gap:12px; } }
+  .vervaag{ position:absolute; left:1px; right:1px; bottom:0; height:44px; pointer-events:none; z-index:1;
+            background:linear-gradient(to bottom, rgba(253,249,248,0) 0%, rgba(253,249,248,.72) 55%, var(--bg) 100%);
+            opacity:0; transition:opacity 220ms cubic-bezier(.2,.6,.3,1); }
+  .vervaag.aan{ opacity:1; }
+
+  .rubriek{ background:var(--kaart); border:1px solid #ecd9d5; border-radius:12px; overflow:hidden; box-shadow:var(--sh-rust); }
+  .rkop{ display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:52px;
+         padding:12px 16px; background:#fbf0ee; border:0; text-align:left; cursor:pointer; font:inherit; color:inherit;
+         -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .rkop h2{ margin:0; font-family:var(--disp); font-weight:600; font-size:15px; color:var(--brand-dark); }
+  .rkop .telling{ font-family:var(--body); font-weight:500; font-size:12.5px; color:#6b4a46; }
+  .rkop .chev{ transition:transform 180ms cubic-bezier(.2,.6,.3,1); }
+  .rubriek.open .rkop{ border-bottom:1px solid #ecd9d5; }
+  .rubriek.open .rkop .chev{ transform:rotate(90deg); }
+  .rlijst{ display:none; }
+  .rubriek.open .rlijst{ display:block; padding:6px 0 8px; }
+
+  /* Het triplet: datumtag · bron · titel. Eén regel per item, meer niet. */
+  .rij{ display:block; width:100%; text-align:left; background:none; border:0; cursor:pointer; font:inherit;
+        padding:9px 16px; border-top:1px solid var(--hair); color:inherit; }
+  .rlijst .rij:first-child{ border-top:0; }
+  @media (hover:hover) and (pointer:fine){ .rij:hover{ background:#fdf6f5; } }
+  .rij:focus-visible{ outline:2px solid var(--brand); outline-offset:-2px; }
+  .rij .tag{ font-family:var(--disp); font-weight:600; font-size:12px; color:var(--ink-zwak); }
+  .rij .bron{ font-family:var(--body); font-weight:600; font-size:12px; color:var(--groen); }
+  .rij .sep{ color:var(--hair3); padding:0 6px; }
+  .rij .titel{ display:block; margin-top:2px; font-family:var(--body); font-weight:600; font-size:14px; line-height:20px; color:var(--ink-body); }
+
+  .leeg{ border:1px dashed var(--hair3); border-radius:12px; background:var(--bg); padding:28px 20px; display:grid; justify-items:center; gap:8px; text-align:center; }
+  .leeg h3{ margin:0; font-family:var(--disp); font-weight:600; font-size:15px; color:var(--ink-body); }
+  .leeg p{ margin:0; font-size:14px; line-height:22px; color:var(--ink-meta); max-width:40ch; }
+
+  .voet{ background:var(--bg); border-top:1px solid var(--hair); padding:10px 14px; font-family:var(--body); font-weight:500; font-size:12.5px; color:var(--ink-meta); }
+
+  /* Abonnee-muur: verschijnt bij een klik op een titel. */
+  .muur{ position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; padding:16px;
+         background:rgba(36,28,28,.45); }
+  .muur.open{ display:flex; }
+  .muurkaart{ background:#fff; border:1px solid #ecd9d5; border-radius:14px; max-width:420px; width:100%;
+              padding:20px; box-shadow:0 18px 50px -20px rgba(90,0,0,.45); }
+  .muurkaart h3{ margin:0 0 8px; font-family:var(--disp); font-weight:600; font-size:16px; color:var(--brand-dark); }
+  .muurkaart p{ margin:0 0 16px; font-size:14px; line-height:22px; color:var(--ink-body); }
+  .muurkaart .knoppen{ display:flex; gap:10px; flex-wrap:wrap; }
+  .muurkaart a.abo{ display:inline-flex; align-items:center; min-height:44px; padding:0 18px; border-radius:9px;
+                    background:var(--brand); color:#fff; text-decoration:none; font-family:var(--disp); font-weight:600; font-size:14px; }
+  .muurkaart a.abo:hover{ filter:brightness(1.1); }
+  .muurkaart button.sluit{ min-height:44px; padding:0 16px; border-radius:9px; border:1px solid var(--hair3);
+                           background:#fff; color:var(--ink-body2); font-family:var(--disp); font-weight:600; font-size:14px; cursor:pointer; }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{ animation-duration:.01ms!important; transition-duration:.01ms!important; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
+  <symbol id="ic-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></symbol>
+  <symbol id="ic-leeg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"></circle><path d="M8.4 13.8h7.2"></path></symbol>
+</svg>
+
+<div class="panel">
+  <div class="bar">
+    <div>
+      <h1>Regelgevingsarchief</h1>
+      <div class="sub" id="sub">wordt geladen…</div>
+    </div>
+    <a class="terug" href="/actueel" target="_top">← Actueel</a>
+  </div>
+  <div class="scrollwrap">
+    <div class="scroller" id="scroller"></div>
+    <div class="vervaag" id="vervaag" aria-hidden="true"></div>
+  </div>
+  <div class="voet">Franse wet- en regelgeving, per rubriek bewaard. Nieuwste bovenaan.</div>
+</div>
+
+<div class="muur" id="muur" role="dialog" aria-modal="true" aria-labelledby="muurkop">
+  <div class="muurkaart">
+    <h3 id="muurkop">Alleen voor abonnees</h3>
+    <p id="muurtekst">Toegang tot dit archief is uitsluitend voorbehouden aan abonnees.</p>
+    <div class="knoppen">
+      <a class="abo" id="muurlink" href="https://infofrankrijk.com/abonnement/" target="_blank" rel="noopener">Word abonnee ↗</a>
+      <button type="button" class="sluit" id="muursluit">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var scrollerEl = document.getElementById("scroller");
+  var vervaagEl  = document.getElementById("vervaag");
+  var subEl      = document.getElementById("sub");
+  var muurEl     = document.getElementById("muur");
+  var muurTekst  = document.getElementById("muurtekst");
+  var muurLink   = document.getElementById("muurlink");
+
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function ico(id){ return '<svg class="ic" aria-hidden="true"><use href="#'+id+'"/></svg>'; }
+
+  // Welke rubrieken staan open? Bewaard per sessie, net als op /actueel.
+  var open = {};
+  try { open = JSON.parse(sessionStorage.getItem("nlfr_arch_open") || "{}") || {}; } catch(e){ open = {}; }
+  function bewaar(){ try { sessionStorage.setItem("nlfr_arch_open", JSON.stringify(open)); } catch(e){} }
+
+  function rijHtml(it){
+    return '<button type="button" class="rij" data-titel="'+esc(it.titel)+'">'+
+      '<span class="tag">'+esc(it.datum)+'</span><span class="sep">·</span>'+
+      '<span class="bron">'+esc(it.bron)+'</span>'+
+      '<span class="titel">'+esc(it.titel)+'</span>'+
+    '</button>';
+  }
+  function rubriekHtml(r){
+    var isOpen = !!open[r.rubriek];
+    return '<section class="rubriek'+(isOpen?" open":"")+'" data-rubriek="'+esc(r.rubriek)+'">'+
+      '<button type="button" class="rkop" aria-expanded="'+(isOpen?"true":"false")+'">'+
+        '<span><h2>'+esc(r.label)+'</h2><span class="telling">'+r.aantal+' '+(r.aantal===1?"stuk":"stukken")+'</span></span>'+
+        '<span class="chev">'+ico("ic-chevron")+'</span>'+
+      '</button>'+
+      '<div class="rlijst">'+r.items.map(rijHtml).join("")+'</div>'+
+    '</section>';
+  }
+
+  function toonMuur(){ muurEl.classList.add("open"); document.getElementById("muursluit").focus(); }
+  function sluitMuur(){ muurEl.classList.remove("open"); }
+  document.getElementById("muursluit").addEventListener("click", sluitMuur);
+  muurEl.addEventListener("click", function(e){ if (e.target === muurEl) sluitMuur(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") sluitMuur(); });
+
+  scrollerEl.addEventListener("click", function(e){
+    var rij = e.target.closest(".rij");
+    if (rij){ toonMuur(); return; }   // klikken opent geen inhoud, maar de muur
+    var kop = e.target.closest(".rkop");
+    if (kop){
+      var sec = kop.closest(".rubriek");
+      var nu = sec.classList.toggle("open");
+      kop.setAttribute("aria-expanded", nu ? "true" : "false");
+      var id = sec.getAttribute("data-rubriek");
+      if (nu) open[id] = true; else delete open[id];
+      bewaar(); meldHoogte(); werkVervaagBij();
+    }
+  });
+
+  // Vervaag-rand: aan zolang er inhoud onder de vouw zit (zelfde gedrag als /actueel).
+  function werkVervaagBij(){
+    if (!vervaagEl) return;
+    var rest = scrollerEl.scrollHeight - scrollerEl.clientHeight - scrollerEl.scrollTop;
+    vervaagEl.classList.toggle("aan", rest > 8);
+  }
+  scrollerEl.addEventListener("scroll", werkVervaagBij, { passive:true });
+
+  // Hoogte-handshake met de moederpagina — identiek aan /actueel, zodat dezelfde
+  // embedcode werkt (postMessage nlfrActueelHeight, gecapt op nlfrViewport).
+  var parentVenster = 0, lastH = 0, hTimer = null;
+  function cap(){
+    if (parentVenster > 0) return Math.max(420, parentVenster);
+    var s = (window.screen && window.screen.height) || 900;
+    return Math.max(640, Math.min(1200, Math.round(s * 0.9)));
+  }
+  function natuur(){
+    var bar = document.querySelector(".bar"), voet = document.querySelector(".voet");
+    return (bar?bar.offsetHeight:0) + (scrollerEl.scrollHeight||0) + (voet?voet.offsetHeight:0) + 4;
+  }
+  function meldHoogte(){
+    werkVervaagBij();
+    if (hTimer) return;
+    hTimer = setTimeout(function(){
+      hTimer = null;
+      try{
+        if (window.parent && window.parent !== window){
+          var h = Math.min(natuur(), cap());
+          h = Math.round(h/8)*8;
+          if (Math.abs(h-lastH) >= 8){ lastH = h; window.parent.postMessage({ nlfrActueelHeight:h }, "*"); }
+        }
+      }catch(e){}
+    }, 100);
+  }
+  window.addEventListener("message", function(e){
+    if (e.data && typeof e.data.nlfrViewport === "number" && e.data.nlfrViewport > 0){
+      parentVenster = e.data.nlfrViewport; lastH = 0; meldHoogte();
+    }
+  });
+  if (window.ResizeObserver){ new ResizeObserver(function(){ meldHoogte(); }).observe(scrollerEl); }
+
+  function leegHtml(){
+    return '<div class="leeg">'+ico("ic-leeg")+
+      '<h3>Nog geen stukken in het archief</h3>'+
+      '<p>Overheidsberichten verhuizen hierheen zodra ze hun periode op de nieuwspagina hebben doorlopen.</p></div>';
+  }
+
+  function laad(){
+    fetch("/api/register", { cache:"no-store" })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; })
+      .then(function(data){
+        if (!data){ scrollerEl.innerHTML = leegHtml(); subEl.textContent = "niet bereikbaar"; meldHoogte(); return; }
+        if (data.muur){
+          if (data.muur.tekst) muurTekst.textContent = data.muur.tekst;
+          if (data.muur.url) muurLink.href = data.muur.url;
+        }
+        var rubrieken = data.rubrieken || [];
+        subEl.textContent = data.totaal + " " + (data.totaal===1 ? "stuk" : "stukken") + " in " + rubrieken.length + " " + (rubrieken.length===1 ? "rubriek" : "rubrieken");
+        scrollerEl.innerHTML = rubrieken.length ? rubrieken.map(rubriekHtml).join("") : leegHtml();
+        meldHoogte();
+      });
+  }
+  laad();
+  setInterval(laad, 10*60*1000);
+})();
+</script>
+</body>
+</html>

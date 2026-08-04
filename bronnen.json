@@ -1,5 +1,5 @@
 {
-  "_uitleg": "Bronnenlijst voor de route /actueel (live Frankrijknieuws). De API-route /api/actueel haalt UITSLUITEND de feeds hieronder op, parseert ze (RSS 2.0 + Atom), normaliseert en respecteert per bron het regime. Velden per bron: naam, feed (RSS/Atom-URL), thema, regime ('overheid', 'pers', 'eigen' of 'verenigingen'), taal ('fr' of 'nl'), prioriteit (1=hoog .. 3=laag), actief (true/false). Extra veld 'verificatie': 'geverifieerd' = door Anton/Claude bevestigd op 31-07-2026; 'te-testen' = vanaf Vercel verifiëren (werkt niet -> in de bron-status melden, niet gissen). Regime-regel: overheid = titel + samenvatting uit de feed + bronvermelding met URL; pers = UITSLUITEND titel + bron + datum + link (geen samenvatting, geen vertaling); eigen = eigen redactionele bron (Infofrankrijk), zelfde behandeling als overheid: titel + samenvatting + link; verenigingen = agenda-/nieuwsitems van Nederlandse verenigingen (JSON-aggregaat), ook titel + samenvatting + link. Alleen 'pers' doorloopt de clustering, de AI-synthese en de publicatie-gate van de reviewtool; overheid, eigen en verenigingen gaan buiten die poort om rechtstreeks naar /actueel en krijgen het ruime datumvenster. Een kapotte feed wordt overgeslagen; de rest blijft werken.",
+  "_uitleg": "Bronnenlijst voor de route /actueel (live Frankrijknieuws). De API-route /api/actueel haalt UITSLUITEND de feeds hieronder op, parseert ze (RSS 2.0 + Atom), normaliseert en respecteert per bron het regime. Velden per bron: naam, feed (RSS/Atom-URL), thema, regime ('overheid', 'pers', 'eigen' of 'verenigingen'), taal ('fr' of 'nl'), prioriteit (1=hoog .. 3=laag), actief (true/false). Extra veld 'verificatie': 'geverifieerd' = bevestigd via de live bronStatus (HTTP 200 én items); het veld 'verificatieDatum' houdt bij wanneer dat is vastgesteld. 'te-testen' = nog vanaf Vercel te verifiëren (werkt niet -> in de bron-status melden, niet gissen). 'geblokkeerd' = feed weigert of levert niets; bron staat op actief:false. Regime-regel: overheid = titel + samenvatting uit de feed + bronvermelding met URL; pers = UITSLUITEND titel + bron + datum + link (geen samenvatting, geen vertaling); eigen = eigen redactionele bron (Infofrankrijk), zelfde behandeling als overheid: titel + samenvatting + link; verenigingen = agenda-/nieuwsitems van Nederlandse verenigingen (JSON-aggregaat), ook titel + samenvatting + link. Alleen 'pers' doorloopt de clustering, de AI-synthese en de publicatie-gate van de reviewtool; overheid, eigen en verenigingen gaan buiten die poort om rechtstreeks naar /actueel en krijgen het ruime datumvenster. Een kapotte feed wordt overgeslagen; de rest blijft werken.",
   "bronnen": [
     {
       "naam": "Bercy — Ministère de l'Économie",
@@ -81,7 +81,8 @@
       "taal": "nl",
       "prioriteit": 2,
       "actief": true,
-      "verificatie": "te-testen",
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04",
       "frankrijkFilter": true
     },
     {
@@ -92,7 +93,8 @@
       "taal": "fr",
       "prioriteit": 2,
       "actief": true,
-      "verificatie": "te-testen"
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04"
     },
     {
       "naam": "Le Figaro — Actualités",
@@ -102,7 +104,8 @@
       "taal": "fr",
       "prioriteit": 2,
       "actief": true,
-      "verificatie": "te-testen"
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04"
     },
     {
       "naam": "Franceinfo — Titres",
@@ -112,7 +115,8 @@
       "taal": "fr",
       "prioriteit": 2,
       "actief": true,
-      "verificatie": "te-testen"
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04"
     },
     {
       "naam": "Sud Ouest",
@@ -122,7 +126,8 @@
       "taal": "fr",
       "prioriteit": 3,
       "actief": true,
-      "verificatie": "te-testen"
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04"
     },
     {
       "naam": "Midi Libre",
@@ -132,7 +137,8 @@
       "taal": "fr",
       "prioriteit": 3,
       "actief": true,
-      "verificatie": "te-testen"
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04"
     },
     {
       "naam": "ici (France Bleu / France 3)",
@@ -165,7 +171,8 @@
       "prioriteit": 3,
       "actief": true,
       "vensterDagen": 14,
-      "verificatie": "te-testen",
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04",
       "_opmerking": "Actualités-feed (brèves, articles, dossiers). Juiste RSS-URL door Anton aangeleverd op 03-08-2026; de oude rss.xml gaf 0 items. Venster op 14 dagen (trage publicatie) i.p.v. de standaard 72u. Verifieer op Vercel via de bron-status."
     },
     {
@@ -176,7 +183,8 @@
       "taal": "nl",
       "prioriteit": 1,
       "actief": true,
-      "verificatie": "te-testen",
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04",
       "eigenContent": true,
       "vensterDagen": 14,
       "_opmerking": "Eigen publicatie (infofrankrijk.com). Eigen content: titel + samenvatting + link mogen ruim (geen auteursrechtelijk bezwaar). Krijgt een eigen tegel op /actueel; loopt niet via de cron/synthese en niet via het Frankrijk-filter."
@@ -190,7 +198,8 @@
       "taal": "nl",
       "prioriteit": 3,
       "actief": true,
-      "verificatie": "te-testen",
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-04",
       "vensterDagen": 30,
       "_opmerking": "Aggregaat-JSON van antonnoe/verenigingen-kalender (GitHub Pages). Bundelt de nieuwsfeeds van NL-verenigingen in Frankrijk. Ruimer venster (30 dagen), want laagfrequent."
     }

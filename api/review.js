@@ -20,6 +20,7 @@ import {
   zachteSignalen,
 } from "../lib/poort.js";
 import { vindGelijkenis, gelijkenis } from "../lib/gelijkenis.js";
+import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
@@ -27,6 +28,8 @@ import {
   KEY_PUBLICATIE,
   KEY_AFGEWEZEN,
   KEY_OVERHEID,
+  KEY_REGISTER,
+  OVERHEID_TTL_S,
   SCAN_CONCEPT,
   SCAN_PUBLICATIE,
   SCAN_OVERHEID,
@@ -377,6 +380,67 @@ export default async function handler(req, res) {
       const rest = Math.max(60, Math.round(PUBLICATIE_TTL_S - (Date.now() - gepubT) / 1000));
       await setJSON(KEY_PUBLICATIE(id), pub, rest); // TTL blijft op het 14-daagse eindpunt
       return res.status(200).json({ ok: true, publicatie: pub });
+    }
+
+    if (actie === "keten") {
+      // Antwoord op een keten-vraag bij een overheidsbericht. SERVERSIDE
+      // AFGEDWONGEN: de UI stuurt alleen ja/nee + de smaak; welke records
+      // veranderen en hoe, wordt hier bepaald.
+      const soort = body.soort === "aanvulling" ? "aanvulling" : "vervangen";
+      const antwoord = body.antwoord === "ja" ? "ja" : "nee";
+      const doc = await getJSON(KEY_OVERHEID(id));
+      if (!doc) {
+        return res.status(404).json({ ok: false, fout: "Overheidsbericht niet gevonden." });
+      }
+      const vraag = doc.ketenVraag;
+      if (!vraag || !vraag.doelId) {
+        return res.status(409).json({ ok: false, fout: "Voor dit bericht staat geen keten-vraag open." });
+      }
+
+      if (antwoord === "nee") {
+        // Geen keten: de records blijven los. De vraag verdwijnt en komt niet
+        // terug (de detectie draait alleen bij instroom van een nieuw bericht).
+        delete doc.ketenVraag;
+        doc.ketenAntwoord = { soort, antwoord, op: new Date().toISOString() };
+        await setJSON(KEY_OVERHEID(id), doc, OVERHEID_TTL_S);
+        return res.status(200).json({ ok: true, keten: "geen" });
+      }
+
+      // "Ja": beide kanten moeten registerrecords zijn, want de keten hoort in
+      // het duurzame register thuis. Staat een van de twee er nog niet in (het
+      // nieuwe bericht is meestal nog live), dan nemen we het nu alvast op. Bij
+      // het verstrijken van de live periode ziet de cron dat het al opgenomen is
+      // en ruimt alleen het live record op.
+      const nuIso = Date.now();
+      let doelRecord = await getJSON(KEY_REGISTER(vraag.doelId));
+      if (!doelRecord) {
+        const doelLive = await getJSON(KEY_OVERHEID(vraag.doelId));
+        if (!doelLive) {
+          return res.status(404).json({ ok: false, fout: "Het bericht uit de keten is niet meer te vinden." });
+        }
+        doelRecord = maakRegisterRecord(doelLive, nuIso);
+      }
+      let bronRecord = await getJSON(KEY_REGISTER(id));
+      if (!bronRecord) bronRecord = maakRegisterRecord(doc, nuIso);
+
+      const uitkomst =
+        soort === "vervangen"
+          ? pasVervangingToe(doelRecord, bronRecord, nuIso)
+          : pasAanvullingToe(doelRecord, bronRecord, nuIso);
+
+      // Nooit verwijderen: beide records worden geschreven, zonder TTL.
+      await setJSON(KEY_REGISTER(uitkomst.oud.id), uitkomst.oud);
+      await setJSON(KEY_REGISTER(uitkomst.nieuw.id), uitkomst.nieuw);
+
+      delete doc.ketenVraag;
+      doc.ketenAntwoord = { soort, antwoord, doelId: vraag.doelId, op: new Date().toISOString() };
+      await setJSON(KEY_OVERHEID(id), doc, OVERHEID_TTL_S);
+      return res.status(200).json({
+        ok: true,
+        keten: soort,
+        oud: { id: uitkomst.oud.id, status: uitkomst.oud.status },
+        nieuw: { id: uitkomst.nieuw.id, status: uitkomst.nieuw.status },
+      });
     }
 
     if (actie === "verwijder-overheid") {

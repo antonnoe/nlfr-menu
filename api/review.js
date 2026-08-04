@@ -19,7 +19,7 @@ import {
   isPersConcept,
   zachteSignalen,
 } from "../lib/poort.js";
-import { vindGelijkenis, gelijkenis } from "../lib/gelijkenis.js";
+import { vindGelijkenis, gelijkenis, vindPrimaireBron } from "../lib/gelijkenis.js";
 import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
 import {
   CONCEPT_TTL_S,
@@ -33,6 +33,7 @@ import {
   SCAN_CONCEPT,
   SCAN_PUBLICATIE,
   SCAN_OVERHEID,
+  SCAN_REGISTER,
 } from "../lib/config.js";
 
 // Leest het token robuust, ongeacht runtime-eigenaardigheden:
@@ -160,10 +161,12 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const [ruweConcepten, publicaties, overheid] = await Promise.all([
+    const nuMs = Date.now();
+    const [ruweConcepten, publicaties, overheid, registerRecords] = await Promise.all([
       listJSON(SCAN_CONCEPT),
       listJSON(SCAN_PUBLICATIE),
       listJSON(SCAN_OVERHEID),
+      listJSON(SCAN_REGISTER),
     ]);
     // Buitenland-opschoning: concepten die niet over Frankrijk gaan (bv. Israël/
     // Hamas) horen hier niet. Ze zijn vaak vóór de tweede filterlaag gemaakt; we
@@ -197,6 +200,12 @@ export default async function handler(req, res) {
       // Lijkt dit concept op een ander openstaand concept of op iets dat al live
       // staat? De server rekent, de UI toont alleen.
       c.gelijkenis = vindGelijkenis(c, besten, publicaties);
+      // Dwarsverband: staat er over dit onderwerp al een overheidsbericht? Dan
+      // is dat de primaire bron. Signalering, geen blokkade — de redacteur
+      // kiest tussen "Weg" en publiceren.
+      c.primaireBron = c.poort.persconcept
+        ? vindPrimaireBron(c, overheid, registerRecords, nuMs)
+        : null;
     }
     besten.sort(
       (a, b) => (Date.parse(b.aangemaaktOp) || 0) - (Date.parse(a.aangemaaktOp) || 0)

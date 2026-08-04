@@ -240,6 +240,18 @@
     return uit + '</div>';
   }
 
+  // Dwarsverband met de primaire bron: staat er over dit onderwerp al een
+  // overheidsbericht? Signalering, geen blokkade — de redacteur kiest tussen
+  // "Weg" (de primaire bron dekt het al) en publiceren (de pers voegt iets toe).
+  function primaireBronHtml(c){
+    var p = c.primaireBron;
+    if (!p) return "";
+    return '<div class="waarschuwing"><b>Primaire bron staat al live</b>'+
+      'Over dit onderwerp staat al een overheidsbericht live: '+
+      esc(p.titel || "zonder titel")+' ('+esc(p.bron || "overheid")+'). '+
+      'Voegt de perssynthese hier echt iets aan toe? Zo niet: "Weg".</div>';
+  }
+
   function render(){
     var html = "";
 
@@ -270,6 +282,7 @@
         bronnenHtml(c.bronnen)+
         outletWaarschuwing(c)+
         gelijkenisHtml(c)+
+        primaireBronHtml(c)+
         outletnaamHtml(c)+
         '<div class="poortmelding"></div>'+
         '<div class="knoppen">'+

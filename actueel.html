@@ -361,8 +361,21 @@
     var bronBlok = bronnen.length
       ? '<div class="bronwrap"><button type="button" class="bronknop" data-bron="'+esc(aid)+'" aria-expanded="false">'+ico("ic-bronnen")+' Bronnen ('+bronnen.length+')</button><ul class="bronlijst">'+bronnen.map(bronHTML).join("")+'</ul></div>'
       : '<div class="bronknop leeg">'+ico("ic-bronnen")+' Geen externe bron</div>';
-    var meta = a.restDagen ? ('<span class="rest">Blijft nog '+a.restDagen+' dag'+(a.restDagen===1?'':'en')+' in het archief</span>')
-             : (bronnen.length ? esc((bronnen[0].naam||""))+(bronnen[0].datum?" · "+esc(datum(bronnen[0].datum)):"") : "");
+    // Onderregel. Een PERSSYNTHESE is eigen redactioneel werk op meerdere
+    // bronnen; die onder de naam van de eerste krant uit de lijst zetten zou
+    // suggereren dat het hun artikel is. Daar staat dus de redactie met de
+    // publicatiedatum; de bronnenlijst hieronder is de attributie. Overheids-,
+    // Infofrankrijk- en verenigingsitems hebben één afzender — daar klopt de
+    // bronregel wél en blijft hij ongewijzigd.
+    var rest = a.restDagen ? '<span class="rest">Blijft nog '+a.restDagen+' dag'+(a.restDagen===1?'':'en')+' in het archief</span>' : "";
+    var meta;
+    if (a.soort === "pers"){
+      meta = "Redactie NLFR"+(a.datum?" · "+esc(datum(a.datum)):"")+(rest?" · "+rest:"");
+    } else if (rest){
+      meta = rest;
+    } else {
+      meta = bronnen.length ? esc((bronnen[0].naam||""))+(bronnen[0].datum?" · "+esc(datum(bronnen[0].datum)):"") : "";
+    }
     return '<div class="artikel'+(isOpen?" open":"")+'" data-art="'+esc(aid)+'">'+
       '<button type="button" class="artkop" aria-expanded="'+(isOpen?"true":"false")+'">'+
         '<span class="tk"><span class="att">'+esc(a.titel)+'</span>'+(a.summary?'<span class="asum">'+esc(a.summary)+'</span>':'')+(meta?'<span class="ameta">'+meta+'</span>':'')+'</span>'+

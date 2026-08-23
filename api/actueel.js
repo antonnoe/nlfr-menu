@@ -22,7 +22,32 @@ import {
   SCAN_OVERHEID,
 } from "../lib/config.js";
 
+// Zonder Access-Control-Allow-Origin draait deze route alleen binnen een
+// iframe op de eigen site. Zelfde allowlist als nlfr-berichten/api/berichten.js.
+const TOEGESTAAN = [
+  "https://www.nederlanders.fr",
+  "https://nederlanders.fr",
+  "https://cafeclaude.fr",
+  "https://www.cafeclaude.fr",
+  "https://infofrankrijk.com",
+  "https://www.infofrankrijk.com",
+  "https://nedergids.nl",
+  "https://www.nedergids.nl",
+];
+
+function cors(req, res) {
+  const o = req.headers.origin;
+  if (o && (TOEGESTAAN.includes(o) || /^https:\/\/[a-z0-9-]+\.(vercel\.app|claudeusercontent\.com)$/i.test(o))) {
+    res.setHeader("Access-Control-Allow-Origin", o);
+    res.setHeader("Vary", "Origin");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+}
+
 export default async function handler(req, res) {
+  cors(req, res);
+  if (req.method === "OPTIONS") return res.status(204).end();
+
   const nu = Date.now();
   const nuIso = new Date(nu).toISOString();
 

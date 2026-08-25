@@ -22,22 +22,34 @@ import {
   SCAN_OVERHEID,
 } from "../lib/config.js";
 
-// Zelfde allowlist-model als antonnoe/nlfr-berichten (api/berichten.js e.a.):
-// eigen domeinen met naam, plus de eigen *.vercel.app-previews/deploys.
-const TOEGESTAAN = [
-  "https://www.nederlanders.fr",
-  "https://nederlanders.fr",
-  "https://cafeclaude.fr",
-  "https://www.cafeclaude.fr",
-  "https://infofrankrijk.com",
-  "https://www.infofrankrijk.com",
-  "https://nedergids.nl",
-  "https://www.nedergids.nl",
+// Allowlist-model van antonnoe/nlfr-berichten (api/berichten.js e.a.), maar dan
+// mét subdomeinen: IF-Mobiel wordt als iframe ingebed en stuurt straks
+// mobiel.nederlanders.fr als Origin mee (bij een fetch uit een iframe is de
+// Origin die van de iframe zelf, niet die van de omliggende pagina). Een vaste
+// lijst met alleen de kale en www-vorm zou daar opnieuw op stuklopen.
+const EIGEN_DOMEINEN = [
+  "nederlanders.fr",
+  "cafeclaude.fr",
+  "infofrankrijk.com",
+  "nedergids.nl",
 ];
+
+// Eigen deploys/previews: alléén als subdomein, nooit het kale platformdomein.
+const EIGEN_DEPLOYS = ["vercel.app", "claudeusercontent.com"];
+
+function toegestaan(origin) {
+  let u;
+  try { u = new URL(origin); } catch { return false; }
+  if (u.protocol !== "https:") return false;
+  const h = u.hostname.toLowerCase();
+  // De punt in "." + d is wat telt: zo matcht kwaadnederlanders.fr niet mee.
+  return EIGEN_DOMEINEN.some((d) => h === d || h.endsWith("." + d))
+      || EIGEN_DEPLOYS.some((d) => h.endsWith("." + d));
+}
 
 function cors(req, res) {
   const o = req.headers.origin;
-  if (o && (TOEGESTAAN.includes(o) || /^https:\/\/[a-z0-9-]+\.(vercel\.app|claudeusercontent\.com)$/i.test(o))) {
+  if (o && toegestaan(o)) {
     res.setHeader("Access-Control-Allow-Origin", o);
     res.setHeader("Vary", "Origin");
   }

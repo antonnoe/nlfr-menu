@@ -78,25 +78,81 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
 
 - `bronnen.json` — de enige toegestane bronnenlijst (RSS/Atom). Los aanpasbaar,
   zonder code. Elke bron heeft o.a. `regime` (`overheid` of `pers`) en `actief`.
-- `/api/actueel` — levert het antwoord voor de pagina: tegels, agenda,
-  bronStatus. **Leest bij voorkeur een voorgebakken antwoord uit KV** (zie
-  "Hoe het antwoord tot stand komt" hieronder) en stelt het alleen zelf samen
-  als dat ontbreekt. Bij zelf samenstellen: alle actieve bronnen ophalen,
-  parseren (RSS 2.0 + Atom), normaliseren en het regime respecteren (overheid:
-  titel + samenvatting; pers: alleen titel + bron + datum + link), hot-clusters
-  bepalen (≥ 3 onafhankelijke bronnen) en gepubliceerde redactiesyntheses
-  bovenaan zetten. Een kapotte feed wordt overgeslagen; de rest blijft werken.
+- `/api/actueel` — de **compacte levering**: tegels, agenda, bronStatus, en per
+  artikel alles wat de DICHTE staat toont — maar zonder `tekst` en zonder de
+  volledige `bronnen`-array. **Leest bij voorkeur een voorgebakken antwoord uit
+  KV** (zie "Hoe het antwoord tot stand komt" hieronder) en stelt het alleen
+  zelf samen als dat ontbreekt. Bij zelf samenstellen: alle actieve bronnen
+  ophalen, parseren (RSS 2.0 + Atom), normaliseren en het regime respecteren
+  (overheid: titel + samenvatting; pers: alleen titel + bron + datum + link),
+  hot-clusters bepalen (≥ 3 onafhankelijke bronnen) en gepubliceerde
+  redactiesyntheses bovenaan zetten. Een kapotte feed wordt overgeslagen; de
+  rest blijft werken.
+- `/api/actueel-tekst` — de **tekst-levering**: per artikel de volledige
+  NL-tekst en de volledige bronnenlijst, in één verzoek voor alle artikelen.
+  Zie "De twee leveringen" hieronder.
 - `/api/schoolvakanties` — eerstvolgende schoolvakantie per zone, live uit de
   open data van het onderwijsministerie, met vaste link naar service-public.
 - `/api/cron` — serverless job (Vercel Cron, elke 15 min) die voor nieuwe
   hot-clusters via de Anthropic API één NL-synthese schrijft en als **concept**
   opslaat. Nooit direct live. Model/max_tokens staan in één constante
   (`lib/config.js` → `AI_CONFIG`). Aan het eind van elke ronde **bakt de cron
-  het complete antwoord van `/api/actueel` voor** en zet het in KV.
+  beide leveringen voor** en zet ze in KV.
 - `/review?token=…` — mobielvriendelijke reviewtool. Publiceer / Weg / inline
   bewerken. Concepten verlopen automatisch na 48 uur.
 
-### Hoe het antwoord van `/api/actueel` tot stand komt
+### De twee leveringen
+
+De pagina wordt in **twee stukken** geserveerd. Reden: het volledige antwoord
+was 317.675 bytes (88 kB over de lijn) voor 152 artikelen, en daarvan was het
+veld `tekst` samen 117.303 bytes en waren de `bronnen`-arrays 114.154 bytes —
+ruim 70% — terwijl de lezer die pas ziet zodra hij een artikel **openklapt**.
+
+| | `/api/actueel` (compact) | `/api/actueel-tekst` |
+| --- | --- | --- |
+| `bijgewerkt`, `gebakkenOp` | ✔ | ✔ (hetzelfde bakmoment) |
+| `tegels` met `label`, `soort`, `thema`, `hot` | ✔ | — |
+| per artikel `id`, `titel`, `summary`, `soort`, `datum`, `url`, `label`, `restDagen` | ✔ | — |
+| per artikel **`bronMeta`** — `{naam, datum}` van de eerste bron | ✔ | — |
+| per artikel **`bronAantal`** — het aantal bronnen | ✔ | — |
+| `agenda`, `bronStatus` | ✔ | — |
+| per artikel `tekst` (volledige NL-tekst) | — | ✔ |
+| per artikel `bronnen` (volledige array, incl. `url`/`urlGeweigerd`) | — | ✔ |
+
+`bronMeta` en `bronAantal` zijn er omdat de dichte staat die twee dingen wél
+toont: `bronMeta` is de onderregel onder een overheids-, Infofrankrijk- of
+verenigingsartikel ("Service-Public · 27 augustus"), `bronAantal` is het getal
+op de knop "Bronnen (n)". Een perssynthese toont daar de NLFR-byline en gebruikt
+`bronMeta` niet.
+
+De tekst-levering is een object op sleutel **`tegelId/artikelId`**, niet op het
+kale artikel-id: hetzelfde artikel-id kan in twee tegels voorkomen (een
+perssynthese die van de live-tegel naar het archief verhuist).
+
+```json
+{ "bijgewerkt": "...", "gebakkenOp": "...",
+  "artikelen": { "overheid-douane/a1": { "tekst": "...", "bronnen": [ ... ] } } }
+```
+
+**Hoe de pagina ze gebruikt** (`actueel.html`): renderen gebeurt op de compacte
+levering; de tekst-levering wordt daarná op de achtergrond opgehaald en houdt de
+eerste weergave niet op. Klapt de lezer een artikel open voordat die binnen is,
+dan ziet hij de summary met de regel "Volledige tekst wordt geladen…" en een
+niet-aanklikbare "Bronnen (n)" — het aantal is dan al bekend uit `bronAantal`.
+Zodra de levering binnen is, rendert de pagina opnieuw (open/dicht-standen en
+scrollpositie blijven staan). Mislukt de levering helemaal, dan blijft de
+summary staan met "De volledige tekst kon niet worden geladen"; de 5-minutenlus
+probeert het vanzelf opnieuw. Een lege bak of een knop die niets doet komt er
+dus in geen van de gevallen.
+
+**De sonde toetst beide leveringen.** `scripts/sonde.mjs` haalt ze allebei op en
+voegt ze per `tegelId/artikelId` weer samen, zodat de bronlinktoetsen (I3, I4,
+I9) en de tekstinvarianten (I5) op dezelfde artikelvorm blijven werken als vóór
+de splitsing. Twee toetsen zijn erbij gekomen: **I10** (de leveringen dekken
+elkaar exact en komen uit dezelfde ronde) en **I11** (`bronAantal` en `bronMeta`
+kloppen met de volledige bronnenlijst).
+
+### Hoe de leveringen tot stand komen
 
 Deze route stelde het antwoord vroeger bij **elke** cache-miss ter plekke samen:
 16 feeds live ophalen plus de verenigingen-agenda, en daarna ~145 losse KV-reads.
@@ -105,22 +161,24 @@ De traagste externe site bepaalde de responstijd — gemeten 12,0 tot 12,5 s, te
 
 1. **De cron bakt voor.** Aan het eind van elke ronde (elke 15 min) stelt
    `/api/cron` het volledige antwoordobject samen — `bijgewerkt`, `tegels`,
-   `agenda`, `bronStatus` — en schrijft dat weg onder de sleutel
-   **`actueel:snapshot:v1`**, met een **TTL van 6 uur**. Die TTL is ruim langer
-   dan de croninterval: een paar gemiste rondes geven dus nog geen lege pagina.
-   Het veld `bijgewerkt` is voortaan het **bakmoment**, niet de requesttijd; het
-   object draagt datzelfde moment ook als `gebakkenOp`.
-2. **`/api/actueel` leest die sleutel** en antwoordt ermee. Dat is één
+   `agenda`, `bronStatus` — splitst het in de twee leveringen en schrijft die
+   weg onder **`actueel:snapshot:v2`** (compact) en
+   **`actueel:snapshot-tekst:v1`** (tekst), allebei met een **TTL van 6 uur**.
+   Die TTL is ruim langer dan de croninterval: een paar gemiste rondes geven dus
+   nog geen lege pagina. Het veld `bijgewerkt` is het **bakmoment**, niet de
+   requesttijd; beide leveringen dragen datzelfde moment ook als `gebakkenOp`.
+2. **Elke route leest haar eigen sleutel** en antwoordt ermee. Dat is één
    KV-round-trip, geen enkele feed.
 3. **Ontbreekt de snapshot, of is hij ouder dan 60 minuten**, dan stelt de route
-   het antwoord alsnog zelf samen (live feeds + KV) — via dezelfde functie als de
-   cron, `lib/antwoord.js` → `bouwAntwoord()`, dus functioneel identiek aan het
-   oude gedrag, inclusief `bronStatus` — en **schrijft het resultaat weg als
-   nieuwe snapshot**, zodat de volgende bezoeker hem wél voorgebakken krijgt.
-   Er is bewust **geen lock of wachtrij** bij gelijktijdige missers: twee keer
-   bakken mag, dat is de complexiteit niet waard.
+   het volledige antwoord alsnog zelf samen (live feeds + KV) — via dezelfde
+   functie als de cron, `lib/antwoord.js` → `bouwAntwoord()`, dus functioneel
+   identiek aan het oude gedrag, inclusief `bronStatus` — splitst het, en
+   **schrijft BEIDE leveringen weg**. Wie de ene route mist, warmt dus meteen
+   ook de andere op; de tweede route hoeft de feeds daarna niet nóg een keer op
+   te halen. Er is bewust **geen lock of wachtrij** bij gelijktijdige missers:
+   twee keer bakken mag, dat is de complexiteit niet waard.
 4. **Zonder KV** (env-vars niet ingesteld) valt stap 1 en 3 weg: er is geen
-   snapshot te lezen en niet te schrijven, en de route stelt het antwoord elke
+   snapshot te lezen en niet te schrijven, en de routes stellen het antwoord elke
    keer zelf samen. De pagina blijft dus werken, precies zoals voorheen.
 
 Na een deploy is in de uitvoer van `/api/cron` te zien of het voorbakken lukt:
@@ -153,9 +211,10 @@ Die waarden staan in `lib/config.js` (`FEED_MAX_AGE_S`, `FEED_SWR_S`,
 5-minutenlus in de pagina haalt daarna vanzelf een verse versie. De fetch van
 `/api/schoolvakanties` staat nog wel op `no-store`.
 
-Meten: `node scripts/meet-actueel.mjs` doet drie miss-metingen (met cache-buster
-in de querystring, want een nieuwe URL is altijd een edge-miss), de hit-meting en
-beide payloadgroottes, en drukt het af als markdown-tabel.
+Meten: `node scripts/meet-actueel.mjs` doet per route drie miss-metingen (met
+cache-buster in de querystring, want een nieuwe URL is altijd een edge-miss), de
+hit-meting en beide payloadgroottes, plus wat een lezer in totaal binnenhaalt.
+Drukt het af als markdown-tabel.
 
 ### Env-vars (in Vercel instellen, zie `.env.example`)
 

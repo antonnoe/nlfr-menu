@@ -10,99 +10,22 @@
 //   3) infofrankrijk — eigen publicatie (live feed): titel + summary + link.
 //   4) verenigingen — NL-verenigingsnieuws (live feed).
 // Daarnaast los: agenda (komende 2 weken) en de bron-statusbalk.
-// Cache: stale-while-revalidate op de drie headers.
 //
-// HOE HET ANTWOORD TOT STAND KOMT (sinds de cache-miss-ingreep). Deze route
-// stelt het antwoord NIET meer standaard zelf samen. De cron bakt elke 15
-// minuten het volledige object voor onder actueel:snapshot:v1; hier wordt dat
-// alleen gelezen (één KV-round-trip). Ontbreekt de snapshot of is hij ouder dan
-// SNAPSHOT_MAX_LEEFTIJD_S, dan stelt de route hem alsnog zelf samen — via
-// dezelfde bouwAntwoord() als de cron, dus functioneel identiek aan het oude
-// gedrag — en schrijft het resultaat weg als nieuwe snapshot.
-// Bewust GEEN lock bij gelijktijdige missers: twee keer bakken mag.
+// DEZE ROUTE IS DE COMPACTE LEVERING. Per artikel ontbreken `tekst` en de
+// volledige `bronnen`-array; daarvoor in de plaats staan `bronMeta` (naam en
+// datum van de eerste bron, de onderregel) en `bronAantal` (het getal op de
+// knop "Bronnen (n)"). De rest haalt de pagina bij /api/actueel-tekst. Zie
+// lib/levering.js voor het waarom en de precieze vorm.
+//
+// HOE HET ANTWOORD TOT STAND KOMT. De cron bakt elke 15 minuten beide
+// leveringen voor; hier wordt de compacte alleen gelezen (één KV-round-trip).
+// Ontbreekt de snapshot of is hij ouder dan SNAPSHOT_MAX_LEEFTIJD_S, dan stelt
+// de route het volledige antwoord alsnog zelf samen, splitst het, schrijft
+// BEIDE leveringen weg en antwoordt met de compacte helft. Bewust geen lock bij
+// gelijktijdige missers: twee keer bakken mag. Zie lib/lever.js.
 
-import { bouwAntwoord, snapshotBruikbaar } from "../lib/antwoord.js";
-import { getJSON, setJSON } from "../lib/store.js";
-import {
-  FEED_MAX_AGE_S,
-  FEED_SWR_S,
-  BROWSER_MAX_AGE_S,
-  KEY_ACTUEEL_SNAPSHOT,
-  SNAPSHOT_TTL_S,
-} from "../lib/config.js";
-
-// Allowlist-model van antonnoe/nlfr-berichten (api/berichten.js e.a.), maar dan
-// mét subdomeinen: IF-Mobiel wordt als iframe ingebed en stuurt straks
-// mobiel.nederlanders.fr als Origin mee (bij een fetch uit een iframe is de
-// Origin die van de iframe zelf, niet die van de omliggende pagina). Een vaste
-// lijst met alleen de kale en www-vorm zou daar opnieuw op stuklopen.
-const EIGEN_DOMEINEN = [
-  "nederlanders.fr",
-  "cafeclaude.fr",
-  "infofrankrijk.com",
-  "nedergids.nl",
-];
-
-// Eigen deploys/previews: alléén als subdomein, nooit het kale platformdomein.
-const EIGEN_DEPLOYS = ["vercel.app", "claudeusercontent.com"];
-
-function toegestaan(origin) {
-  let u;
-  try { u = new URL(origin); } catch { return false; }
-  if (u.protocol !== "https:") return false;
-  const h = u.hostname.toLowerCase();
-  // De punt in "." + d is wat telt: zo matcht kwaadnederlanders.fr niet mee.
-  return EIGEN_DOMEINEN.some((d) => h === d || h.endsWith("." + d))
-      || EIGEN_DEPLOYS.some((d) => h.endsWith("." + d));
-}
-
-function cors(req, res) {
-  const o = req.headers.origin;
-  if (o && toegestaan(o)) {
-    res.setHeader("Access-Control-Allow-Origin", o);
-    res.setHeader("Vary", "Origin");
-  }
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-}
+import { lever } from "../lib/lever.js";
 
 export default async function handler(req, res) {
-  cors(req, res);
-  if (req.method === "OPTIONS") return res.status(204).end();
-
-  const nu = Date.now();
-
-  // 1) Voorgebakken antwoord. getJSON() slikt zowel "geen KV geconfigureerd"
-  //    als een KV-storing en geeft dan null — precies de graceful degradation
-  //    die deze route altijd al had.
-  const snapshot = await getJSON(KEY_ACTUEEL_SNAPSHOT);
-  let antwoord = null;
-  let herkomst = "snapshot";
-
-  if (snapshotBruikbaar(snapshot, nu)) {
-    antwoord = snapshot;
-  } else {
-    // 2) Terugval: zelf samenstellen (live feeds + KV), zoals voorheen.
-    herkomst = snapshot ? "vers-verouderd" : "vers-ontbrekend";
-    antwoord = await bouwAntwoord({ nu });
-    // En meteen wegschrijven, zodat de volgende bezoeker hem wél voorgebakken
-    // krijgt. Mislukt dat (geen KV, storing), dan antwoorden we gewoon door.
-    try {
-      await setJSON(KEY_ACTUEEL_SNAPSHOT, antwoord, SNAPSHOT_TTL_S);
-    } catch {
-      herkomst += "-nietbewaard";
-    }
-  }
-
-  // Diagnose bij het meten: kwam dit antwoord uit de snapshot of is het ter
-  // plekke gebakken? Verandert niets aan de inhoud van de pagina.
-  res.setHeader("X-Actueel-Herkomst", herkomst);
-
-  const swr = `public, s-maxage=${FEED_MAX_AGE_S}, stale-while-revalidate=${FEED_SWR_S}`;
-  res.setHeader(
-    "Cache-Control",
-    `public, max-age=${BROWSER_MAX_AGE_S}, s-maxage=${FEED_MAX_AGE_S}, stale-while-revalidate=${FEED_SWR_S}`
-  );
-  res.setHeader("CDN-Cache-Control", swr);
-  res.setHeader("Vercel-CDN-Cache-Control", swr);
-  res.status(200).json(antwoord);
+  return lever(req, res, "compact");
 }

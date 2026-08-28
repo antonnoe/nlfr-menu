@@ -8,10 +8,12 @@
 // 2) PERS: items eerst door de faits-divers-zeef; daarna clusteren. Een cluster
 //    met >= SYNTHESE_MIN_BRONNEN (2) onafhankelijke bronnen krijgt een NL-
 //    synthese als CONCEPT (48 u TTL) -> reviewtool -> pas na akkoord live.
-// 3) SNAPSHOT: aan het eind van elke ronde wordt het volledige antwoord van
-//    /api/actueel voorgebakken en in KV gezet (actueel:snapshot:v1, TTL 6 uur).
-//    Daardoor hoeft die route bij een cache-miss geen 16 feeds meer live op te
-//    halen. Zie lib/antwoord.js.
+// 3) SNAPSHOT: aan het eind van elke ronde worden BEIDE leveringen van de
+//    nieuwspagina voorgebakken en in KV gezet (actueel:snapshot:v2 voor de
+//    compacte levering van /api/actueel, actueel:snapshot-tekst:v1 voor
+//    /api/actueel-tekst; TTL 6 uur). Daardoor hoeft geen van beide routes bij
+//    een cache-miss nog 16 feeds live op te halen. Zie lib/antwoord.js en
+//    lib/levering.js.
 // `?force=1` beperkt de ronde tot het best scorende perscluster (max. 1), zodat
 // je gericht één concept kunt testen. Force beïnvloedt ALLEEN de sortering en de
 // limiet: de faits-divers-zeef en de eis van >= 2 onafhankelijke outlets gelden
@@ -41,11 +43,13 @@ import {
   KEY_REGISTER,
   OVERHEID_ARCHIEF_NA_DAGEN,
   KEY_ACTUEEL_SNAPSHOT,
+  KEY_ACTUEEL_TEKST_SNAPSHOT,
   SNAPSHOT_TTL_S,
 } from "../lib/config.js";
 import { dedupOverheid, alBekend, overheidSleutel } from "../lib/overheid.js";
 import { maakRegisterRecord, zoekKeten } from "../lib/register.js";
 import { bouwAntwoord } from "../lib/antwoord.js";
+import { splitsAntwoord } from "../lib/levering.js";
 
 function leesForce(req) {
   let f = req && req.query ? req.query.force : undefined;
@@ -366,13 +370,13 @@ export default async function handler(req, res) {
     }
   }
 
-  // ---- 3) SNAPSHOT: het antwoord van /api/actueel voorbakken ---------------
+  // ---- 3) SNAPSHOT: beide leveringen van de nieuwspagina voorbakken --------
   // Pas hier, aan het EIND van de ronde: dan zit alles wat deze ronde live is
   // gegaan (overheid, registeropname, opgeruimde concepten) er al in. De items
   // uit het begin van de ronde worden hergebruikt, zodat de cron de 16 feeds
   // niet nóg een keer hoeft op te halen binnen zijn maxDuration.
   // Een mislukte snapshot mag de ronde niet rood maken: het werk hierboven is
-  // al gedaan, en /api/actueel valt vanzelf terug op zelf samenstellen — dus op
+  // al gedaan, en de routes vallen vanzelf terug op zelf samenstellen — dus op
   // precies het gedrag van vóór deze ingreep. De reden staat in het antwoord
   // (`snapshot.reden`), zodat een structurele mislukking — bijvoorbeeld een
   // document dat de maximale requestgrootte van Upstash overschrijdt — zichtbaar
@@ -380,14 +384,23 @@ export default async function handler(req, res) {
   let snapshot;
   try {
     const antwoord = await bouwAntwoord({ nu: Date.now(), vooraf: { items, bronStatus } });
-    await setJSON(KEY_ACTUEEL_SNAPSHOT, antwoord, SNAPSHOT_TTL_S);
+    const { compact, tekst } = splitsAntwoord(antwoord);
+    await setJSON(KEY_ACTUEEL_SNAPSHOT, compact, SNAPSHOT_TTL_S);
+    await setJSON(KEY_ACTUEEL_TEKST_SNAPSHOT, tekst, SNAPSHOT_TTL_S);
     snapshot = {
       ok: true,
-      sleutel: KEY_ACTUEEL_SNAPSHOT,
+      sleutels: [KEY_ACTUEEL_SNAPSHOT, KEY_ACTUEEL_TEKST_SNAPSHOT],
       gebakkenOp: antwoord.gebakkenOp,
-      tegels: antwoord.tegels.length,
-      artikelen: antwoord.tegels.reduce((n, t) => n + (t.artikelen || []).length, 0),
+      tegels: compact.tegels.length,
+      artikelen: compact.tegels.reduce((n, t) => n + (t.artikelen || []).length, 0),
+      // Moet gelijk zijn aan `artikelen`: elk artikel hoort in beide leveringen
+      // te staan. Loopt dit uiteen, dan is de koppeling stuk.
+      tekstArtikelen: Object.keys(tekst.artikelen).length,
       agenda: antwoord.agenda.length,
+      bytes: {
+        compact: JSON.stringify(compact).length,
+        tekst: JSON.stringify(tekst).length,
+      },
     };
   } catch (e) {
     snapshot = { ok: false, reden: e instanceof Error ? e.message : String(e) };

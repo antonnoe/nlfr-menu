@@ -1,18 +1,20 @@
-// Meet de responstijd en de payloadgrootte van /api/actueel.
+// Meet de responstijd en de payloadgrootte van de nieuwspagina.
 // ---------------------------------------------------------------------------
-// WAAROM. De cache-miss van deze route was 12 s (twee metingen op productie),
-// de hit 0,06 s. Om vast te stellen of een ingreep daar iets aan doet, moet je
-// die twee gevallen apart kunnen meten — en reproduceerbaar, niet met de hand.
+// WAAROM. De cache-miss van /api/actueel was ooit 12 s (opgelost met een
+// voorgebakken snapshot), en daarna was de payload zelf aan de beurt: 318 kB
+// onbewerkt voor 152 artikelen. Sinds de splitsing zijn er TWEE leveringen
+// (zie lib/levering.js), en dan is één getal niet meer genoeg — je wilt weten
+// wat de lezer binnenhaalt vóór de eerste weergave, en wat in totaal.
 //
 // EEN MISS FORCEREN. De edge-cache is per URL. Een willekeurige querystring
 // (?meting=12345) is dus een URL die de CDN nog nooit heeft gezien: die
-// beslist altijd een miss. Zonder querystring meet je de hit.
+// betekent altijd een miss. Zonder querystring meet je de hit.
 //
 // Draaien:  node scripts/meet-actueel.mjs
 //   MEET_URL     overschrijft de basis-URL (standaard nlfr-menu.vercel.app)
-//   MEET_RONDES  aantal miss-metingen (standaard 3)
+//   MEET_RONDES  aantal miss-metingen per route (standaard 3)
 //
-// De uitvoer is een markdown-tabel, klaar om onder docs/ te plakken.
+// De uitvoer is markdown, klaar om onder docs/ te plakken.
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -21,7 +23,11 @@ const uitvoeren = promisify(execFile);
 
 const BASIS = (process.env.MEET_URL || "https://nlfr-menu.vercel.app").replace(/\/+$/, "");
 const RONDES = Number(process.env.MEET_RONDES || 3);
-const API = `${BASIS}/api/actueel`;
+
+const ROUTES = [
+  { naam: "compact", pad: "/api/actueel", uitleg: "levering 1 — wat de dichte staat toont" },
+  { naam: "tekst", pad: "/api/actueel-tekst", uitleg: "levering 2 — tekst + bronnen" },
+];
 
 // Eén curl-meting. `-w` levert de cijfers die ertoe doen: time_starttransfer is
 // de tijd tot de eerste byte (dus inclusief het samenstellen aan de serverkant),
@@ -65,40 +71,84 @@ async function meet(url, { brotli }) {
 function regel(label, m) {
   return `| ${label} | ${m.seconden.toFixed(3)} s | ${m.bytes} | ${m.http} | ${m.herkomst} | ${m.edge} |`;
 }
+const mediaanVan = (lijst) => {
+  const g = [...lijst].sort((a, b) => a - b);
+  return g[Math.floor(g.length / 2)];
+};
 
-const missen = [];
-for (let i = 1; i <= RONDES; i += 1) {
-  // Cache-buster: nieuwe URL = gegarandeerde edge-miss.
-  missen.push(await meet(`${API}?meting=${Math.floor(Math.random() * 1e6)}`, { brotli: false }));
-}
-const hit = await meet(API, { brotli: false });
-const hitBrotli = await meet(API, { brotli: true });
+console.log(`Meting nieuwspagina — ${new Date().toISOString()} — doel ${BASIS}\n`);
 
-console.log(`Meting /api/actueel — ${new Date().toISOString()} — doel ${API}\n`);
-console.log("| meting | tijd tot eerste byte | bytes | http | herkomst | edge |");
-console.log("| --- | --- | --- | --- | --- | --- |");
-missen.forEach((m, i) => console.log(regel(`miss ${i + 1} (cache-buster)`, m)));
-console.log(regel("hit (zonder querystring)", hit));
-console.log(regel("hit, brotli", hitBrotli));
+const samenvatting = [];
+for (const route of ROUTES) {
+  const url = `${BASIS}${route.pad}`;
+  const missen = [];
+  for (let i = 1; i <= RONDES; i += 1) {
+    // Cache-buster: nieuwe URL = gegarandeerde edge-miss.
+    missen.push(await meet(`${url}?meting=${Math.floor(Math.random() * 1e6)}`, { brotli: false }));
+  }
+  const hit = await meet(url, { brotli: false });
+  const hitBrotli = await meet(url, { brotli: true });
 
-// Het bakmoment uit het antwoord zelf. Blijft `bijgewerkt` staan terwijl de
-// herkomst "snapshot" is, dan serveert de route een voorgebakken antwoord;
-// schuift het elke croninterval op, dan bakt de cron ook echt.
-try {
-  const r = await fetch(API, { headers: { Accept: "application/json" } });
-  const body = await r.json();
-  const artikelen = (body.tegels || []).reduce((n, t) => n + (t.artikelen || []).length, 0);
+  console.log(`## ${route.pad} — ${route.uitleg}\n`);
+  console.log("| meting | tijd tot eerste byte | bytes | http | herkomst | edge |");
+  console.log("| --- | --- | --- | --- | --- | --- |");
+  missen.forEach((m, i) => console.log(regel(`miss ${i + 1} (cache-buster)`, m)));
+  console.log(regel("hit (zonder querystring)", hit));
+  console.log(regel("hit, brotli", hitBrotli));
   console.log(
-    `\nBakmoment (bijgewerkt): ${body.bijgewerkt || "(ontbreekt)"}` +
-      `  ·  gebakkenOp: ${body.gebakkenOp || "(ontbreekt)"}`
+    `\nMediaan van de missen: ${mediaanVan(missen.map((m) => m.seconden)).toFixed(3)} s` +
+      `  ·  onbewerkt ${hit.bytes} bytes  ·  brotli ${hitBrotli.bytes} bytes`
   );
-  console.log(`Inhoud: ${(body.tegels || []).length} tegels, ${artikelen} artikelen`);
-} catch (e) {
-  console.log(`\nBakmoment niet op te halen: ${e.message}`);
+  console.log(`Cache-Control: ${hit.cacheControl}\n`);
+  samenvatting.push({ ...route, onbewerkt: hit.bytes, brotli: hitBrotli.bytes });
 }
 
-const tijden = missen.map((m) => m.seconden).sort((a, b) => a - b);
-const mediaan = tijden[Math.floor(tijden.length / 2)];
-console.log(`\nMediaan van de missen: ${mediaan.toFixed(3)} s`);
-console.log(`Payload onbewerkt: ${hit.bytes} bytes; brotli: ${hitBrotli.bytes} bytes`);
-console.log(`Cache-Control: ${hit.cacheControl}`);
+// ---- Wat een lezer werkelijk binnenhaalt ----------------------------------
+// De pagina rendert op levering 1 en haalt levering 2 daarna op de ACHTERGROND
+// op. Openklappen kost dus geen extra verzoek: scenario (a) en (b) halen
+// dezelfde bytes binnen. Wat wél verschilt is het moment — en dat is precies
+// waar de splitsing voor is.
+const compact = samenvatting.find((r) => r.naam === "compact");
+const tekst = samenvatting.find((r) => r.naam === "tekst");
+if (compact && tekst) {
+  console.log("## Wat een lezer binnenhaalt\n");
+  console.log("| scenario | over de lijn (brotli) | onbewerkt |");
+  console.log("| --- | --- | --- |");
+  console.log(`| vóór de eerste weergave | ${compact.brotli} | ${compact.onbewerkt} |`);
+  console.log(
+    `| (a) pagina openen, niets openklappen | ${compact.brotli + tekst.brotli} | ${compact.onbewerkt + tekst.onbewerkt} |`
+  );
+  console.log(
+    `| (b) pagina openen, één artikel openklappen | ${compact.brotli + tekst.brotli} | ${compact.onbewerkt + tekst.onbewerkt} |`
+  );
+  console.log(
+    "\n(a) en (b) zijn gelijk: levering 2 wordt na de eerste weergave op de " +
+      "achtergrond opgehaald, dus openklappen kost geen extra verzoek."
+  );
+}
+
+// ---- Bakmoment en inhoudstelling uit de antwoorden zelf --------------------
+try {
+  const [c, t] = await Promise.all([
+    fetch(`${BASIS}/api/actueel`, { headers: { Accept: "application/json" } }).then((r) => r.json()),
+    fetch(`${BASIS}/api/actueel-tekst`, { headers: { Accept: "application/json" } }).then((r) => r.json()),
+  ]);
+  const artikelen = (c.tegels || []).reduce((n, x) => n + (x.artikelen || []).length, 0);
+  console.log(
+    `\nBakmoment compact: ${c.bijgewerkt || "(ontbreekt)"}  ·  tekst: ${t.bijgewerkt || "(ontbreekt)"}`
+  );
+  console.log(
+    `Inhoud: ${(c.tegels || []).length} tegels, ${artikelen} artikelen, ` +
+      `${Object.keys(t.artikelen || {}).length} tekst-records, ` +
+      `${(c.bronStatus || []).length} bronnen in bronStatus`
+  );
+  // Hoe de bytes verdeeld zijn — het cijfer waar de splitsing op gebaseerd is.
+  const veldBytes = (kies) =>
+    Object.values(t.artikelen || {}).reduce((n, a) => n + JSON.stringify(kies(a) ?? "").length, 0);
+  console.log(
+    `Waarvan in levering 2: tekst ${veldBytes((a) => a.tekst)} bytes, ` +
+      `bronnen ${veldBytes((a) => a.bronnen)} bytes (onbewerkt)`
+  );
+} catch (e) {
+  console.log(`\nBakmoment/inhoud niet op te halen: ${e.message}`);
+}

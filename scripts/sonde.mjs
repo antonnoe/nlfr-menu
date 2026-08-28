@@ -17,6 +17,7 @@
 //   SONDE_WEBHOOK_URL  optioneel; ontbreekt hij, dan wordt die stap overgeslagen.
 
 import { laadBronnen } from "../lib/feeds.js";
+import { artikelSleutel } from "../lib/levering.js";
 import { bronUrlOordeel, bronVoorNaam, bronVoorThema, isAssetHost } from "../lib/bronurl.js";
 import { kernUitTekst, zelfdeVerhaal } from "../lib/cluster.js";
 import {
@@ -27,6 +28,13 @@ import {
 
 const BASIS = (process.env.SONDE_URL || "https://nlfr-menu.vercel.app").replace(/\/+$/, "");
 const API = `${BASIS}/api/actueel`;
+// De nieuwspagina wordt in TWEE leveringen geserveerd (zie lib/levering.js).
+// `tekst` en de volledige `bronnen`-arrays staan niet meer in /api/actueel maar
+// hier. De sonde MOET die er dus bij halen en per artikel weer samenvoegen —
+// anders zouden de bronlinktoetsen (I3, I4, I9) en de tekstinvarianten (I5)
+// stilzwijgend over lege velden lopen en altijd groen zijn. Precies de
+// bewaking die ze moeten leveren, zou dan wegvallen.
+const API_TEKST = `${BASIS}/api/actueel-tekst`;
 const STATISCH = `${BASIS}/actueel.json`;
 const DAG = 24 * 60 * 60 * 1000;
 
@@ -55,11 +63,25 @@ async function haalJson(url) {
   }
 }
 
-// Alle artikelen uit alle tegels, met hun tegel erbij.
-function alleArtikelen(data) {
+// Alle artikelen uit alle tegels, met hun tegel erbij, en met `tekst` en
+// `bronnen` uit de TWEEDE levering er weer aan geplakt. Vanaf hier kijkt de
+// rest van de sonde naar dezelfde artikelvorm als vóór de splitsing.
+function alleArtikelen(data, teksten) {
+  const perSleutel = (teksten && teksten.artikelen) || {};
   const uit = [];
   for (const t of data.tegels || []) {
-    for (const a of t.artikelen || []) uit.push({ tegel: t, art: a });
+    for (const a of t.artikelen || []) {
+      const sleutel = artikelSleutel(t.id, a.id);
+      const extra = perSleutel[sleutel] || null;
+      uit.push({
+        tegel: t,
+        art: extra ? { ...a, tekst: extra.tekst, bronnen: extra.bronnen } : { ...a },
+        sleutel,
+        // Of dit artikel een tegenhanger in de tekst-levering had. I10 toetst
+        // dat; de overige invarianten mogen niet stil doorlopen op een gat.
+        gekoppeld: Boolean(extra),
+      });
+    }
   }
   return uit;
 }
@@ -75,9 +97,73 @@ async function main() {
     meld("I1 api-bereikbaar", `${API}: ${e.message}`);
     return klaar(nu);
   }
-  const artikelen = alleArtikelen(data);
+  // De tweede levering. Ontbreekt die, dan is dat zelf een bevinding EN mogen
+  // de bronlinktoetsen hieronder niet stilzwijgend groen worden.
+  let teksten = null;
+  try {
+    teksten = await haalJson(API_TEKST);
+  } catch (e) {
+    meld("I10 tekstlevering", `${API_TEKST}: ${e.message}`);
+  }
+
+  const artikelen = alleArtikelen(data, teksten);
   if (!artikelen.length) {
     meld("I1 items-aanwezig", `${API} leverde 0 artikelen in ${(data.tegels || []).length} tegels`);
+  }
+
+  // ---- I10. De twee leveringen dekken elkaar exact --------------------------
+  // Elk artikel uit de compacte levering hoort een tekst-record te hebben, en
+  // andersom mag de tekst-levering geen wezen bevatten. Loopt dat uiteen, dan
+  // klapt de lezer een artikel open en krijgt hij niets.
+  if (teksten) {
+    const zonder = artikelen.filter((r) => !r.gekoppeld);
+    for (const r of zonder.slice(0, 10)) {
+      meld("I10 tekstlevering", `geen tekst-record voor ${r.sleutel} · "${kort(r.art.titel)}"`);
+    }
+    if (zonder.length > 10) {
+      meld("I10 tekstlevering", `... en nog ${zonder.length - 10} artikel(en) zonder tekst-record`);
+    }
+    const bekend = new Set(artikelen.map((r) => r.sleutel));
+    const wezen = Object.keys(teksten.artikelen || {}).filter((k) => !bekend.has(k));
+    for (const k of wezen.slice(0, 10)) {
+      meld("I10 tekstlevering", `tekst-record ${k} hoort bij geen enkel artikel`);
+    }
+    // Uit dezelfde cronronde? Anders kan de lezer een tekst bij een titel uit
+    // een andere ronde krijgen.
+    if (teksten.gebakkenOp && data.gebakkenOp && teksten.gebakkenOp !== data.gebakkenOp) {
+      meld(
+        "I10 tekstlevering",
+        `bakmomenten lopen uiteen: compact ${data.gebakkenOp} vs tekst ${teksten.gebakkenOp}`
+      );
+    }
+  }
+
+  // ---- I11. De compacte velden kloppen met de volledige bronnenlijst -------
+  // bronAantal is het getal op de knop "Bronnen (n)" en bronMeta is de
+  // onderregel; allebei afgeleid van de bronnen die in de tweede levering
+  // staan. Lopen ze uiteen, dan liegt de dichte staat tegen de lezer.
+  for (const { tegel, art, gekoppeld } of artikelen) {
+    if (!gekoppeld) continue;
+    const bronnen = art.bronnen || [];
+    if (art.bronAantal !== bronnen.length) {
+      meld(
+        "I11 compacte-velden",
+        `tegel ${tegel.id} · "${kort(art.titel)}" · bronAantal ${art.bronAantal} maar ${bronnen.length} bronnen`
+      );
+    }
+    const eerste = bronnen[0] || null;
+    const meta = art.bronMeta || null;
+    if (Boolean(eerste) !== Boolean(meta)) {
+      meld(
+        "I11 compacte-velden",
+        `tegel ${tegel.id} · "${kort(art.titel)}" · bronMeta ${meta ? "aanwezig" : "ontbreekt"} bij ${bronnen.length} bronnen`
+      );
+    } else if (eerste && meta && ((eerste.naam || null) !== meta.naam || (eerste.datum || null) !== meta.datum)) {
+      meld(
+        "I11 compacte-velden",
+        `tegel ${tegel.id} · "${kort(art.titel)}" · bronMeta (${meta.naam} · ${meta.datum}) wijkt af van de eerste bron (${eerste.naam} · ${eerste.datum})`
+      );
+    }
   }
 
   // ---- I2. actueel.json is geldige JSON ------------------------------------
@@ -221,7 +307,7 @@ async function main() {
     }
   }
 
-  toonInventaris(data, artikelen);
+  toonInventaris(data, artikelen, teksten);
   return klaar(nu);
 }
 
@@ -247,8 +333,10 @@ function kort(s, n = 70) {
 // achteraf te lezen is zonder hem opnieuw te draaien. Met SONDE_TOON_LINKS=1
 // ook elke titel met de bron-URL erachter — voor als je één specifiek item wilt
 // natrekken.
-function toonInventaris(data, artikelen) {
+function toonInventaris(data, artikelen, teksten) {
   console.log(`Tegels: ${(data.tegels || []).length}, artikelen: ${artikelen.length}`);
+  const tekstAantal = teksten ? Object.keys(teksten.artikelen || {}).length : "(niet opgehaald)";
+  console.log(`Tekst-levering: ${tekstAantal} artikel(en), bronStatus: ${(data.bronStatus || []).length} bron(nen)`);
   for (const t of data.tegels || []) {
     console.log(`  ${t.id} (${t.soort}): ${(t.artikelen || []).length} artikel(en)`);
   }

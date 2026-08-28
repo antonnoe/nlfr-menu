@@ -153,6 +153,9 @@
   .uitleg .tekst{ border-left:1px solid var(--hair); padding-left:12px; display:grid; gap:10px; }
   .redlabel{ font-family:var(--body); font-weight:600; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--groen); }
   .uitleg p{ margin:0; font-size:16px; line-height:26px; color:var(--ink-body); max-width:68ch; text-wrap:pretty; }
+  /* Laadstaat van de tweede levering (tekst + bronnen). Zichtbaar zolang die
+     nog onderweg is, of als hij mislukte; de summary staat er dan al. */
+  .uitleg p.tekstlaad{ font-size:13px; line-height:20px; color:var(--ink-zwak); font-style:italic; }
 
   /* ---- Niveau 4: bronnen ---- */
   .bronknop{ display:inline-flex; align-items:center; gap:6px; margin-top:10px; min-height:36px; padding:0 10px; border-radius:4px; border:1px solid var(--c-rand); background:var(--c-chip); color:var(--c-main); font-family:var(--body); font-weight:600; font-size:12.5px; cursor:pointer; }
@@ -361,14 +364,52 @@
     return '<li><a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(t)+'</a>'+uitg+'</li>';
   }
 
+  // De tekst en de volledige bronnenlijst van één artikel. Die komen uit de
+  // TWEEDE levering (/api/actueel-tekst), die op de achtergrond binnenkomt.
+  // Terugval op het artikel zelf: levert de server toch de volledige vorm (een
+  // ouder antwoord dat nog in de browsercache zit), dan werkt de pagina daar
+  // gewoon mee door.
+  function tekstVoor(aid, a){
+    if (teksten && teksten[aid]) return teksten[aid];
+    if (a && (a.tekst != null || a.bronnen)) return { tekst:a.tekst||"", bronnen:a.bronnen||[] };
+    return null;
+  }
+  // Hoeveel bronnen heeft dit artikel? Uit de compacte levering (bronAantal),
+  // of uit de volledige vorm als die er is.
+  function bronAantalVan(a, extra){
+    if (extra) return (extra.bronnen||[]).length;
+    if (typeof a.bronAantal === "number") return a.bronAantal;
+    return (a.bronnen||[]).length;
+  }
+
   function artikelHTML(cat, t, a){
     var aid = t.id+"/"+a.id, isOpen = !!artOpen[aid];
-    var paras = String(a.tekst||"").split(/\n\n+/).filter(Boolean).map(function(p){ return "<p>"+esc(p)+"</p>"; }).join("");
+    var extra = tekstVoor(aid, a);
+    var aantal = bronAantalVan(a, extra);
+    var paras = extra
+      ? String(extra.tekst||"").split(/\n\n+/).filter(Boolean).map(function(p){ return "<p>"+esc(p)+"</p>"; }).join("")
+      : "";
     if(!paras) paras="<p>"+esc(a.summary||"")+"</p>";
-    var bronnen=a.bronnen||[];
-    var bronBlok = bronnen.length
-      ? '<div class="bronwrap"><button type="button" class="bronknop" data-bron="'+esc(aid)+'" aria-expanded="false">'+ico("ic-bronnen")+' Bronnen ('+bronnen.length+')</button><ul class="bronlijst">'+bronnen.map(bronHTML).join("")+'</ul></div>'
-      : '<div class="bronknop leeg">'+ico("ic-bronnen")+' Geen externe bron</div>';
+    // Nog niet binnen: de summary staat er al, met een korte laadstaat eronder.
+    // Mislukt de tweede levering helemaal, dan blijft de summary staan — geen
+    // lege bak. De 5-minutenlus probeert het vanzelf opnieuw.
+    if(!extra){
+      paras += '<p class="tekstlaad">'+(tekstStatus==="mislukt"
+        ? "De volledige tekst kon niet worden geladen."
+        : "Volledige tekst wordt geladen…")+'</p>';
+    }
+    var bronnen = extra ? (extra.bronnen||[]) : [];
+    var bronBlok;
+    if (extra && bronnen.length){
+      bronBlok = '<div class="bronwrap"><button type="button" class="bronknop" data-bron="'+esc(aid)+'" aria-expanded="false">'+ico("ic-bronnen")+' Bronnen ('+bronnen.length+')</button><ul class="bronlijst">'+bronnen.map(bronHTML).join("")+'</ul></div>';
+    } else if (!extra && aantal){
+      // Wél bronnen, maar de lijst is er nog niet. Bewust de "leeg"-vorm: die is
+      // niet aanklikbaar, dus geen knop die niets doet.
+      bronBlok = '<div class="bronknop leeg">'+ico("ic-bronnen")+' Bronnen ('+aantal+') — '+
+        (tekstStatus==="mislukt" ? "niet geladen" : "worden geladen…")+'</div>';
+    } else {
+      bronBlok = '<div class="bronknop leeg">'+ico("ic-bronnen")+' Geen externe bron</div>';
+    }
     // Onderregel. Een PERSSYNTHESE is eigen redactioneel werk op meerdere
     // bronnen; die onder de naam van de eerste krant uit de lijst zetten zou
     // suggereren dat het hun artikel is. Daar staat dus de redactie met de
@@ -382,7 +423,10 @@
     } else if (rest){
       meta = rest;
     } else {
-      meta = bronnen.length ? esc((bronnen[0].naam||""))+(bronnen[0].datum?" · "+esc(datum(bronnen[0].datum)):"") : "";
+      // De onderregel komt uit de COMPACTE levering: bronMeta is naam + datum
+      // van de eerste bron. Terugval op de volledige vorm als die er is.
+      var bm = a.bronMeta || (extra && extra.bronnen && extra.bronnen[0]) || null;
+      meta = bm ? esc(bm.naam||"")+(bm.datum?" · "+esc(datum(bm.datum)):"") : "";
     }
     return '<div class="artikel'+(isOpen?" open":"")+'" data-art="'+esc(aid)+'">'+
       '<button type="button" class="artkop" aria-expanded="'+(isOpen?"true":"false")+'">'+
@@ -597,6 +641,41 @@
     werkVervaagBij();
   }, { passive:true });
 
+  // De pagina wordt in TWEE leveringen geladen (zie lib/levering.js):
+  //   1. /api/actueel        de compacte vorm — alles wat de DICHTE staat toont.
+  //                          Hierop wordt meteen gerenderd.
+  //   2. /api/actueel-tekst   de tekst en de bronnenlijsten, samen ruim 70% van
+  //                          de oude payload. Die haalt de pagina op de
+  //                          ACHTERGROND op; de eerste weergave wacht er niet op.
+  // teksten blijft null tot levering 2 binnen is; artikelHTML() toont dan de
+  // summary met een korte laadstaat. Mislukt levering 2, dan blijft de summary
+  // staan en probeert de 5-minutenlus het vanzelf opnieuw.
+  var teksten = null;
+  var tekstStatus = "laden"; // laden | klaar | mislukt
+
+  function haalTeksten(){
+    return fetch("/api/actueel-tekst")
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; })
+      .then(function(d){
+        if (d && d.artikelen){
+          teksten = d.artikelen;
+          tekstStatus = "klaar";
+        } else if (!teksten){
+          // Alleen als er nog nooit iets binnenkwam; een eerder geslaagde
+          // levering blijft staan als een latere ronde mislukt.
+          tekstStatus = "mislukt";
+        }
+        // Opnieuw renderen met wat er nu is. De open/dicht-standen zitten in
+        // `open` en `artOpen`, dus die overleven het; de scrollpositie zetten
+        // we zelf terug, want renderScroller() vervangt de innerHTML.
+        var sc = scrollerEl.scrollTop;
+        render();
+        scrollerEl.scrollTop = sc;
+        werkVervaagBij();
+      });
+  }
+
   function laad(){
     Promise.all([
       // Geen cache:"no-store" meer: de server zet max-age=120, dus de browser
@@ -614,6 +693,8 @@
       var sc = load("nlfr_scroll", 0); if(sc){ scrollerEl.scrollTop = sc; }
       // Direct bij laden: staat er meer onder de vouw, dan meteen de rand tonen.
       werkVervaagBij();
+      // Pas NA de eerste weergave, en zonder die op te houden.
+      haalTeksten();
     });
   }
 

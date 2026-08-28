@@ -100,8 +100,15 @@ test("de weergave zet de byline op soort, niet op de bronnenlijst", async () => 
   const html = fs.readFileSync(new URL("../actueel.html", import.meta.url), "utf8");
   assert.ok(html.includes('a.soort === "pers"'), "de byline hangt aan het soort van het artikel");
   assert.ok(html.includes('"Redactie NLFR"'), "de perssynthese krijgt de redactie-byline");
-  // De bronregel bestaat nog steeds — voor de items met één afzender.
-  assert.ok(html.includes("bronnen[0].naam"), "de enkele bronregel blijft voor overheid/IF/verenigingen");
+  // De bronregel bestaat nog steeds — voor de items met één afzender. Sinds de
+  // splitsing in twee leveringen (lib/levering.js) komt hij niet meer uit
+  // bronnen[0] maar uit `bronMeta` in de COMPACTE levering: de volledige
+  // bronnenlijst zit daar niet meer in. De regel zelf is ongewijzigd.
+  assert.ok(html.includes("a.bronMeta"), "de enkele bronregel blijft voor overheid/IF/verenigingen");
+  assert.ok(
+    html.includes("extra.bronnen && extra.bronnen[0]"),
+    "met terugval op de volledige vorm zolang die nog uit de browsercache kan komen"
+  );
 });
 
 // ---- 2) Primaire-bron-signalering -------------------------------------------

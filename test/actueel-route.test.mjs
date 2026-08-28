@@ -17,7 +17,8 @@ process.env.KV_REST_API_URL = "https://kv.test.invalid";
 process.env.KV_REST_API_TOKEN = "test-token";
 
 const { default: handler } = await import("../api/actueel.js");
-const { KEY_ACTUEEL_SNAPSHOT, KV_PREFIX } = await import("../lib/config.js");
+const { default: tekstHandler } = await import("../api/actueel-tekst.js");
+const { KEY_ACTUEEL_SNAPSHOT, KEY_ACTUEEL_TEKST_SNAPSHOT, KV_PREFIX } = await import("../lib/config.js");
 
 // Twee overheidsdocumenten in KV; genoeg om echte tegels te laten ontstaan
 // zonder van een externe feed af te hangen.
@@ -130,7 +131,8 @@ test("terugvalpad bakt zelf, snapshotpad geeft exact hetzelfde antwoord", async 
   assert.equal(res1.statusCode, 200);
   assert.equal(res1.headers["x-actueel-herkomst"], "vers-ontbrekend");
   assert.ok(telling.feeds > 0, "het terugvalpad haalt de feeds wél live op");
-  assert.ok(kv.has(KEY_ACTUEEL_SNAPSHOT), "en schrijft het resultaat weg als snapshot");
+  assert.ok(kv.has(KEY_ACTUEEL_SNAPSHOT), "en schrijft de compacte levering weg");
+  assert.ok(kv.has(KEY_ACTUEEL_TEKST_SNAPSHOT), "én meteen de tekst-levering");
 
   const feedsNaRonde1 = telling.feeds;
 
@@ -152,6 +154,97 @@ test("terugvalpad bakt zelf, snapshotpad geeft exact hetzelfde antwoord", async 
 
   // `bijgewerkt` is het BAKMOMENT: ronde 2 toont dat van ronde 1, niet "nu".
   assert.equal(res2.body.bijgewerkt, res1.body.gebakkenOp);
+
+  // Ronde 3: de TWEEDE route heeft nu niets meer te doen — de miss op
+  // /api/actueel heeft haar levering al warm gezet.
+  const res3 = nepRes();
+  await tekstHandler({ method: "GET", headers: {} }, res3);
+  assert.equal(res3.headers["x-actueel-herkomst"], "snapshot");
+  assert.equal(telling.feeds, feedsNaRonde1, "ook de tweede route raakt geen feed aan");
+  assert.equal(res3.body.bijgewerkt, res1.body.bijgewerkt, "zelfde bakmoment als de compacte");
+});
+
+test("de compacte levering draagt geen tekst en geen bronnen-array mee", async () => {
+  const kv = kvVoorraad();
+  zetWereldOp(kv);
+  const res = nepRes();
+  await handler({ method: "GET", headers: {} }, res);
+
+  const arts = res.body.tegels.flatMap((t) => t.artikelen || []);
+  assert.ok(arts.length > 0);
+  for (const a of arts) {
+    assert.equal("tekst" in a, false);
+    assert.equal("bronnen" in a, false);
+    assert.equal(typeof a.bronAantal, "number", "bronAantal hoort er wél in te staan");
+    assert.ok("bronMeta" in a, "bronMeta ook");
+  }
+});
+
+test("de tweede route levert per artikel de tekst en de volledige bronnen", async () => {
+  const kv = kvVoorraad();
+  zetWereldOp(kv);
+
+  const compactRes = nepRes();
+  await handler({ method: "GET", headers: {} }, compactRes);
+  const tekstRes = nepRes();
+  await tekstHandler({ method: "GET", headers: {} }, tekstRes);
+
+  // Elk artikel uit de compacte levering heeft een tekst-record, op de sleutel
+  // tegelId/artikelId — precies de koppeling die de sonde gebruikt.
+  const sleutels = [];
+  for (const t of compactRes.body.tegels) {
+    for (const a of t.artikelen || []) sleutels.push(`${t.id}/${a.id}`);
+  }
+  assert.deepEqual(
+    Object.keys(tekstRes.body.artikelen).sort(),
+    sleutels.slice().sort(),
+    "de twee leveringen dekken elkaar exact"
+  );
+
+  for (const t of compactRes.body.tegels) {
+    for (const a of t.artikelen || []) {
+      const extra = tekstRes.body.artikelen[`${t.id}/${a.id}`];
+      assert.equal(typeof extra.tekst, "string");
+      assert.ok(Array.isArray(extra.bronnen));
+      // De compacte velden moeten kloppen met de volledige lijst.
+      assert.equal(a.bronAantal, extra.bronnen.length);
+      if (extra.bronnen.length) {
+        assert.equal(a.bronMeta.naam, extra.bronnen[0].naam || null);
+        assert.equal(a.bronMeta.datum, extra.bronnen[0].datum || null);
+      } else {
+        assert.equal(a.bronMeta, null);
+      }
+    }
+  }
+});
+
+test("een miss op de tweede route warmt ook de compacte levering op", async () => {
+  const kv = kvVoorraad();
+  const telling = zetWereldOp(kv);
+
+  const res = nepRes();
+  await tekstHandler({ method: "GET", headers: {} }, res);
+  assert.equal(res.headers["x-actueel-herkomst"], "vers-ontbrekend");
+  assert.ok(kv.has(KEY_ACTUEEL_SNAPSHOT));
+  assert.ok(kv.has(KEY_ACTUEEL_TEKST_SNAPSHOT));
+
+  const feedsNa = telling.feeds;
+  const res2 = nepRes();
+  await handler({ method: "GET", headers: {} }, res2);
+  assert.equal(res2.headers["x-actueel-herkomst"], "snapshot");
+  assert.equal(telling.feeds, feedsNa, "de compacte route hoeft niets meer op te halen");
+});
+
+test("de tweede route heeft dezelfde cacheheaders als de eerste", async () => {
+  const kv = kvVoorraad();
+  zetWereldOp(kv);
+  const a = nepRes();
+  const b = nepRes();
+  await handler({ method: "GET", headers: {} }, a);
+  await tekstHandler({ method: "GET", headers: {} }, b);
+  assert.equal(b.headers["cache-control"], a.headers["cache-control"]);
+  assert.equal(b.headers["cdn-cache-control"], a.headers["cdn-cache-control"]);
+  assert.equal(b.headers["vercel-cdn-cache-control"], a.headers["vercel-cdn-cache-control"]);
 });
 
 test("een te oude snapshot wordt overgebakken, niet geserveerd", async () => {

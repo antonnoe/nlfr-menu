@@ -81,6 +81,22 @@ missen.forEach((m, i) => console.log(regel(`miss ${i + 1} (cache-buster)`, m)));
 console.log(regel("hit (zonder querystring)", hit));
 console.log(regel("hit, brotli", hitBrotli));
 
+// Het bakmoment uit het antwoord zelf. Blijft `bijgewerkt` staan terwijl de
+// herkomst "snapshot" is, dan serveert de route een voorgebakken antwoord;
+// schuift het elke croninterval op, dan bakt de cron ook echt.
+try {
+  const r = await fetch(API, { headers: { Accept: "application/json" } });
+  const body = await r.json();
+  const artikelen = (body.tegels || []).reduce((n, t) => n + (t.artikelen || []).length, 0);
+  console.log(
+    `\nBakmoment (bijgewerkt): ${body.bijgewerkt || "(ontbreekt)"}` +
+      `  ·  gebakkenOp: ${body.gebakkenOp || "(ontbreekt)"}`
+  );
+  console.log(`Inhoud: ${(body.tegels || []).length} tegels, ${artikelen} artikelen`);
+} catch (e) {
+  console.log(`\nBakmoment niet op te halen: ${e.message}`);
+}
+
 const tijden = missen.map((m) => m.seconden).sort((a, b) => a - b);
 const mediaan = tijden[Math.floor(tijden.length / 2)];
 console.log(`\nMediaan van de missen: ${mediaan.toFixed(3)} s`);

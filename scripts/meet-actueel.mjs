@@ -167,3 +167,16 @@ try {
 } catch (e) {
   console.log(`\nBakmoment/inhoud niet op te halen: ${e.message}`);
 }
+
+// ---- De schoolvakantiezin, letterlijk -------------------------------------
+// De andere zin die de pagina toont. Die is twee keer fout geweest (tijdzone,
+// en een vakantienaam die niet bij de datums hoorde), dus hij hoort letterlijk
+// in een meting te staan en niet alleen in een test.
+try {
+  const v = await fetch(`${BASIS}/api/schoolvakanties`, {
+    headers: { Accept: "application/json" },
+  }).then((r) => r.json());
+  console.log(`\nSchoolvakanties (ok=${v.ok}): ${v.zin || "(leeg)"}`);
+} catch (e) {
+  console.log(`\nSchoolvakantiezin niet op te halen: ${e.message}`);
+}

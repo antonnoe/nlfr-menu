@@ -7,6 +7,9 @@
 //    in <regio> al op Y." (afwijkende regio's als Mayotte apart benoemd)
 //  - Zit een deel in vakantie -> die regio's + reprise benoemen.
 //  - Tussen vakanties door -> de eerstvolgende vakantie per zone benoemen.
+// ALLE datums worden in Europe/Paris geformatteerd, ongeacht de tijdzone van de
+// server (zie fmtDag). En de vakantieNAAM komt altijd van hetzelfde record als
+// de datums die eronder staan.
 
 import { normaliseer } from "../lib/feeds.js";
 
@@ -56,9 +59,22 @@ export default async function handler(req, res) {
   });
 }
 
+// De schoolkalender is een FRANSE kalender: elke datum hoort in Europe/Paris
+// gelezen te worden. De dataset zet de dagen op 22:00Z — middernacht Parijse
+// tijd — dus zonder expliciete tijdzone valt een datum op een runtime die op
+// UTC staat (zoals Vercel) een dag te vroeg uit: "31 augustus" waar
+// "1 september" hoort te staan. Dat stond zo live.
+// De tijdzone staat hier HARD, niet via de omgevingsvariabele TZ: dan hangt de
+// uitkomst niet af van hoe de server toevallig is ingesteld.
+const TIJDZONE = "Europe/Paris";
+
 function fmtDag(iso) {
   try {
-    return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
+    return new Date(iso).toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "long",
+      timeZone: TIJDZONE,
+    });
   } catch {
     return iso;
   }
@@ -114,37 +130,69 @@ export function bouwSchoolvakantieZin(records, nu) {
   }
 
   // --- Geval 2: een deel van de zones heeft nu vakantie (niet-zomer) ---
+  // Naam, regio's en einddatum moeten bij ELKAAR horen. Daarom groeperen op
+  // vakantienaam + einddatum, en de groep nemen waarvan de scholen het eerst
+  // weer beginnen; de zin noemt dan precies de regio's waarvoor hij klopt.
+  // (Vóór deze wijziging kwamen de regio's uit álle lopende records en kwamen
+  // naam en datum uit het eerste record — dezelfde fout als in geval 3.)
   if (lopend.length) {
-    const perRegio = new Map();
+    const groepen = new Map();
     for (const r of lopend) {
       const regio = regioLabel(r);
-      if (regio && !perRegio.has(regio)) perRegio.set(regio, { desc: r.description, eind: r.end_date });
+      if (!regio) continue;
+      const sleutel = `${r.description}|${r.end_date}`;
+      if (!groepen.has(sleutel)) {
+        groepen.set(sleutel, { desc: r.description, eind: r.end_date, regios: [] });
+      }
+      const g = groepen.get(sleutel);
+      if (!g.regios.includes(regio)) g.regios.push(regio);
     }
-    const regios = [...perRegio.keys()];
-    const desc = lopend[0].description;
-    const eind = lopend[0].end_date;
-    const regioTekst = regios.length > 2 ? "een deel van Frankrijk" : regios.join(" en ");
-    return `Op dit moment heeft ${regioTekst} vakantie (${desc}); de scholen beginnen daar weer op ${fmtDag(eind)}.`;
+    const gekozen = [...groepen.values()].sort(
+      (a, b) => (Date.parse(a.eind) || 0) - (Date.parse(b.eind) || 0)
+    )[0];
+    if (gekozen) {
+      const regioTekst =
+        gekozen.regios.length > 2 ? "een deel van Frankrijk" : gekozen.regios.join(" en ");
+      return `Op dit moment heeft ${regioTekst} vakantie (${gekozen.desc}); de scholen beginnen daar weer op ${fmtDag(gekozen.eind)}.`;
+    }
   }
 
   // --- Geval 3: tussen vakanties door -> eerstvolgende per zone ---
+  // De NAAM moet bij de DATUMS horen. Die kwam hier uit het eerste komende
+  // record van de hele lijst — en dat kon een OVERZEESE vakantie zijn (de
+  // septembervakantie van Polynésie, 12 september) terwijl de afgedrukte datums
+  // die van la Toussaint waren (17 oktober voor zone A, B, C en Corse). De zin
+  // noemde dan een vakantie die in die zones helemaal niet begint. Nu komt de
+  // naam van hetzelfde record als de datums.
   if (komend.length) {
-    const desc = komend[0].description;
     const zones = ["Zone A", "Zone B", "Zone C", "Corse"];
-    const perZone = new Map();
-    for (const r of komend) {
-      const z = String(r.zones || "").trim();
-      if (!isMetropoolZone(z)) continue;
-      const label = zones.find((zz) => zz.toLowerCase() === z.toLowerCase()) || z;
-      if (!perZone.has(label)) perZone.set(label, r.start_date);
+    const opStart = (a, b) => (Date.parse(a.start_date) || 0) - (Date.parse(b.start_date) || 0);
+    const metropool = komend.filter((r) => isMetropoolZone(r.zones)).sort(opStart);
+
+    if (metropool.length) {
+      // De eerstvolgende vakantie VOOR DE ZONES DIE WE NOEMEN.
+      const desc = metropool[0].description;
+      const perZone = new Map();
+      for (const r of metropool) {
+        const z = String(r.zones || "").trim();
+        const label = zones.find((zz) => zz.toLowerCase() === z.toLowerCase()) || z;
+        if (!perZone.has(label)) perZone.set(label, r);
+      }
+      // Alleen de zones waarvan de eerstvolgende vakantie ook echt die vakantie
+      // is; anders zou de zin een zone onder een verkeerde naam scharen.
+      const delen = zones
+        .filter((z) => perZone.has(z) && perZone.get(z).description === desc)
+        .map((z) => `${z} vanaf ${fmtDag(perZone.get(z).start_date)}`);
+      if (delen.length) {
+        return `De eerstvolgende schoolvakantie (${desc}) begint in ${delen.join(", ")}.`;
+      }
     }
-    const delen = zones
-      .filter((z) => perZone.has(z))
-      .map((z) => `${z} vanaf ${fmtDag(perZone.get(z))}`);
-    if (delen.length) {
-      return `De eerstvolgende schoolvakantie (${desc}) begint in ${delen.join(", ")}.`;
-    }
-    return `De eerstvolgende schoolvakantie is ${desc}, vanaf ${fmtDag(komend[0].start_date)}.`;
+
+    // Geen enkele metropoolzone in zicht: dan wél de eerstvolgende uit de hele
+    // lijst, maar met de datum van datzelfde record — naam en datum blijven zo
+    // hoe dan ook bij elkaar horen.
+    const eerste = [...komend].sort(opStart)[0];
+    return `De eerstvolgende schoolvakantie is ${eerste.description}, vanaf ${fmtDag(eerste.start_date)}.`;
   }
 
   return "";

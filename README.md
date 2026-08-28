@@ -94,6 +94,8 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
   archieftegel plus hun tekst en bronnen. Zie "De drie leveringen" hieronder.
 - `/api/schoolvakanties` — eerstvolgende schoolvakantie per zone, live uit de
   open data van het onderwijsministerie, met vaste link naar service-public.
+  Zie "Schoolvakanties: tijdzone en vakantienaam" hieronder — daar zitten twee
+  valkuilen die allebei live hebben gestaan.
 - `/api/cron` — serverless job (Vercel Cron, elke 15 min) die voor nieuwe
   hot-clusters via de Anthropic API één NL-synthese schrijft en als **concept**
   opslaat. Nooit direct live. Model/max_tokens staan in één constante
@@ -258,6 +260,38 @@ cache-buster in de querystring, want een nieuwe URL is altijd een edge-miss), de
 hit-meting en beide payloadgroottes, plus wat een lezer binnenhaalt in de drie
 scenario's (niets aanraken / een artikel openklappen / het archief openen).
 Drukt het af als markdown-tabel.
+
+### Schoolvakanties: tijdzone en vakantienaam
+
+Twee regels voor `api/schoolvakanties.js`, allebei het gevolg van een fout die
+live heeft gestaan.
+
+**1. Reken elke datum in `Europe/Paris`, hard, niet via `TZ`.** De schoolkalender
+is een Franse kalender en de dataset zet elke dag op middernacht Parijse tijd —
+dat is `22:00Z` in de zomertijd en `23:00Z` in de wintertijd. De Vercel-runtime
+staat op UTC, dus `toLocaleDateString("nl-NL")` zónder tijdzone gaf elke datum
+een dag te vroeg. Live stond: *"De scholen beginnen weer op 31 augustus; in
+Saint Pierre et Miquelon pas op 1 september, in Corse pas op 2 september"* —
+juist is 1, 2 en 3 september. `fmtDag()` geeft daarom `timeZone: "Europe/Paris"`
+mee. Bewust hardgecodeerd: via de omgevingsvariabele `TZ` zou de uitkomst
+afhangen van hoe de server toevallig is ingesteld. En bewust een tijdzone en
+geen vaste verschuiving van twee uur: over de zomer-winterovergang klopt die
+niet meer.
+
+**2. De vakantienaam moet van hetzelfde record komen als de datums eronder.**
+De naam kwam uit het eerste komende record van de hele lijst, en dat kon een
+*overzeese* vakantie zijn (de septembervakantie van Polynésie, 12 september)
+terwijl de afgedrukte datums die van la Toussaint waren (17 oktober voor zone A,
+B, C en Corse). De zin noemde dan een vakantie die in die zones helemaal niet
+begint. Nu wordt eerst de eerstvolgende vakantie **van de metropoolzones**
+gekozen, en worden alleen de zones genoemd waarvoor dát ook echt de
+eerstvolgende vakantie is. Hetzelfde geldt voor een lopende vakantie: naam,
+regio's en einddatum komen uit één groep.
+
+`test/schoolvakanties.test.mjs` legt beide vast met een vast recordfixture en
+ingevroren datums (28 augustus, 1 en 5 september, 20 oktober 2026). Die tests
+draaien op **`TZ=UTC`** — de tijdzone van productie, en de enige waarin fout 1
+zichtbaar wordt: op `Europe/Paris` zouden ze groen blijven mét de fout.
 
 ### Env-vars (in Vercel instellen, zie `.env.example`)
 

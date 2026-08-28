@@ -65,3 +65,44 @@ Dezelfde feed, dezelfde 10 items, opnieuw gemeten met de nieuwe parser:
 waaronder:
 
     https://infofrankrijk.com/handleiding-voor-een-woning-opgetrokken-uit-leem/
+
+## Wat de sonde daarna op productie vond
+
+De meting hierboven kon alleen de Infofrankrijk-feed zien. De sonde draait vanaf
+een GitHub-runner zonder die beperking en toetste dezelfde regels op de echte
+uitvoer van `/api/actueel` (±150 artikelen). Dat leverde drie dingen op die de
+sessiemeting niet kón zien — twee daarvan waren regressies van de fix zelf.
+
+1. **Franceinfo publiceert onder twee merkdomeinen.** De feed staat op
+   `www.francetvinfo.fr`, de artikelen op `www.franceinfo.fr` en op
+   regiosubdomeinen als `france3-regions.franceinfo.fr`. De herkomsttoets
+   weigerde die en onderdrukte ruim vijftien perslinks. Opgelost met
+   `linkDomeinen` op die bron.
+
+2. **Service-Public is verhuisd naar `service-public.gouv.fr`.** De feed staat
+   nog op `www.service-public.fr`, de artikel-URL's wijzen naar
+   `www.service-public.gouv.fr`. Alle acht Service-Public-items verloren hun
+   bronlink. Opgelost met `linkDomeinen` op beide Service-Public-bronnen. Dit is
+   een echte verhuizing aan de kant van de Franse overheid, geen fout in deze
+   repo — maar wel iets om te weten.
+
+3. **Verenigingsitems dragen de naam van de vereniging.** De aggregaatfeed zet
+   per item `ERN Paris`, `LOTgenoten`, `NVLR` of `CMUnf` als bronnaam, niet de
+   naam van de geconfigureerde bron. De toets zocht de bronconfiguratie op díé
+   naam, vond niets en onderdrukte élke verenigingslink. Opgelost door de
+   aggregaatbron op het thema op te zoeken en expliciet mee te geven — in
+   `lib/tegels.js` én in de sonde zelf, die dezelfde fout maakte.
+
+Alle drie zijn hersteld en met tests vastgelegd. De sonderun daarna is groen.
+
+## Verificatie op productie
+
+Sonderun op `https://nlfr-menu.vercel.app/api/actueel`, verdict **groen**, met
+het item uit de storing erbij gefilterd:
+
+    [infofrankrijk] Handleiding voor een woning opgetrokken uit leem
+        artikel-URL: https://infofrankrijk.com/handleiding-voor-een-woning-opgetrokken-uit-leem/
+        bron:        https://infofrankrijk.com/handleiding-voor-een-woning-opgetrokken-uit-leem/
+
+Die URL is los opgevraagd en geeft HTTP 200 met
+`<title>Handleiding voor een woning opgetrokken uit leem | Infofrankrijk</title>`.

@@ -97,6 +97,83 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
 (`KV_REST_API_URL` / `KV_REST_API_TOKEN`). De feedpagina werkt ook zonder deze
 vars; alleen de AI-synthese en de reviewtool hebben ze nodig.
 
+## Bewaking: tests en sonde (GitHub Actions)
+
+Twee workflows in `.github/workflows/`.
+
+### `tests.yml` — de testsuite
+
+Draait `npm test` bij **elke push naar main** en **elke pull request**. Faalt de
+suite, dan is de run rood en mailt GitHub de eigenaar. Hiervoor hing "tests
+groen" ervan af of iemand de tests toevallig aanriep.
+
+**Nog te doen om hem écht blokkerend te maken** — een workflow kan zichzelf niet
+verplicht stellen, dat is een repo-instelling:
+
+> GitHub → repository **antonnoe/nlfr-menu** → **Settings** → **Rules** →
+> **Rulesets** → **New ruleset** → *New branch ruleset* → naam bv. `main
+> beschermen`, **Target branches** → *Add target* → `Include default branch` →
+> onder **Rules** aanvinken **Require status checks to pass** → *Add checks* →
+> zoek **`npm test`** en voeg hem toe → **Create**.
+>
+> (Het oudere pad werkt ook: **Settings** → **Branches** → **Add branch
+> protection rule** → Branch name pattern `main` → *Require status checks to
+> pass before merging* → check `npm test`.)
+
+Zonder die instelling is de uitslag wél zichtbaar op de PR, maar houdt hij het
+mergen niet tegen.
+
+### `sonde.yml` — invarianten op de live uitvoer
+
+Draait **dagelijks om 06:20 UTC** (en handmatig via *Run workflow*)
+`scripts/sonde.mjs` tegen de echte productiedata op
+`https://nlfr-menu.vercel.app`. Deterministisch, geen AI-oordeel: bij een
+schending eindigt de stap met code 1, de run wordt rood en GitHub mailt zelf.
+
+Getoetst wordt onder meer: elke bronlink hoort bij zijn bron en heeft een
+niet-leeg pad, geen asset-hosts, elk artikel heeft minstens één bron, geen twee
+live artikelen over hetzelfde verhaal, datums binnen een plausibel venster,
+`actueel.json` geldige JSON, geen uitgezette bron die tóch items levert, en
+artikel-id's aanwezig en uniek. Wat bewust *niet* getoetst wordt (en waarom)
+staat in `scripts/sonde.mjs` zelf.
+
+Handmatig draaien met de gevonden links erbij: *Run workflow* → vink
+**toon_links** aan, en vul eventueel **toon_filter** met een stuk van een titel
+om één item na te trekken.
+
+### De webhook-secret `SONDE_WEBHOOK_URL`
+
+Aan het eind van elke sonderun gaat er één POST naar de URL in de repo-secret
+`SONDE_WEBHOOK_URL`. **Ontbreekt die secret, dan wordt de stap stilzwijgend
+overgeslagen** — de bewaking zelf werkt onverminderd, ook zonder webhook.
+
+Aanmaken zodra de Zapier-webhook bestaat:
+
+> GitHub → repository **antonnoe/nlfr-menu** → **Settings** → **Secrets and
+> variables** → **Actions** → tabblad **Secrets** → **New repository secret** →
+> Name: `SONDE_WEBHOOK_URL`, Secret: de "Catch Hook"-URL van de Zap.
+
+De Zap ontvangt `Content-Type: application/json` met deze body:
+
+```json
+{
+  "datum": "2026-08-28",
+  "verdict": "rood",
+  "aantal": 2,
+  "bevindingen": "I3 bronlink-herkomst: tegel infofrankrijk · \"Titel\" · bron Infofrankrijk · https://fonts.googleapis.com · leeg pad (alleen de voorpagina van fonts.googleapis.com)\nI4 bron-aanwezig: tegel overheid-praktisch · \"Titel\" heeft geen enkele bron"
+}
+```
+
+- `datum` — `YYYY-MM-DD`, de dag van de run.
+- `verdict` — `"groen"` of `"rood"`.
+- `aantal` — aantal bevindingen (`0` bij groen).
+- `bevindingen` — leesbare tekst, één bevinding per regel (`\n`); **leeg bij
+  groen**.
+
+Bij groen komt er dus ook een POST, met `verdict: "groen"` en lege
+`bevindingen`. Een Zap die alleen bij problemen wil mailen, filtert op
+`verdict = rood`.
+
 ## Eenmalige installatie (uitgevoerd 29-07-2026)
 
 1. Repo aangemaakt, `index.html` toegevoegd.

@@ -7,6 +7,11 @@
 //           "weg"         concept verwijderen + 48u-afwijzing (cron regenereert niet)
 //           "bewerk"      concepttekst bijwerken (TTL vernieuwt)
 //           "depubliceer" publicatie verwijderen (verdwijnt van de feed)
+//           "verwijs"     Infofrankrijk-verwijzing onder een bericht zetten
+//           "verwijs-weg" die verwijzing weer weghalen
+//           "nakijken"    IF-artikel op de auditlijst zetten (lezer ziet niets)
+//           "nakijken-klaar" van de auditlijst af
+// GET ?deel=if&artikel=<id>[&zoek=…] -> Infofrankrijk-kandidaten bij één bericht.
 // Concepten verlopen automatisch na 48 uur (TTL in KV). Standaard = niet
 // gepubliceerd.
 
@@ -21,7 +26,14 @@ import {
 } from "../lib/poort.js";
 import { vindGelijkenis, gelijkenis, vindPrimaireBron } from "../lib/gelijkenis.js";
 import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
-import { keurBronnen } from "../lib/bronurl.js";
+import { keurBronnen, bronUrlOordeel, bronVoorNaam } from "../lib/bronurl.js";
+import { persTegelVanPublicatie } from "../lib/tegels.js";
+import {
+  kandidaten as ifKandidaten,
+  bijnaVerlopen as ifBijnaVerlopen,
+  categorieIdsVoorThema,
+  artikelUitIndex,
+} from "../lib/ifindex.js";
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
@@ -35,6 +47,15 @@ import {
   SCAN_PUBLICATIE,
   SCAN_OVERHEID,
   SCAN_REGISTER,
+  KEY_IF_INDEX,
+  KEY_VERWIJZING,
+  SCAN_VERWIJZING,
+  VERWIJZING_TTL_S,
+  KEY_NAKIJKEN,
+  SCAN_NAKIJKEN,
+  IF_VERWIJZING_MAX,
+  IF_KANDIDATEN_STANDAARD,
+  IF_MAX_LEEFTIJD_MAANDEN,
 } from "../lib/config.js";
 
 // Leest het token robuust, ongeacht runtime-eigenaardigheden:
@@ -148,6 +169,80 @@ function ontdubbel(concepten) {
   return { besten, duplicaten };
 }
 
+
+// ---- Infofrankrijk: verwijzen en nakijken ----------------------------------
+// TWEE UITGANGEN, ÉÉN VRAAG: welke Infofrankrijk-artikelen horen bij dit
+// bericht? De ene uitgang is publiek (een verwijzing onder het bericht op
+// /actueel), de andere is de takenlijst van de redactie ("nakijken" — een
+// nieuwe aankondiging van Bercy kan betekenen dat fiscale artikelen op IF
+// bijgewerkt moeten worden). De kandidatenlijst is voor allebei dezelfde.
+//
+// HANDMATIG, ZONDER UITZONDERING. Alleen deze route schrijft verwijzingen, en
+// alleen op een expliciete actie. De cron doet het niet, en er is geen
+// automatische keuze uit de lijst: klikt de redactie niets aan, dan komt er
+// geen verwijzing.
+
+function leesQuery(req, naam) {
+  let v = req && req.query ? req.query[naam] : undefined;
+  if (Array.isArray(v)) v = v[0];
+  if (v == null && req && req.url) {
+    try {
+      v = new URL(req.url, "http://localhost").searchParams.get(naam);
+    } catch {
+      v = null;
+    }
+  }
+  return (v == null ? "" : String(v)).trim();
+}
+
+// Bij welk bericht hoort dit id, en welk thema heeft dat bericht? Het thema
+// bepaalt via de koppeltabel welke IF-categorieën meedoen. Bewust SERVERSIDE:
+// de reviewtool stuurt alleen een id, nooit een thema — anders zou de
+// categoriekeuze vanuit de browser te sturen zijn.
+async function zoekBericht(id) {
+  const overheid = await getJSON(KEY_OVERHEID(id));
+  if (overheid) {
+    return {
+      soort: "overheid",
+      id,
+      thema: overheid.thema || null,
+      kop: overheid.kop || overheid.titelBron || "",
+      bron: overheid.bron || null,
+      datum: overheid.datum || overheid.gepubliceerdOp || null,
+    };
+  }
+  const publicatie = await getJSON(KEY_PUBLICATIE(id));
+  if (publicatie) {
+    return {
+      soort: "publicatie",
+      id,
+      // Een perssynthese heeft geen opgeslagen thema: de tegelindeling wordt bij
+      // weergave berekend. Dezelfde functie gebruiken we hier, zodat de
+      // kandidaten horen bij de tegel waarin de lezer het artikel ziet staan.
+      thema: persTegelVanPublicatie(publicatie),
+      kop: publicatie.kop || "",
+      bron: null,
+      datum: publicatie.gepubliceerdOp || null,
+    };
+  }
+  return null;
+}
+
+async function leesIfIndex() {
+  const index = await getJSON(KEY_IF_INDEX);
+  if (!index || !Array.isArray(index.artikelen)) return null;
+  return index;
+}
+
+// Een verwijzing wordt alleen opgeslagen als de URL de bron-URL-toets van
+// Infofrankrijk doorstaat (lib/bronurl.js). Dezelfde toets als voor bronlinks:
+// dat is de laag die ooit is gebouwd omdat Infofrankrijk-items naar
+// fonts.googleapis.com bleken te wijzen, en een verwijzing hoort daar niet
+// buiten te vallen.
+function keurIfUrl(url) {
+  return bronUrlOordeel(url, bronVoorNaam("Infofrankrijk") || {});
+}
+
 export default async function handler(req, res) {
   res.setHeader("X-Robots-Tag", "noindex, nofollow");
   res.setHeader("Cache-Control", "no-store");
@@ -163,12 +258,58 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     const nuMs = Date.now();
-    const [ruweConcepten, publicaties, overheid, registerRecords] = await Promise.all([
-      listJSON(SCAN_CONCEPT),
-      listJSON(SCAN_PUBLICATIE),
-      listJSON(SCAN_OVERHEID),
-      listJSON(SCAN_REGISTER),
-    ]);
+
+    // ---- Kandidatenlijst bij één bericht (aparte, kleine GET) --------------
+    // Apart gehouden van de hoofd-GET: die haalt alle concepten, publicaties,
+    // overheidsberichten en registerrecords op, en dat hoef je niet opnieuw te
+    // doen omdat de redacteur een zoekterm intypt.
+    if (leesQuery(req, "deel") === "if") {
+      const artikelId = leesQuery(req, "artikel");
+      const zoek = leesQuery(req, "zoek");
+      const index = await leesIfIndex();
+      if (!index) {
+        return res.status(200).json({
+          ok: true,
+          index: null,
+          kandidaten: [],
+          fout: "De Infofrankrijk-index is er nog niet. Hij wordt bij de eerstvolgende cronronde opgehaald.",
+        });
+      }
+      const bericht = artikelId ? await zoekBericht(artikelId) : null;
+      if (artikelId && !bericht) {
+        return res.status(404).json({ ok: false, fout: "Bericht niet gevonden." });
+      }
+      const thema = bericht ? bericht.thema : null;
+      const lijst = ifKandidaten({ index, thema, zoek, nu: nuMs });
+      const catIds = categorieIdsVoorThema(thema);
+      const bestaand = artikelId ? await getJSON(KEY_VERWIJZING(artikelId)) : null;
+      const gekozen = new Set(((bestaand && bestaand.items) || []).map((x) => Number(x.ifId)));
+      return res.status(200).json({
+        ok: true,
+        index: { opgehaaldOp: index.opgehaaldOp, aantal: index.artikelen.length },
+        bericht: bericht ? { id: bericht.id, soort: bericht.soort, thema, kop: bericht.kop } : null,
+        // Welke categorieën het filter heeft gebruikt, met hun naam — anders is
+        // een lege of rare lijst niet te verklaren zonder in de code te kijken.
+        categorieen: catIds.map((cid) => ({
+          id: cid,
+          naam: (index.categorieen && index.categorieen[String(cid)]) || `#${cid}`,
+        })),
+        maanden: IF_MAX_LEEFTIJD_MAANDEN,
+        standaardAantal: IF_KANDIDATEN_STANDAARD,
+        totaal: lijst.length,
+        kandidaten: lijst.map((a) => ({ ...a, gekozen: gekozen.has(Number(a.ifId)) })),
+      });
+    }
+
+    const [ruweConcepten, publicaties, overheid, registerRecords, verwijzingRecords, nakijkenRecords] =
+      await Promise.all([
+        listJSON(SCAN_CONCEPT),
+        listJSON(SCAN_PUBLICATIE),
+        listJSON(SCAN_OVERHEID),
+        listJSON(SCAN_REGISTER),
+        listJSON(SCAN_VERWIJZING),
+        listJSON(SCAN_NAKIJKEN),
+      ]);
     // Buitenland-opschoning: concepten die niet over Frankrijk gaan (bv. Israël/
     // Hamas) horen hier niet. Ze zijn vaak vóór de tweede filterlaag gemaakt; we
     // verwijderen ze meteen uit de opslag (zelfherstellend) en tonen ze niet.
@@ -246,9 +387,32 @@ export default async function handler(req, res) {
       }
     }
 
+    // Verwijzingen als kaart id -> items, zodat de kaart van een bericht meteen
+    // toont wat eronder staat zonder een tweede verzoek.
+    const verwijzingen = {};
+    for (const r of verwijzingRecords) {
+      if (r && r.id && Array.isArray(r.items)) verwijzingen[r.id] = r.items;
+    }
+    // De auditlijst: oudste `modified` bovenaan — dat is de volgorde waarin je
+    // ze wilt nakijken.
+    const nakijken = (nakijkenRecords || [])
+      .filter(Boolean)
+      .sort((a, b) => (Date.parse(a.modified) || 0) - (Date.parse(b.modified) || 0));
+    // De index en wat er bijna uit de verwijzingen valt. De 12-maandengrens is
+    // stil: zonder deze lijst merk je pas dat een artikel niet meer verwijsbaar
+    // is als je het mist.
+    const ifIndex = await leesIfIndex();
+    const bijnaVerlopen = ifIndex ? ifBijnaVerlopen({ index: ifIndex, nu: nuMs }) : [];
+
     // overheid staat automatisch live; hier alleen als kill-switch (verwijderen).
     return res.status(200).json({
       ok: true,
+      verwijzingen,
+      nakijken,
+      bijnaVerlopen,
+      ifIndex: ifIndex
+        ? { opgehaaldOp: ifIndex.opgehaaldOp, aantal: ifIndex.artikelen.length }
+        : null,
       concepten: besten,
       totaalConcepten: concepten.length,
       duplicatenAantal: duplicaten.length,
@@ -479,6 +643,106 @@ export default async function handler(req, res) {
         oud: { id: uitkomst.oud.id, status: uitkomst.oud.status },
         nieuw: { id: uitkomst.nieuw.id, status: uitkomst.nieuw.status },
       });
+    }
+
+    // ---- Infofrankrijk: verwijzen (publiek) --------------------------------
+    if (actie === "verwijs" || actie === "verwijs-weg") {
+      const ifId = Number(body.ifId);
+      if (!ifId) return res.status(400).json({ ok: false, fout: "ifId vereist." });
+      const bericht = await zoekBericht(id);
+      if (!bericht) return res.status(404).json({ ok: false, fout: "Bericht niet gevonden." });
+
+      const bestaand = (await getJSON(KEY_VERWIJZING(id))) || { id, items: [] };
+      let items = Array.isArray(bestaand.items) ? bestaand.items : [];
+
+      if (actie === "verwijs-weg") {
+        items = items.filter((x) => Number(x.ifId) !== ifId);
+      } else {
+        if (items.some((x) => Number(x.ifId) === ifId)) {
+          return res.status(200).json({ ok: true, items, ongewijzigd: true });
+        }
+        if (items.length >= IF_VERWIJZING_MAX) {
+          return res.status(409).json({
+            ok: false,
+            fout: `Hooguit ${IF_VERWIJZING_MAX} verwijzingen per bericht. Haal er eerst een weg.`,
+          });
+        }
+        const index = await leesIfIndex();
+        const artikel = index ? artikelUitIndex(index, ifId) : null;
+        if (!artikel) {
+          return res.status(404).json({ ok: false, fout: "Dit artikel staat niet in de Infofrankrijk-index." });
+        }
+        const oordeel = keurIfUrl(artikel.url);
+        if (!oordeel.ok) {
+          return res.status(409).json({ ok: false, fout: `Onbruikbare link: ${oordeel.reden}` });
+        }
+        items = items.concat({
+          ifId,
+          titel: artikel.titel,
+          url: oordeel.url,
+          modified: artikel.modified || null,
+          gekozenOp: new Date().toISOString(),
+        });
+      }
+
+      if (!items.length) {
+        // Geen verwijzingen meer: het record hoort weg, niet leeg blijven staan.
+        await del(KEY_VERWIJZING(id));
+      } else {
+        await setJSON(
+          KEY_VERWIJZING(id),
+          { id, items, bijgewerktOp: new Date().toISOString() },
+          VERWIJZING_TTL_S
+        );
+      }
+      // De pagina toont dit pas na de eerstvolgende cronronde (de leveringen
+      // worden voorgebakken). Dat staat zo in het antwoord, zodat de reviewtool
+      // het kan zeggen in plaats van dat het lijkt of er niets gebeurt.
+      return res.status(200).json({ ok: true, items, zichtbaarNaCron: true });
+    }
+
+    // ---- Infofrankrijk: nakijken (alleen redactie) --------------------------
+    if (actie === "nakijken") {
+      const ifId = Number(body.ifId);
+      if (!ifId) return res.status(400).json({ ok: false, fout: "ifId vereist." });
+      const index = await leesIfIndex();
+      const artikel = index ? artikelUitIndex(index, ifId) : null;
+      if (!artikel) {
+        return res.status(404).json({ ok: false, fout: "Dit artikel staat niet in de Infofrankrijk-index." });
+      }
+      const bericht = await zoekBericht(id);
+      if (!bericht) return res.status(404).json({ ok: false, fout: "Bericht niet gevonden." });
+
+      const bestaand = (await getJSON(KEY_NAKIJKEN(ifId))) || null;
+      const aanleidingen = (bestaand && Array.isArray(bestaand.aanleidingen) ? bestaand.aanleidingen : [])
+        .filter((a) => a && a.id !== id)
+        .concat({
+          id,
+          soort: bericht.soort,
+          kop: bericht.kop,
+          bron: bericht.bron,
+          datum: bericht.datum,
+          op: new Date().toISOString(),
+        });
+      const record = {
+        ifId,
+        titel: artikel.titel,
+        url: artikel.url,
+        modified: artikel.modified || null,
+        aanleidingen,
+        gezetOp: (bestaand && bestaand.gezetOp) || new Date().toISOString(),
+      };
+      // BEWUST ZONDER TTL: dit is een takenlijst, geen momentopname. Hij
+      // verdwijnt als de redactie hem afvinkt, niet als de tijd verstrijkt.
+      await setJSON(KEY_NAKIJKEN(ifId), record);
+      return res.status(200).json({ ok: true, record });
+    }
+
+    if (actie === "nakijken-klaar") {
+      const ifId = Number(body.ifId || id);
+      if (!ifId) return res.status(400).json({ ok: false, fout: "ifId vereist." });
+      await del(KEY_NAKIJKEN(ifId));
+      return res.status(200).json({ ok: true });
     }
 
     if (actie === "verwijder-overheid") {

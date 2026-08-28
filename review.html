@@ -80,6 +80,31 @@
   .keten .ketennee { background:#fff; color:var(--brand); border:1px solid rgba(128,0,0,.25); }
   .keten.klaar { background:rgba(47,107,58,.07); border-color:rgba(47,107,58,.3); color:var(--actueel); font-weight:600; }
   .info { background:rgba(47,107,58,.08); color:var(--actueel); border:1px solid rgba(47,107,58,.25); }
+
+  /* ---- Infofrankrijk: verwijzen (publiek) en nakijken (redactie) ---- */
+  .ifblok { margin-top:12px; padding:10px 12px; border-radius:10px; border:1px solid rgba(47,107,58,.25); background:rgba(47,107,58,.04); }
+  .ifblok > b { font-family:'Poppins',sans-serif; font-weight:700; font-size:12px; color:var(--actueel); display:block; margin-bottom:6px; }
+  .ifgekozen { list-style:none; margin:0 0 8px; padding:0; display:grid; gap:5px; }
+  .ifgekozen li { display:flex; gap:8px; align-items:center; background:#fff; border:1px solid rgba(47,107,58,.25); border-radius:8px; padding:6px 10px; font-size:13.5px; }
+  .ifgekozen a { color:var(--brand); text-decoration:none; flex:1; }
+  .ifgekozen button { flex:none; border:none; background:none; color:var(--brand); cursor:pointer; font-size:16px; line-height:1; padding:4px 6px; }
+  .ifzoekrij { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .ifzoekrij input { flex:1; min-width:180px; font-family:'Mulish',sans-serif; font-size:14px; padding:8px 10px; border:1px solid rgba(128,0,0,.2); border-radius:8px; }
+  .ifknop { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; border-radius:8px; padding:8px 12px; min-height:38px; cursor:pointer; border:1px solid rgba(47,107,58,.3); background:#fff; color:var(--actueel); }
+  .ifknop.klein { min-height:32px; padding:4px 10px; font-size:12.5px; }
+  .ifuitleg { font-size:12px; color:#8a7f7c; margin-bottom:8px; }
+  .ifkandidaten { list-style:none; margin:0; padding:0; display:grid; gap:5px; }
+  .ifkandidaten li { display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:#fff; border:1px solid rgba(128,0,0,.12); border-radius:8px; padding:6px 10px; }
+  .ifkandidaten .ifdatum { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:#8a7f7c; flex:none; }
+  .ifkandidaten .iftitel { flex:1; min-width:160px; font-size:13.5px; }
+  .ifkandidaten .iftitel a { color:#3a3330; text-decoration:none; }
+  .ifkandidaten .ifacties { display:flex; gap:6px; flex:none; }
+  .ifkandidaten li.alverwezen { background:rgba(47,107,58,.07); }
+  .nakijklijst { list-style:none; margin:0 0 18px; padding:0; display:grid; gap:8px; }
+  .nakijklijst li { border:1px solid rgba(176,90,0,.3); background:rgba(176,90,0,.05); border-radius:8px; padding:10px 12px; }
+  .nakijklijst .aanleiding { font-size:12.5px; color:#7a6a6a; margin-top:3px; }
+  .nakijklijst .rij { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .nakijklijst .rij a { flex:1; min-width:180px; color:var(--brand); text-decoration:none; font-weight:600; }
   .leeg { color:#8a7f7c; font-size:14px; }
 </style>
 </head>
@@ -108,7 +133,11 @@
   if (nbEl){ nbEl.href = PREVIEW_URL; }
   var meldingEl = document.getElementById("melding");
   var inhoudEl = document.getElementById("inhoud");
-  var state = { concepten: [], index: 0, duplicaten: 0, totaal: 0, publicaties: [], overheid: [], bronUrlWeigeringen: [] };
+  var state = { concepten: [], index: 0, duplicaten: 0, totaal: 0, publicaties: [], overheid: [], bronUrlWeigeringen: [],
+    // Infofrankrijk: gekozen verwijzingen per bericht-id, de auditlijst, wat er
+    // bijna uit het 12-maandenvenster valt, en het geopende kandidatenpaneel
+    // (hoogstens één tegelijk).
+    verwijzingen: {}, nakijken: [], bijnaVerlopen: [], ifIndex: null, ifPaneel: null };
 
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
@@ -119,6 +148,13 @@
     var opties = { method: method, headers: { "X-Review-Token": token } };
     if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
     return fetch(url, opties).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, data: j }; }); });
+  }
+
+  // GET met extra querystring (de kandidatenlijst; zie ?deel=if in api/review.js).
+  function apiGet(extra){
+    var url = "/api/review?token=" + encodeURIComponent(token) + (extra || "");
+    return fetch(url, { headers: { "X-Review-Token": token } })
+      .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, data: j }; }); });
   }
 
   function bronnenHtml(bronnen){
@@ -258,6 +294,114 @@
       'Voegt de perssynthese hier echt iets aan toe? Zo niet: "Weg".</div>';
   }
 
+  // ---- Infofrankrijk: verwijzen en nakijken ---------------------------------
+  // ÉÉN VRAAG, TWEE UITGANGEN. "Verwijzen" zet een link onder het bericht op de
+  // nieuwspagina (de lezer ziet die). "Nakijken" zet het IF-artikel op een
+  // takenlijst hier (de lezer ziet daar niets van) — want een nieuwe
+  // aankondiging van Bercy kan betekenen dat een fiscaal artikel op
+  // Infofrankrijk niet meer klopt.
+  //
+  // NIETS GEBEURT VANZELF. De lijst is een voorstel: hij is gefilterd op de
+  // categorieën die bij het thema van dit bericht horen én op de twaalf
+  // maanden-regel, en gesorteerd op oudste wijziging eerst. Klik je niets aan,
+  // dan komt er geen verwijzing.
+  function ifDatum(iso){
+    try { return new Date(iso).toISOString().slice(0,10); } catch(e){ return "?"; }
+  }
+
+  function gekozenHtml(id){
+    var items = state.verwijzingen[id] || [];
+    if (!items.length) return "";
+    return '<ul class="ifgekozen">'+items.map(function(v){
+      return '<li><a href="'+esc(v.url)+'" target="_blank" rel="noopener">'+esc(v.titel||v.url)+'</a>'+
+        '<button type="button" title="Verwijzing weghalen" data-if-af="'+esc(String(v.ifId))+'">×</button></li>';
+    }).join("")+'</ul>';
+  }
+
+  function kandidaatHtml(k, id){
+    return '<li'+(k.gekozen?' class="alverwezen"':'')+'>'+
+      '<span class="ifdatum">'+esc(ifDatum(k.modified))+'</span>'+
+      '<span class="iftitel"><a href="'+esc(k.url)+'" target="_blank" rel="noopener">'+esc(k.titel)+'</a></span>'+
+      '<span class="ifacties">'+
+        (k.gekozen
+          ? '<button type="button" class="ifknop klein" data-if-af="'+esc(String(k.ifId))+'">Verwijzing weg</button>'
+          : '<button type="button" class="ifknop klein" data-if-verwijs="'+esc(String(k.ifId))+'">Verwijzen</button>')+
+        '<button type="button" class="ifknop klein" data-if-nakijk="'+esc(String(k.ifId))+'">Nakijken</button>'+
+      '</span>'+
+    '</li>';
+  }
+
+  function paneelHtml(id){
+    var p = state.ifPaneel;
+    if (!p || p.id !== id) {
+      return '<button type="button" class="ifknop" data-if-open="'+esc(id)+'">Infofrankrijk erbij zoeken</button>';
+    }
+    var uit = '<div class="ifzoekrij">'+
+      '<input type="search" id="ifZoek" placeholder="Zoek in alle Infofrankrijk-artikelen…" value="'+esc(p.zoek||"")+'">'+
+      '<button type="button" class="ifknop" id="ifZoekBtn">Zoek</button>'+
+      '<button type="button" class="ifknop" data-if-dicht="1">Sluiten</button>'+
+    '</div>';
+    if (p.laden) return uit + '<div class="ifuitleg">Laden…</div>';
+    if (p.fout) return uit + '<div class="melding fout">'+esc(p.fout)+'</div>';
+    var d = p.data || {};
+    var lijst = d.kandidaten || [];
+    var cats = (d.categorieen||[]).map(function(c){ return c.naam; }).join(", ");
+    uit += '<div class="ifuitleg">'+
+      (p.zoek
+        ? 'Zoekresultaat in alle artikelen (het categoriefilter staat uit; de '+esc(String(d.maanden||12))+'-maandenregel geldt wel).'
+        : (cats
+            ? 'Categorieën bij thema <b>'+esc(d.bericht&&d.bericht.thema||"?")+'</b>: '+esc(cats)+'.'
+            : 'Voor thema <b>'+esc(d.bericht&&d.bericht.thema||"?")+'</b> staan er nog geen categorieën in de koppeltabel (lib/config.js). Gebruik het zoekveld.'))+
+      ' Oudste wijziging bovenaan. '+esc(String(d.totaal||0))+' artikel'+((d.totaal===1)?"":"en")+'.</div>';
+    if (!lijst.length) return uit + '<div class="leeg">Geen kandidaten.</div>';
+    var standaard = d.standaardAantal || 10;
+    var tonen = p.alles ? lijst : lijst.slice(0, standaard);
+    uit += '<ul class="ifkandidaten">'+tonen.map(function(k){ return kandidaatHtml(k, id); }).join("")+'</ul>';
+    if (!p.alles && lijst.length > tonen.length){
+      uit += '<div style="margin-top:8px"><button type="button" class="ifknop klein" data-if-alles="1">Toon alle '+lijst.length+'</button></div>';
+    }
+    return uit;
+  }
+
+  function ifBlokHtml(id){
+    return '<div class="ifblok"><b>Infofrankrijk</b>'+gekozenHtml(id)+paneelHtml(id)+'</div>';
+  }
+
+  // De auditkant: IF-artikelen die de redactie zelf op de lijst heeft gezet,
+  // oudste wijziging bovenaan. Verdwijnt alleen door "Klaar" — niet vanzelf.
+  function nakijkenHtml(){
+    var lijst = state.nakijken || [];
+    var uit = '<h2>Nakijken op Infofrankrijk ('+lijst.length+')</h2>';
+    if (!lijst.length){
+      return uit + '<div class="leeg">Niets op de lijst. Zet een artikel erop met "Nakijken" onder een bericht.</div>';
+    }
+    uit += '<ul class="nakijklijst">'+lijst.map(function(n){
+      var aanleidingen = (n.aanleidingen||[]).map(function(a){
+        return esc((a.kop||"bericht")+(a.bron?" ("+a.bron+")":""));
+      }).join(" · ");
+      return '<li><div class="rij">'+
+        '<span class="ifdatum">'+esc(ifDatum(n.modified))+'</span>'+
+        '<a href="'+esc(n.url)+'" target="_blank" rel="noopener">'+esc(n.titel)+'</a>'+
+        '<button type="button" class="ifknop klein" data-nakijk-klaar="'+esc(String(n.ifId))+'">Klaar</button>'+
+      '</div>'+(aanleidingen?'<div class="aanleiding">Aanleiding: '+aanleidingen+'</div>':'')+'</li>';
+    }).join("")+'</ul>';
+    return uit;
+  }
+
+  // De 12-maandengrens is stil: wat er bijna uit valt, kun je nu nog bijwerken.
+  function bijnaVerlopenHtml(){
+    var lijst = state.bijnaVerlopen || [];
+    if (!lijst.length) return "";
+    var top = lijst.slice(0, 10);
+    return '<h2>Bijna niet meer verwijsbaar ('+lijst.length+')</h2>'+
+      '<div class="ifuitleg">Deze artikelen vallen binnenkort buiten de twaalf maanden en verdwijnen dan uit de keuzelijsten hierboven. Werk ze bij, of laat ze gaan.</div>'+
+      '<ul class="nakijklijst">'+top.map(function(a){
+        return '<li><div class="rij"><span class="ifdatum">'+esc(ifDatum(a.modified))+'</span>'+
+          '<a href="'+esc(a.url)+'" target="_blank" rel="noopener">'+esc(a.titel)+'</a></div></li>';
+      }).join("")+'</ul>'+
+      (lijst.length > top.length ? '<div class="ifuitleg">… en nog '+(lijst.length-top.length)+'.</div>' : "");
+  }
+
   // ---- Geweigerde bron-URL's -------------------------------------------------
   // Een bronlink die de validatie in lib/bronurl.js niet haalt (vreemde host,
   // leeg pad, asset-host) wordt op /actueel NIET klikbaar getoond. Zonder deze
@@ -282,6 +426,8 @@
     var html = "";
 
     html += bronUrlWeigeringenHtml();
+    html += nakijkenHtml();
+    html += bijnaVerlopenHtml();
 
     // ---- Concepten: pager (één voor één) ----
     html += '<h2>Concepten</h2>';
@@ -329,6 +475,7 @@
         (p.kop?'<div class="kop">'+esc(p.kop)+'</div>':'')+
         '<div class="tekst">'+esc(p.tekst)+'</div>'+
         bronnenHtml(p.bronnen)+
+        ifBlokHtml(p.id)+
         '<div class="knoppen">'+
           (p.gearchiveerd?'':'<button class="actie bewaarbtn" data-act="archiveer">Toevoegen aan archief</button>')+
           '<button class="actie wegbtn" data-act="depubliceer">Van de site halen</button>'+
@@ -346,6 +493,7 @@
         '<div class="tekst">'+esc(o.samenvatting)+'</div>'+
         (o.url?'<div class="bronnen"><a href="'+esc(o.url)+'" target="_blank" rel="noopener">Bron →</a></div>':'')+
         ketenHtml(o)+
+        ifBlokHtml(o.id)+
         '<div class="knoppen"><button class="actie wegbtn" data-act="verwijder-overheid">Van de site halen</button></div>'+
       '</div>';
     });
@@ -408,6 +556,104 @@
             if (vak) vak.querySelectorAll("button").forEach(function(b){ b.disabled = false; });
           }
         }).catch(function(){ melding("Netwerkfout.", "fout"); });
+      });
+    });
+
+    // ---- Infofrankrijk: paneel, zoeken, verwijzen, nakijken ----------------
+    function ifKaartId(btn){
+      var kaart = btn.closest(".kaart");
+      return kaart ? kaart.getAttribute("data-id") : null;
+    }
+    // Eén verzoek voor de kandidatenlijst. Het THEMA wordt serverside uit het
+    // bericht zelf afgeleid; hier gaat alleen een id en een eventuele zoekterm
+    // de deur uit.
+    function laadKandidaten(){
+      var p = state.ifPaneel;
+      if (!p) return;
+      p.laden = true; p.fout = null; render();
+      apiGet("&deel=if&artikel=" + encodeURIComponent(p.id) + (p.zoek ? "&zoek=" + encodeURIComponent(p.zoek) : ""))
+        .then(function(res){
+          var q = state.ifPaneel;
+          if (!q || q.id !== p.id) return; // paneel is intussen gesloten
+          q.laden = false;
+          if (res.ok && res.data.ok){ q.data = res.data; q.fout = res.data.fout || null; }
+          else { q.fout = (res.data && res.data.fout) || "Kon de lijst niet ophalen."; }
+          render();
+          var veld = document.getElementById("ifZoek");
+          if (veld && q.zoek){ veld.focus(); veld.setSelectionRange(veld.value.length, veld.value.length); }
+        })
+        .catch(function(){ var q = state.ifPaneel; if (q){ q.laden=false; q.fout="Netwerkfout."; render(); } });
+    }
+    // Na "Verwijzen"/"Verwijzing weg" alleen de gekozen lijst bijwerken, zodat
+    // het paneel open blijft staan en de redacteur door kan met de volgende.
+    function ifActie(body, gelukt){
+      api("POST", body).then(function(res){
+        if (res.ok && res.data.ok){
+          melding(gelukt, "info");
+          laad(true);
+          if (state.ifPaneel) laadKandidaten();
+        } else {
+          melding((res.data && res.data.fout) || "Mislukt.", "fout");
+        }
+      }).catch(function(){ melding("Netwerkfout.", "fout"); });
+    }
+
+    inhoudEl.querySelectorAll("button[data-if-open]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        state.ifPaneel = { id: btn.getAttribute("data-if-open"), zoek: "", alles: false, data: null };
+        laadKandidaten();
+      });
+    });
+    inhoudEl.querySelectorAll("button[data-if-dicht]").forEach(function(btn){
+      btn.addEventListener("click", function(){ state.ifPaneel = null; render(); });
+    });
+    inhoudEl.querySelectorAll("button[data-if-alles]").forEach(function(btn){
+      btn.addEventListener("click", function(){ if (state.ifPaneel){ state.ifPaneel.alles = true; render(); } });
+    });
+    var zoekBtn = document.getElementById("ifZoekBtn");
+    var zoekVeld = document.getElementById("ifZoek");
+    function zoekNu(){
+      if (!state.ifPaneel || !zoekVeld) return;
+      state.ifPaneel.zoek = zoekVeld.value.trim();
+      state.ifPaneel.alles = false;
+      laadKandidaten();
+    }
+    if (zoekBtn) zoekBtn.addEventListener("click", zoekNu);
+    if (zoekVeld) zoekVeld.addEventListener("keydown", function(e){
+      if (e.key === "Enter"){ e.preventDefault(); zoekNu(); }
+    });
+    inhoudEl.querySelectorAll("button[data-if-verwijs]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = ifKaartId(btn); if (!id) return;
+        btn.disabled = true;
+        ifActie({ actie: "verwijs", id: id, ifId: Number(btn.getAttribute("data-if-verwijs")) },
+          "Verwijzing toegevoegd. Op de nieuwspagina zichtbaar na de eerstvolgende cronronde.");
+      });
+    });
+    inhoudEl.querySelectorAll("button[data-if-af]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = ifKaartId(btn); if (!id) return;
+        btn.disabled = true;
+        ifActie({ actie: "verwijs-weg", id: id, ifId: Number(btn.getAttribute("data-if-af")) },
+          "Verwijzing weggehaald.");
+      });
+    });
+    inhoudEl.querySelectorAll("button[data-if-nakijk]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = ifKaartId(btn); if (!id) return;
+        btn.disabled = true;
+        ifActie({ actie: "nakijken", id: id, ifId: Number(btn.getAttribute("data-if-nakijk")) },
+          "Op de lijst \u201cNakijken op Infofrankrijk\u201d gezet. De lezer ziet hier niets van.");
+      });
+    });
+    inhoudEl.querySelectorAll("button[data-nakijk-klaar]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var ifId = Number(btn.getAttribute("data-nakijk-klaar"));
+        btn.disabled = true;
+        api("POST", { actie: "nakijken-klaar", id: String(ifId), ifId: ifId }).then(function(res){
+          if (res.ok && res.data.ok){ melding("Afgevinkt.", "info"); laad(true); }
+          else { melding((res.data && res.data.fout) || "Mislukt.", "fout"); btn.disabled = false; }
+        }).catch(function(){ melding("Netwerkfout.", "fout"); btn.disabled = false; });
       });
     });
 
@@ -476,6 +722,10 @@
         state.publicaties = res.data.publicaties || [];
         state.overheid = res.data.overheid || [];
         state.bronUrlWeigeringen = res.data.bronUrlWeigeringen || [];
+        state.verwijzingen = res.data.verwijzingen || {};
+        state.nakijken = res.data.nakijken || [];
+        state.bijnaVerlopen = res.data.bijnaVerlopen || [];
+        state.ifIndex = res.data.ifIndex || null;
         if (state.index >= state.concepten.length) state.index = 0;
         render();
       } else { melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout"); inhoudEl.innerHTML = ""; }

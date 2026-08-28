@@ -24,6 +24,7 @@ import {
   PUBLICATIE_TTL_S,
   VENSTER_VERENIGINGEN_DAGEN,
   OVERHEID_TTL_S,
+  IF_VERWIJZING_MAX,
 } from "../lib/config.js";
 
 const BASIS = (process.env.SONDE_URL || "https://nlfr-menu.vercel.app").replace(/\/+$/, "");
@@ -90,7 +91,16 @@ function alleArtikelen(data, teksten, archief) {
       const extra = perSleutel[sleutel] || null;
       uit.push({
         tegel: t,
-        art: extra ? { ...a, tekst: extra.tekst, bronnen: extra.bronnen } : { ...a },
+        art: extra
+          ? {
+              ...a,
+              tekst: extra.tekst,
+              bronnen: extra.bronnen,
+              // Alleen aanwezig als de redactie een verwijzing heeft gekozen;
+              // I13 toetst hem, de rest van de sonde raakt hem niet aan.
+              ...(extra.verwijzingen ? { verwijzingen: extra.verwijzingen } : {}),
+            }
+          : { ...a },
         sleutel,
         // Of dit artikel een tegenhanger in een tekstlevering had. I10 toetst
         // dat; de overige invarianten mogen niet stil doorlopen op een gat.
@@ -240,6 +250,50 @@ async function main() {
         "I11 compacte-velden",
         `tegel ${tegel.id} · "${kort(art.titel)}" · bronMeta (${meta.naam} · ${meta.datum}) wijkt af van de eerste bron (${eerste.naam} · ${eerste.datum})`
       );
+    }
+  }
+
+  // ---- I13. Redactionele verwijzingen naar Infofrankrijk -------------------
+  // Deze verwijzingen worden met de hand gekozen en staan in een eigen blok
+  // onder de bronnen. Vier dingen mogen niet stil misgaan:
+  //   * een link naar een andere host dan infofrankrijk.com — precies de
+  //     storing waar lib/bronurl.js voor is gebouwd, nu op een tweede plek;
+  //   * een verwijzing die als BRON in de bronnenlijst belandt (dan claimt de
+  //     pagina ons eigen artikel als attributie voor de synthese);
+  //   * meer dan IF_VERWIJZING_MAX onder één bericht;
+  //   * dezelfde verwijzing meer dan één keer binnen dezelfde tegel.
+  const ifBron = bronVoorNaam("Infofrankrijk") || {};
+  const verwijzingPerTegel = new Map();
+  for (const { tegel, art } of artikelen) {
+    const lijst = Array.isArray(art.verwijzingen) ? art.verwijzingen : [];
+    if (!lijst.length) continue;
+    if (lijst.length > IF_VERWIJZING_MAX) {
+      meld(
+        "I13 verwijzingen",
+        `tegel ${tegel.id} · "${kort(art.titel)}" · ${lijst.length} verwijzingen, maximaal ${IF_VERWIJZING_MAX}`
+      );
+    }
+    if (!verwijzingPerTegel.has(tegel.id)) verwijzingPerTegel.set(tegel.id, new Set());
+    const gezien = verwijzingPerTegel.get(tegel.id);
+    for (const v of lijst) {
+      const oordeel = bronUrlOordeel(v && v.url, ifBron);
+      if (!oordeel.ok) {
+        meld("I13 verwijzingen", `tegel ${tegel.id} · "${kort(art.titel)}" · ${oordeel.reden}: ${v && v.url}`);
+        continue;
+      }
+      if (!String((v && v.titel) || "").trim()) {
+        meld("I13 verwijzingen", `tegel ${tegel.id} · verwijzing zonder titel: ${oordeel.url}`);
+      }
+      if (gezien.has(oordeel.url)) {
+        meld("I13 verwijzingen", `tegel ${tegel.id} · dezelfde verwijzing twee keer: ${oordeel.url}`);
+      }
+      gezien.add(oordeel.url);
+      if ((art.bronnen || []).some((b) => b && b.url === oordeel.url)) {
+        meld(
+          "I13 verwijzingen",
+          `tegel ${tegel.id} · "${kort(art.titel)}" · de verwijzing staat óók in de bronnenlijst: ${oordeel.url}`
+        );
+      }
     }
   }
 
@@ -418,6 +472,15 @@ function toonInventaris(data, artikelen, teksten, archief) {
     `Tekst-levering: ${tekstAantal} record(s), archieflevering: ${archiefAantal} artikel(en), ` +
       `bronStatus: ${(data.bronStatus || []).length} bron(nen)`
   );
+  // Handmatig gekozen Infofrankrijk-verwijzingen. Nul is een geldige uitkomst
+  // (de redactie hoeft niets te kiezen), maar het getal hoort zichtbaar te zijn:
+  // zakt het onverwacht naar nul, dan is er iets stuk in de keten.
+  const verwijzingen = artikelen.reduce(
+    (n, r) => n + (Array.isArray(r.art.verwijzingen) ? r.art.verwijzingen.length : 0),
+    0
+  );
+  const metVerwijzing = artikelen.filter((r) => (r.art.verwijzingen || []).length).length;
+  console.log(`Infofrankrijk-verwijzingen: ${verwijzingen} onder ${metVerwijzing} artikel(en)`);
   for (const t of data.tegels || []) {
     const n = t.artikelenApart
       ? `${typeof t.artikelAantal === "number" ? t.artikelAantal : "?"} (aparte levering)`

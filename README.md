@@ -131,6 +131,7 @@ metingen op productie liggen daaraan ten grondslag:
 | `agenda`, `bronStatus` | ✔ | — | — |
 | per artikel `tekst` en `bronnen`, buiten het archief | — | ✔ | — |
 | per artikel `tekst` en `bronnen`, in het archief | — | — | ✔ (`teksten`) |
+| per artikel `verwijzingen` — het blok "Meer hierover op Infofrankrijk" | — | ✔ (indien gekozen) | ✔ (indien gekozen) |
 
 `bronMeta` en `bronAantal` zijn er omdat de dichte staat die twee dingen wél
 toont: `bronMeta` is de onderregel onder een overheids-, Infofrankrijk- of
@@ -139,6 +140,11 @@ op de knop "Bronnen (n)". Een perssynthese toont daar de NLFR-byline en gebruikt
 `bronMeta` niet. `artikelAantal` staat op **elke** tegel, zodat de kop ("86
 artikelen") één bron van waarheid heeft — ook op de archieftegel, waar de
 artikelen zelf niet zijn meegestuurd.
+
+`verwijzingen` staat bij de tekst en niet in de compacte levering, omdat het
+blok ónder de bronnen staat en dus pas zichtbaar is als de lezer het artikel
+openklapt; het veld ontbreekt helemaal als de redactie niets heeft gekozen (zie
+"Verwijzen naar Infofrankrijk" hieronder).
 
 De tekst- en archieflevering hangen aan de sleutel **`tegelId/artikelId`**, niet
 aan het kale artikel-id: hetzelfde artikel-id kan in twee tegels voorkomen (een
@@ -189,6 +195,11 @@ erbij gekomen:
 - **I11** — `bronAantal` en `bronMeta` kloppen met de volledige bronnenlijst.
 - **I12** — de archieftegel: `artikelAantal` in de kop klopt met het aantal
   artikelen dat de derde levering bevat, en die levering hoort bij die tegel.
+- **I13** — de redactionele verwijzingen naar Infofrankrijk: elke link staat op
+  infofrankrijk.com (dezelfde toets als voor bronlinks), heeft een titel, staat
+  niet óók in de bronnenlijst, komt binnen één tegel maar één keer voor, en er
+  zijn er hooguit `IF_VERWIJZING_MAX` per bericht. De sonde drukt het aantal
+  bovendien af, zodat een keten die stilvalt zichtbaar wordt.
 
 > **Niet te verwarren met `/archief`.** Die pagina toont het duurzame
 > regelgevingsregister en draait op `/api/register`. Daar staat de
@@ -292,6 +303,85 @@ regio's en einddatum komen uit één groep.
 ingevroren datums (28 augustus, 1 en 5 september, 20 oktober 2026). Die tests
 draaien op **`TZ=UTC`** — de tijdzone van productie, en de enige waarin fout 1
 zichtbaar wordt: op `Europe/Paris` zouden ze groen blijven mét de fout.
+
+### Verwijzen naar Infofrankrijk (en terug: nakijken)
+
+Onder een bericht op `/actueel` kan een verwijzing staan naar een
+achtergrondartikel op infofrankrijk.com — een eigen blok onder de bronnen, met
+de kop **"Meer hierover op Infofrankrijk"**. Dezelfde koppeling werkt de andere
+kant op: een nieuwe aankondiging van Bercy kan betekenen dat fiscale artikelen
+op Infofrankrijk nagekeken moeten worden. Eén vraag (*welke IF-artikelen horen
+bij dit bericht?*), twee uitgangen: **verwijzen** ziet de lezer, **nakijken** is
+een takenlijst in de reviewtool.
+
+**Handmatig, zonder uitzondering.** `api/review.js` is de enige plek die
+verwijzingen schrijft, en alleen op een expliciete klik. De cron kiest nooit
+zelf; klikt de redactie niets aan, dan komt er geen verwijzing.
+`test/verwijzing-route.test.mjs` legt dat vast, inclusief een toets dat
+`api/cron.js` de verwijzingssleutel niet eens kent.
+
+**Een verwijzing is geen bron.** De bronnenlijst is attributie: de Franse
+originelen waar de synthese op steunt. Een eigen achtergrondartikel is "verder
+lezen". Vandaar een apart blok met eigen opmaak, onder de bronnen — en de sonde
+(I13) meldt het als een verwijzing tóch in de bronnenlijst opduikt.
+
+**De twee filters** staan in `lib/config.js`:
+
+1. `IF_CATEGORIE_PER_THEMA` koppelt het thema van het bericht (de acht
+   overheidsthema's en de vier perstegels) aan Infofrankrijk-categorieën. Dit
+   is **handwerk, met opzet**: de categorisering op infofrankrijk.com is niet
+   strak genoeg om automatisch af te leiden — onder de fiscale categorieën valt
+   ook "Kinderbijslag" en "Juridische bijstand". Bijschaven doe je in die ene
+   tabel; de rest van de code kent alleen die tabel. Een zoekveld in de
+   reviewtool dekt alles wat de tabel niet dekt.
+2. `IF_MAX_LEEFTIJD_MAANDEN` (12): nooit verwijzen naar iets waarvan `modified`
+   ouder is dan twaalf maanden. `modified`, niet `date` — dat is de datum die
+   zegt *sinds wanneer heb ik hier niet meer naar gekeken*, en dat is precies de
+   vraag die de auditkant ook stelt. Zonder bruikbare datum doet een artikel
+   niet mee.
+
+Die twaalf-maandengrens is stil — een artikel dat een jaar niet is aangeraakt
+verdwijnt vanzelf uit de keuzelijst zonder dat iemand het merkt. De reviewtool
+toont daarom ook **"Bijna niet meer verwijsbaar"**: wat er binnen twee maanden
+uit valt.
+
+**De index.** `lib/ifindex.js` haalt de artikellijst op uit de openbare
+WordPress-REST-API van infofrankrijk.com (`/wp-json/wp/v2/posts`) — id, link,
+titel, `modified_gmt` en categorie-id's, ~350 artikelen in vier verzoeken, geen
+inloggen. De cron ververst hem hoogstens eens per zes uur
+(`IF_INDEX_VERVERS_NA_S`) en zet hem in KV met een TTL van dertig dagen: valt
+infofrankrijk.com een dag uit, dan blijft de laatste index staan in plaats van
+dat de keuzelijst leeg raakt. Een mislukte verversing maakt de cronronde niet
+rood; de reden staat in de cronuitvoer onder `ifIndex`.
+
+> **`modified_gmt`, niet `modified`.** WordPress levert `modified` in de
+> tijdzone van de site, zónder aanduiding: `"2026-08-23T14:29:45"` parseert in
+> Node (UTC) twee uur te vroeg. Dezelfde valkuil als bij de schoolvakanties
+> hierboven, met dezelfde gevolgen.
+
+**In de reviewtool** staat onder elke gepubliceerde synthese en elk
+overheidsbericht het blok *Infofrankrijk*: de al gekozen verwijzingen (met een
+kruisje om ze weg te halen) en de knop "Infofrankrijk erbij zoeken". De
+kandidaten staan **oudste wijziging bovenaan** — dat is tegelijk de auditvolgorde
+en de reden om de bovenste kritisch te bekijken voordat je ernaar verwijst. Er
+worden er tien getoond, met "toon alle …" eronder. Per regel twee knoppen:
+*Verwijzen* (de lezer ziet het) en *Nakijken* (alleen de redactie).
+
+**Opslag en zichtbaarheid.** Verwijzingen staan onder
+`actueel:verwijzing:<artikel-id>` — bewust náást het bericht en niet erin, zodat
+een cron-ronde die het record herschrijft de keuze van de redactie niet kan
+overschrijven. TTL gelijk aan de langstlevende records (28 dagen). De auditlijst
+staat onder `actueel:nakijken:<if-id>` en verloopt **niet**: die wordt afgevinkt,
+niet uitgezeten. Een nieuwe verwijzing verschijnt op de pagina zodra de
+eerstvolgende cronronde de leveringen opnieuw bakt (hoogstens vijftien minuten);
+de reviewtool zegt dat er ook bij.
+
+**Grenzen die worden afgedwongen.** Hooguit `IF_VERWIJZING_MAX` (3) verwijzingen
+per bericht; binnen één tegel verschijnt dezelfde verwijzing maar één keer (vier
+bosbrandartikelen met vier keer dezelfde link is ruis — de bovenste houdt hem);
+en elke URL moet de bron-URL-toets van Infofrankrijk doorstaan (`lib/bronurl.js`,
+de laag die is gebouwd nadat IF-items naar `fonts.googleapis.com` bleken te
+wijzen), zowel bij het opslaan als bij het samenstellen van de tegels.
 
 ### Env-vars (in Vercel instellen, zie `.env.example`)
 

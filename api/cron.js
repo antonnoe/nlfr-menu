@@ -8,7 +8,10 @@
 // 2) PERS: items eerst door de faits-divers-zeef; daarna clusteren. Een cluster
 //    met >= SYNTHESE_MIN_BRONNEN (2) onafhankelijke bronnen krijgt een NL-
 //    synthese als CONCEPT (48 u TTL) -> reviewtool -> pas na akkoord live.
-// 3) SNAPSHOT: aan het eind van elke ronde worden ALLE DRIE de leveringen van
+// 3) INFOFRANKRIJK-INDEX: hoogstens eens per zes uur wordt de artikellijst van
+//    infofrankrijk.com ververst (lib/ifindex.js). Daaruit kiest de REDACTIE in
+//    de reviewtool handmatig verwijzingen; de cron kiest nooit zelf.
+// 4) SNAPSHOT: aan het eind van elke ronde worden ALLE DRIE de leveringen van
 //    de nieuwspagina voorgebakken en in KV gezet (actueel:snapshot:v3 voor de
 //    compacte levering van /api/actueel, actueel:snapshot-tekst:v2 voor
 //    /api/actueel-tekst en actueel:snapshot-archief:v1 voor
@@ -51,6 +54,7 @@ import {
 import { dedupOverheid, alBekend, overheidSleutel } from "../lib/overheid.js";
 import { maakRegisterRecord, zoekKeten } from "../lib/register.js";
 import { bouwAntwoord } from "../lib/antwoord.js";
+import { verversIfIndex } from "../lib/ifindex.js";
 import { splitsAntwoord } from "../lib/levering.js";
 
 function leesForce(req) {
@@ -372,7 +376,15 @@ export default async function handler(req, res) {
     }
   }
 
-  // ---- 3) SNAPSHOT: alle drie de leveringen voorbakken ---------------------
+  // ---- 3) INFOFRANKRIJK-INDEX bijwerken -----------------------------------
+  // De artikellijst van infofrankrijk.com (titel, link, laatste wijziging,
+  // categorieën) waaruit de reviewtool verwijzingen laat kiezen. Hoogstens één
+  // keer per zes uur; de rest van de rondes is dit een enkele KV-lees.
+  // Dit is PURE VOORRAAD: er wordt niets gepubliceerd en niets gekozen. De
+  // verwijzingen zelf zet de redactie met de hand in de reviewtool.
+  const ifIndex = await verversIfIndex({ nu: Date.now() });
+
+  // ---- 4) SNAPSHOT: alle drie de leveringen voorbakken ---------------------
   // Pas hier, aan het EIND van de ronde: dan zit alles wat deze ronde live is
   // gegaan (overheid, registeropname, opgeruimde concepten) er al in. De items
   // uit het begin van de ronde worden hergebruikt, zodat de cron de 16 feeds
@@ -448,6 +460,7 @@ export default async function handler(req, res) {
       nieuweConcepten: nieuwConcept,
       verwerkt: persVerwerkt,
     },
+    ifIndex, // voorraad voor de Infofrankrijk-verwijzingen (reviewtool)
     snapshot, // voorgebakken antwoord voor /api/actueel
   });
 }

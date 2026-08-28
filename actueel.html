@@ -171,6 +171,16 @@
   /* Bron zonder bruikbare URL: zelfde plek in de lijst, maar duidelijk geen link. */
   .bronlijst .bronzonderlink{ font-family:var(--body); font-weight:600; font-size:13px; line-height:18px; color:var(--ink-meta); }
 
+  /* Redactionele verwijzing naar Infofrankrijk. BEWUST GESCHEIDEN VAN DE
+     BRONNEN: de bronnenlijst is attributie (de Franse originelen waar de
+     synthese op steunt), dit is "verder lezen" op onze eigen site. Door
+     elkaar zetten zou de lezer misleiden en de attributie vertroebelen. */
+  .verwijs{ margin-top:12px; padding:10px 12px; border-radius:4px; border:1px solid var(--hair); border-left:3px solid var(--groen); background:var(--bg); }
+  .verwijs b{ display:block; font-family:var(--disp); font-weight:600; font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--groen); margin-bottom:5px; }
+  .verwijs ul{ list-style:none; margin:0; padding:0; display:grid; gap:4px; }
+  .verwijs a{ font-family:var(--body); font-weight:600; font-size:13px; line-height:18px; color:var(--ink-body); text-decoration:none; }
+  .verwijs a:hover{ text-decoration:underline; }
+
   /* Sluitknop onder de tegel */
   .sluitrij{ padding:2px 16px 14px; }
   .sluit{ display:inline-flex; align-items:center; gap:6px; background:none; border:0; cursor:pointer; font-family:var(--disp); font-weight:600; font-size:11.5px; color:var(--ink-zwak); padding:6px 2px; }
@@ -244,6 +254,10 @@
 (function(){
   "use strict";
   var VERENIGINGEN_PAGINA = "https://www.nederlanders.fr/page/nederlandse-verenigingen-in-frankrijk";
+  // Kop boven het blok met redactionele verwijzingen naar Infofrankrijk.
+  // Dezelfde tekst als IF_VERWIJZING_KOP in lib/config.js; test/verwijzing.test.mjs
+  // houdt de twee gelijk, zodat ze niet stilletjes uiteen kunnen lopen.
+  var VERWIJS_KOP = "Meer hierover op Infofrankrijk";
   var scrollerEl = document.getElementById("scroller");
   var vervaagEl = document.getElementById("vervaag");
   var tabsEl = document.getElementById("tabs");
@@ -410,6 +424,16 @@
     } else {
       bronBlok = '<div class="bronknop leeg">'+ico("ic-bronnen")+' Geen externe bron</div>';
     }
+    // Redactionele verwijzing naar een achtergrondartikel op Infofrankrijk.
+    // Handmatig gekozen in de reviewtool; staat er dus alleen als de redactie
+    // er een heeft aangeklikt. Komt uit dezelfde levering als de tekst, ONDER
+    // de bronnen, in een eigen blok met een eigen kop.
+    var verwijzingen = (extra && extra.verwijzingen) || a.verwijzingen || [];
+    var verwijsBlok = verwijzingen.length
+      ? '<div class="verwijs"><b>'+esc(VERWIJS_KOP)+'</b><ul>'+verwijzingen.map(function(v){
+          return '<li><a href="'+esc(v.url)+'" target="_blank" rel="noopener">'+esc(v.titel||v.url)+'</a></li>';
+        }).join("")+'</ul></div>'
+      : "";
     // Onderregel. Een PERSSYNTHESE is eigen redactioneel werk op meerdere
     // bronnen; die onder de naam van de eerste krant uit de lijst zetten zou
     // suggereren dat het hun artikel is. Daar staat dus de redactie met de
@@ -433,7 +457,7 @@
         '<span class="tk"><span class="att">'+esc(a.titel)+'</span>'+(a.summary?'<span class="asum">'+esc(a.summary)+'</span>':'')+(meta?'<span class="ameta">'+meta+'</span>':'')+'</span>'+
         '<span class="chevbox">'+ico("ic-chevron")+'</span>'+
       '</button>'+
-      '<div class="uitleg"><div class="tekst">'+(cat==="nieuws"&&a.label?'<div class="redlabel">'+esc(a.label)+'</div>':'')+paras+bronBlok+'</div></div>'+
+      '<div class="uitleg"><div class="tekst">'+(cat==="nieuws"&&a.label?'<div class="redlabel">'+esc(a.label)+'</div>':'')+paras+bronBlok+verwijsBlok+'</div></div>'+
     '</div>';
   }
 

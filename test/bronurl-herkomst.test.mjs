@@ -232,3 +232,16 @@ test("een verenigingsitem met een asset-URL verliest zijn link wél", () => {
   assert.equal(art.url, null);
   assert.match(art.bronnen[0].urlGeweigerd, /asset-host/);
 });
+
+test("Service-Public houdt zijn bronlinks na de verhuizing naar gouv.fr", () => {
+  // De Franse overheid verplaatste Service-Public naar service-public.gouv.fr;
+  // de feed staat nog op www.service-public.fr. Zonder linkDomeinen weigert de
+  // herkomsttoets élke Service-Public-bronlink — gevonden door de sonde.
+  for (const naam of ["Service-Public — particuliers", "Service-Public — professionnels"]) {
+    const sp = laadBronnen().find((b) => b.naam === naam);
+    assert.ok(sp, `${naam} hoort te bestaan`);
+    assert.equal(bronUrlOordeel("https://www.service-public.gouv.fr/particuliers/actualites/A18905", sp).ok, true);
+    assert.equal(bronUrlOordeel("https://www.service-public.fr/particuliers/actualites/A18905", sp).ok, true);
+    assert.equal(bronUrlOordeel("https://service-public.gouv.fr.kwaad.example/x", sp).ok, false);
+  }
+});

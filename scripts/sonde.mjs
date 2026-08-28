@@ -15,7 +15,7 @@
 //   SONDE_WEBHOOK_URL  optioneel; ontbreekt hij, dan wordt die stap overgeslagen.
 
 import { laadBronnen } from "../lib/feeds.js";
-import { bronUrlOordeel, bronVoorNaam, isAssetHost } from "../lib/bronurl.js";
+import { bronUrlOordeel, bronVoorNaam, bronVoorThema, isAssetHost } from "../lib/bronurl.js";
 import { kernUitTekst, zelfdeVerhaal } from "../lib/cluster.js";
 import {
   PUBLICATIE_TTL_S,
@@ -107,7 +107,10 @@ async function main() {
         );
         continue;
       }
-      const bron = bronVoorNaam(b.naam) || {};
+      // Zelfde valkuil als in lib/tegels.js: bij een AGGREGAATFEED draagt het
+      // item de naam van de vereniging, niet die van de geconfigureerde bron.
+      // Opzoeken op naam levert dan niets op; het thema van de tegel wel.
+      const bron = bronVoorNaam(b.naam) || bronVoorThema(tegel.thema) || {};
       const oordeel = bronUrlOordeel(b.url, bron);
       if (!oordeel.ok) {
         meld(

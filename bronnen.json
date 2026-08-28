@@ -14,6 +14,8 @@
     {
       "naam": "Service-Public — particuliers",
       "feed": "https://www.service-public.fr/abonnements/rss/actu-actualites-particuliers.rss",
+      "linkDomeinen": ["service-public.gouv.fr"],
+      "_linkDomeinen": "Service-Public is verhuisd naar service-public.gouv.fr: de feed staat nog op www.service-public.fr, maar de artikel-URL's wijzen naar www.service-public.gouv.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js elke Service-Public-bronlink.",
       "thema": "praktisch",
       "regime": "overheid",
       "taal": "fr",
@@ -24,6 +26,8 @@
     {
       "naam": "Service-Public — professionnels",
       "feed": "https://www.service-public.fr/abonnements/rss/actu-actu-pro.rss",
+      "linkDomeinen": ["service-public.gouv.fr"],
+      "_linkDomeinen": "Service-Public is verhuisd naar service-public.gouv.fr: de feed staat nog op www.service-public.fr, maar de artikel-URL's wijzen naar www.service-public.gouv.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js elke Service-Public-bronlink.",
       "thema": "ondernemen",
       "regime": "overheid",
       "taal": "fr",

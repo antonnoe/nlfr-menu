@@ -1,0 +1,45 @@
+# Sonde op de live uitvoer van /actueel.
+# ---------------------------------------------------------------------------
+# Dagelijks: haalt de echte productiedata op en toetst harde invarianten
+# (scripts/sonde.mjs). Bij een schending eindigt de stap met code 1, de run
+# wordt rood en GitHub mailt de eigenaar — daar is geen extra notificatie voor
+# nodig.
+#
+# De sonde draait bewust ZONDER npm ci: scripts/sonde.mjs en alles wat het
+# importeert zijn dependency-vrij. Zo kan een kapotte dependency de bewaking
+# niet uitschakelen.
+
+name: Sonde
+
+on:
+  schedule:
+    # 06:20 UTC, dagelijks. Niet op het hele uur: dan is de Actions-wachtrij
+    # het drukst en lopen geplande runs vertraging op.
+    - cron: '20 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonde
+  cancel-in-progress: false
+
+jobs:
+  sonde:
+    name: Invarianten op productie
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Invarianten toetsen op de live uitvoer
+        env:
+          # Ontbreekt de secret, dan is de variabele leeg en slaat de sonde de
+          # POST stilzwijgend over. De bewaking zelf werkt onverminderd.
+          SONDE_WEBHOOK_URL: ${{ secrets.SONDE_WEBHOOK_URL }}
+        run: node scripts/sonde.mjs

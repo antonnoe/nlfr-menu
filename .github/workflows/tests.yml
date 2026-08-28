@@ -1,0 +1,40 @@
+# Testsuite — blokkerend.
+# ---------------------------------------------------------------------------
+# Hiervoor hing "tests groen" ervan af of iemand (of een sessie) `npm test`
+# toevallig aanriep. Nu draait de suite bij elke push naar main en bij elke
+# pull request. Faalt hij, dan is de run rood en mailt GitHub de eigenaar.
+#
+# BLOKKEREND MAKEN IS ÉÉN HANDELING IN DE INSTELLINGEN, zie het eindrapport:
+# een workflow kan zichzelf niet verplicht stellen. Zonder die instelling is de
+# uitslag zichtbaar op de PR maar houdt hij het mergen niet tegen.
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: npm test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # npm ci en niet npm install: de suite hoort tegen de vastgelegde
+      # versies te draaien. Zonder deze stap ontbreekt @anthropic-ai/sdk en
+      # falen drie testbestanden op een module-fout in plaats van op inhoud.
+      - run: npm ci
+
+      - run: npm test

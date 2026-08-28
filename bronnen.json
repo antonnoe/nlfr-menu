@@ -14,6 +14,8 @@
     {
       "naam": "Service-Public — particuliers",
       "feed": "https://www.service-public.fr/abonnements/rss/actu-actualites-particuliers.rss",
+      "linkDomeinen": ["service-public.gouv.fr"],
+      "_linkDomeinen": "Service-Public is verhuisd naar service-public.gouv.fr: de feed staat nog op www.service-public.fr, maar de artikel-URL's wijzen naar www.service-public.gouv.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js elke Service-Public-bronlink.",
       "thema": "praktisch",
       "regime": "overheid",
       "taal": "fr",
@@ -24,6 +26,8 @@
     {
       "naam": "Service-Public — professionnels",
       "feed": "https://www.service-public.fr/abonnements/rss/actu-actu-pro.rss",
+      "linkDomeinen": ["service-public.gouv.fr"],
+      "_linkDomeinen": "Service-Public is verhuisd naar service-public.gouv.fr: de feed staat nog op www.service-public.fr, maar de artikel-URL's wijzen naar www.service-public.gouv.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js elke Service-Public-bronlink.",
       "thema": "ondernemen",
       "regime": "overheid",
       "taal": "fr",
@@ -121,6 +125,8 @@
     {
       "naam": "Franceinfo — Titres",
       "feed": "https://www.francetvinfo.fr/titres.rss",
+      "linkDomeinen": ["franceinfo.fr"],
+      "_linkDomeinen": "Franceinfo publiceert onder twee merkdomeinen: de feed staat op francetvinfo.fr, maar de artikelen staan op www.franceinfo.fr en op regiosubdomeinen als france3-regions.franceinfo.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js die links terecht-maar-onterecht en verliest een deel van de perssyntheses zijn bronlink.",
       "thema": "landelijk-fr",
       "regime": "pers",
       "taal": "fr",
@@ -212,7 +218,9 @@
       "verificatie": "geverifieerd",
       "verificatieDatum": "2026-08-04",
       "vensterDagen": 30,
-      "_opmerking": "Aggregaat-JSON van antonnoe/verenigingen-kalender (GitHub Pages). Bundelt de nieuwsfeeds van NL-verenigingen in Frankrijk. Ruimer venster (30 dagen), want laagfrequent."
+      "linkAggregaat": true,
+      "_opmerking": "Aggregaat-JSON van antonnoe/verenigingen-kalender (GitHub Pages). Bundelt de nieuwsfeeds van NL-verenigingen in Frankrijk. Ruimer venster (30 dagen), want laagfrequent.",
+      "_linkAggregaat": "De itemlinks wijzen naar de websites van de verenigingen zelf, niet naar antonnoe.github.io. De herkomsttoets 'host hoort bij de feed-host' kan hier dus niet gelden; zou hij dat wel doen, dan verdwijnt elke verenigingslink. Alle andere toetsen uit lib/bronurl.js blijven onverkort gelden: absolute http(s)-URL, niet-leeg pad, geen asset-host, geen geblokkeerd domein. De sonde (.github/workflows/sonde.yml) rapporteert welke hosts de aggregaat aanlevert, zodat deze lijst later een expliciete linkDomeinen-allowlist kan worden."
     }
   ]
 }

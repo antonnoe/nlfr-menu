@@ -21,6 +21,7 @@ import {
 } from "../lib/poort.js";
 import { vindGelijkenis, gelijkenis, vindPrimaireBron } from "../lib/gelijkenis.js";
 import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
+import { keurBronnen } from "../lib/bronurl.js";
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
@@ -218,6 +219,33 @@ export default async function handler(req, res) {
       (a, b) =>
         (Date.parse(b.gepubliceerdOp) || 0) - (Date.parse(a.gepubliceerdOp) || 0)
     );
+    // Bron-URL-weigeringen over ALLES wat is opgeslagen: concepten, publicaties,
+    // overheidsberichten en registerrecords. Aanleiding was de storing waarbij
+    // Infofrankrijk-items naar fonts.googleapis.com linkten; die was nergens
+    // zichtbaar. Nu staat hier per record waarom een link is onderdrukt, in
+    // gewone taal. Er wordt niets verwijderd — alleen gemeld.
+    const bronUrlWeigeringen = [];
+    for (const [soort, lijst] of [
+      ["concept", besten],
+      ["publicatie", publicaties],
+      ["overheid", overheid],
+      ["register", registerRecords],
+    ]) {
+      for (const doc of lijst || []) {
+        for (const w of keurBronnen(doc)) {
+          bronUrlWeigeringen.push({
+            soort,
+            id: doc.id || null,
+            titel: doc.kop || doc.titel || doc.titelBron || "",
+            datum: doc.gepubliceerdOp || doc.datum || doc.datumBron || null,
+            bron: w.naam,
+            url: w.url,
+            reden: w.reden,
+          });
+        }
+      }
+    }
+
     // overheid staat automatisch live; hier alleen als kill-switch (verwijderen).
     return res.status(200).json({
       ok: true,
@@ -227,6 +255,7 @@ export default async function handler(req, res) {
       buitenlandVerwijderd,
       publicaties,
       overheid,
+      bronUrlWeigeringen,
     });
   }
 

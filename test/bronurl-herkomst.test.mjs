@@ -188,3 +188,47 @@ test("een uitgever met een tweede merkdomein houdt zijn bronlinks", () => {
   // Een lookalike-domein mag er niet doorheen glippen.
   assert.equal(bronUrlOordeel("https://kwaadfranceinfo.fr/x", fi).ok, false);
 });
+
+test("een verenigingsitem houdt zijn link, ook al is de bronnaam de vereniging", () => {
+  // De aggregaatfeed levert per item de naam van de VERENIGING ("LOTgenoten"),
+  // niet die van de geconfigureerde bron. Wie de bronconfiguratie op die naam
+  // opzoekt vindt niets en onderdrukt vervolgens élke verenigingslink — een
+  // regressie die de sonde op productie aan het licht bracht.
+  const nu = Date.parse("2026-08-25T12:00:00Z");
+  const items = [
+    {
+      titel: "Festival de Caunes-Minervois vanaf 24 augustus",
+      url: "https://www.nvlr.example/nieuws/festival-caunes",
+      bron: "NVLR",
+      datum: new Date(nu - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      thema: "verenigingen",
+      regime: "verenigingen",
+      samenvatting: "Het festival begint op 24 augustus.",
+    },
+  ];
+  const tegel = assembleerTegels({ items, nu }).find((t) => t.soort === "verenigingen");
+  assert.ok(tegel, "er hoort een verenigingentegel te zijn");
+  const art = tegel.artikelen[0];
+  assert.equal(art.url, "https://www.nvlr.example/nieuws/festival-caunes");
+  assert.equal(art.bronnen[0].url, "https://www.nvlr.example/nieuws/festival-caunes");
+  assert.equal(art.bronnen[0].urlGeweigerd, undefined);
+});
+
+test("een verenigingsitem met een asset-URL verliest zijn link wél", () => {
+  const nu = Date.parse("2026-08-25T12:00:00Z");
+  const items = [
+    {
+      titel: "Doorkijkje",
+      url: "https://fonts.googleapis.com/css2?family=X",
+      bron: "ERN Paris",
+      datum: new Date(nu - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      thema: "verenigingen",
+      regime: "verenigingen",
+      samenvatting: "Iets.",
+    },
+  ];
+  const tegel = assembleerTegels({ items, nu }).find((t) => t.soort === "verenigingen");
+  const art = tegel.artikelen[0];
+  assert.equal(art.url, null);
+  assert.match(art.bronnen[0].urlGeweigerd, /asset-host/);
+});

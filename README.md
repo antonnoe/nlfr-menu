@@ -78,18 +78,84 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
 
 - `bronnen.json` — de enige toegestane bronnenlijst (RSS/Atom). Los aanpasbaar,
   zonder code. Elke bron heeft o.a. `regime` (`overheid` of `pers`) en `actief`.
-- `/api/actueel` — haalt alle actieve bronnen op, parseert (RSS 2.0 + Atom),
-  normaliseert en respecteert het regime (overheid: titel + samenvatting; pers:
-  alleen titel + bron + datum + link). Bepaalt hot-clusters (≥ 3 onafhankelijke
-  bronnen) en zet gepubliceerde redactiesyntheses bovenaan. Een kapotte feed
-  wordt overgeslagen; de rest blijft werken. Stale-while-revalidate (~5 min).
+- `/api/actueel` — levert het antwoord voor de pagina: tegels, agenda,
+  bronStatus. **Leest bij voorkeur een voorgebakken antwoord uit KV** (zie
+  "Hoe het antwoord tot stand komt" hieronder) en stelt het alleen zelf samen
+  als dat ontbreekt. Bij zelf samenstellen: alle actieve bronnen ophalen,
+  parseren (RSS 2.0 + Atom), normaliseren en het regime respecteren (overheid:
+  titel + samenvatting; pers: alleen titel + bron + datum + link), hot-clusters
+  bepalen (≥ 3 onafhankelijke bronnen) en gepubliceerde redactiesyntheses
+  bovenaan zetten. Een kapotte feed wordt overgeslagen; de rest blijft werken.
 - `/api/schoolvakanties` — eerstvolgende schoolvakantie per zone, live uit de
   open data van het onderwijsministerie, met vaste link naar service-public.
-- `/api/cron` — serverless job (Vercel Cron) die voor nieuwe hot-clusters via de
-  Anthropic API één NL-synthese schrijft en als **concept** opslaat. Nooit direct
-  live. Model/max_tokens staan in één constante (`lib/config.js` → `AI_CONFIG`).
+- `/api/cron` — serverless job (Vercel Cron, elke 15 min) die voor nieuwe
+  hot-clusters via de Anthropic API één NL-synthese schrijft en als **concept**
+  opslaat. Nooit direct live. Model/max_tokens staan in één constante
+  (`lib/config.js` → `AI_CONFIG`). Aan het eind van elke ronde **bakt de cron
+  het complete antwoord van `/api/actueel` voor** en zet het in KV.
 - `/review?token=…` — mobielvriendelijke reviewtool. Publiceer / Weg / inline
   bewerken. Concepten verlopen automatisch na 48 uur.
+
+### Hoe het antwoord van `/api/actueel` tot stand komt
+
+Deze route stelde het antwoord vroeger bij **elke** cache-miss ter plekke samen:
+16 feeds live ophalen plus de verenigingen-agenda, en daarna ~145 losse KV-reads.
+De traagste externe site bepaalde de responstijd — gemeten 12,0 tot 12,5 s, tegen
+0,06 s bij een cache-hit. Nu is het omgedraaid:
+
+1. **De cron bakt voor.** Aan het eind van elke ronde (elke 15 min) stelt
+   `/api/cron` het volledige antwoordobject samen — `bijgewerkt`, `tegels`,
+   `agenda`, `bronStatus` — en schrijft dat weg onder de sleutel
+   **`actueel:snapshot:v1`**, met een **TTL van 6 uur**. Die TTL is ruim langer
+   dan de croninterval: een paar gemiste rondes geven dus nog geen lege pagina.
+   Het veld `bijgewerkt` is voortaan het **bakmoment**, niet de requesttijd; het
+   object draagt datzelfde moment ook als `gebakkenOp`.
+2. **`/api/actueel` leest die sleutel** en antwoordt ermee. Dat is één
+   KV-round-trip, geen enkele feed.
+3. **Ontbreekt de snapshot, of is hij ouder dan 60 minuten**, dan stelt de route
+   het antwoord alsnog zelf samen (live feeds + KV) — via dezelfde functie als de
+   cron, `lib/antwoord.js` → `bouwAntwoord()`, dus functioneel identiek aan het
+   oude gedrag, inclusief `bronStatus` — en **schrijft het resultaat weg als
+   nieuwe snapshot**, zodat de volgende bezoeker hem wél voorgebakken krijgt.
+   Er is bewust **geen lock of wachtrij** bij gelijktijdige missers: twee keer
+   bakken mag, dat is de complexiteit niet waard.
+4. **Zonder KV** (env-vars niet ingesteld) valt stap 1 en 3 weg: er is geen
+   snapshot te lezen en niet te schrijven, en de route stelt het antwoord elke
+   keer zelf samen. De pagina blijft dus werken, precies zoals voorheen.
+
+Na een deploy is in de uitvoer van `/api/cron` te zien of het voorbakken lukt:
+het veld `snapshot` bevat `ok`, het bakmoment en het aantal tegels/artikelen, of
+`ok:false` met een reden (bijvoorbeeld een document dat de maximale
+requestgrootte van Upstash overschrijdt). Mislukt het voorbakken, dan valt
+`/api/actueel` vanzelf terug op zelf samenstellen — het gedrag van vóór deze
+ingreep — dus de pagina blijft hoe dan ook werken.
+
+De diagnoseheader `X-Actueel-Herkomst` vertelt welk pad is gelopen: `snapshot`,
+`vers-ontbrekend`, `vers-verouderd`, of met achtervoegsel `-nietbewaard` als het
+wegschrijven mislukte. Hij verandert niets aan de inhoud van de pagina.
+
+`lib/store.js` → `listJSON()` haalt zijn documenten sinds dezelfde ingreep met
+**MGET in batches van 100** op in plaats van één GET per sleutel: voor de huidige
+voorraad van ~145 documenten zijn dat 5 round-trips naar Upstash in plaats van
+147 (gemeten, zie `docs/meting-actueel-cachemiss-2026-08-28.md`).
+
+### Cachevenster
+
+| header | waarde | waarom |
+| --- | --- | --- |
+| `s-maxage` (CDN) | **900 s** | gelijk aan de croninterval: binnen dat venster bestaat er geen versere versie |
+| `stale-while-revalidate` | **86400 s** | een bezoeker krijgt altijd direct de laatst bekende versie; de verse wordt op de achtergrond gemaakt |
+| `max-age` (browser) | **120 s** | herbezoek en terugnavigatie binnen twee minuten kosten niets |
+
+Die waarden staan in `lib/config.js` (`FEED_MAX_AGE_S`, `FEED_SWR_S`,
+`BROWSER_MAX_AGE_S`). `actueel.html` haalt `/api/actueel` **zonder**
+`cache: "no-store"` op, zodat de browser die `max-age` ook echt gebruikt; de
+5-minutenlus in de pagina haalt daarna vanzelf een verse versie. De fetch van
+`/api/schoolvakanties` staat nog wel op `no-store`.
+
+Meten: `node scripts/meet-actueel.mjs` doet drie miss-metingen (met cache-buster
+in de querystring, want een nieuwe URL is altijd een edge-miss), de hit-meting en
+beide payloadgroottes, en drukt het af als markdown-tabel.
 
 ### Env-vars (in Vercel instellen, zie `.env.example`)
 

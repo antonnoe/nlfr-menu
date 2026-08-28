@@ -599,7 +599,11 @@
 
   function laad(){
     Promise.all([
-      fetch("/api/actueel",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      // Geen cache:"no-store" meer: de server zet max-age=120, dus de browser
+      // mag het antwoord twee minuten hergebruiken (herbezoek en terug-
+      // navigatie kosten dan niets). De 5-minutenlus hieronder haalt daarna
+      // vanzelf een verse versie.
+      fetch("/api/actueel").then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch("/api/schoolvakanties",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
     ]).then(function(res){
       var data = res[0] || { bijgewerkt:new Date().toISOString(), tegels:[], agenda:[], bronStatus:[] };

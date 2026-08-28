@@ -11,15 +11,24 @@
 //   4) verenigingen — NL-verenigingsnieuws (live feed).
 // Daarnaast los: agenda (komende 2 weken) en de bron-statusbalk.
 // Cache: stale-while-revalidate op de drie headers.
+//
+// HOE HET ANTWOORD TOT STAND KOMT (sinds de cache-miss-ingreep). Deze route
+// stelt het antwoord NIET meer standaard zelf samen. De cron bakt elke 15
+// minuten het volledige object voor onder actueel:snapshot:v1; hier wordt dat
+// alleen gelezen (één KV-round-trip). Ontbreekt de snapshot of is hij ouder dan
+// SNAPSHOT_MAX_LEEFTIJD_S, dan stelt de route hem alsnog zelf samen — via
+// dezelfde bouwAntwoord() als de cron, dus functioneel identiek aan het oude
+// gedrag — en schrijft het resultaat weg als nieuwe snapshot.
+// Bewust GEEN lock bij gelijktijdige missers: twee keer bakken mag.
 
-import { haalAlleItems, haalAgenda } from "../lib/feeds.js";
-import { listJSON } from "../lib/store.js";
-import { assembleerTegels } from "../lib/tegels.js";
+import { bouwAntwoord, snapshotBruikbaar } from "../lib/antwoord.js";
+import { getJSON, setJSON } from "../lib/store.js";
 import {
   FEED_MAX_AGE_S,
   FEED_SWR_S,
-  SCAN_PUBLICATIE,
-  SCAN_OVERHEID,
+  BROWSER_MAX_AGE_S,
+  KEY_ACTUEEL_SNAPSHOT,
+  SNAPSHOT_TTL_S,
 } from "../lib/config.js";
 
 // Allowlist-model van antonnoe/nlfr-berichten (api/berichten.js e.a.), maar dan
@@ -61,48 +70,37 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
 
   const nu = Date.now();
-  const nuIso = new Date(nu).toISOString();
 
-  let items = [];
-  let bronStatus = [];
-  let agenda = [];
-  try {
-    [{ items, bronStatus }, { items: agenda }] = await Promise.all([
-      haalAlleItems(nu),
-      haalAgenda(nu),
-    ]);
-  } catch {
-    items = [];
-    bronStatus = [];
-    agenda = [];
+  // 1) Voorgebakken antwoord. getJSON() slikt zowel "geen KV geconfigureerd"
+  //    als een KV-storing en geeft dan null — precies de graceful degradation
+  //    die deze route altijd al had.
+  const snapshot = await getJSON(KEY_ACTUEEL_SNAPSHOT);
+  let antwoord = null;
+  let herkomst = "snapshot";
+
+  if (snapshotBruikbaar(snapshot, nu)) {
+    antwoord = snapshot;
+  } else {
+    // 2) Terugval: zelf samenstellen (live feeds + KV), zoals voorheen.
+    herkomst = snapshot ? "vers-verouderd" : "vers-ontbrekend";
+    antwoord = await bouwAntwoord({ nu });
+    // En meteen wegschrijven, zodat de volgende bezoeker hem wél voorgebakken
+    // krijgt. Mislukt dat (geen KV, storing), dan antwoorden we gewoon door.
+    try {
+      await setJSON(KEY_ACTUEEL_SNAPSHOT, antwoord, SNAPSHOT_TTL_S);
+    } catch {
+      herkomst += "-nietbewaard";
+    }
   }
 
-  // Opgeslagen NL-content ophalen (graceful: zonder KV blijft de rest werken).
-  let publicaties = [];
-  let overheidDocs = [];
-  try {
-    [publicaties, overheidDocs] = await Promise.all([
-      listJSON(SCAN_PUBLICATIE),
-      listJSON(SCAN_OVERHEID),
-    ]);
-  } catch {
-    publicaties = [];
-    overheidDocs = [];
-  }
-
-  const tegels = assembleerTegels({ publicaties, overheidDocs, items, nu });
-
-  const antwoord = {
-    bijgewerkt: nuIso,
-    tegels,
-    agenda: agenda || [], // activiteiten komende 14 dagen (verenigingen-repo)
-    bronStatus,
-  };
+  // Diagnose bij het meten: kwam dit antwoord uit de snapshot of is het ter
+  // plekke gebakken? Verandert niets aan de inhoud van de pagina.
+  res.setHeader("X-Actueel-Herkomst", herkomst);
 
   const swr = `public, s-maxage=${FEED_MAX_AGE_S}, stale-while-revalidate=${FEED_SWR_S}`;
   res.setHeader(
     "Cache-Control",
-    `public, max-age=60, s-maxage=${FEED_MAX_AGE_S}, stale-while-revalidate=${FEED_SWR_S}`
+    `public, max-age=${BROWSER_MAX_AGE_S}, s-maxage=${FEED_MAX_AGE_S}, stale-while-revalidate=${FEED_SWR_S}`
   );
   res.setHeader("CDN-Cache-Control", swr);
   res.setHeader("Vercel-CDN-Cache-Control", swr);

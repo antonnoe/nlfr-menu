@@ -119,14 +119,26 @@ async function main() {
     }
   }
 
-  // ---- I5. Geen twee live artikelen met bijna gelijke titel ----------------
+  // ---- I5. Geen twee LIVE artikelen met bijna gelijk verhaal ---------------
   // Gebruikt de BESTAANDE drempels: zelfdeVerhaal() met DEDUP_GEDEELD_MIN en
-  // DEDUP_JACCARD_MIN uit lib/config.js. Bewust die (strengere, beslissende)
-  // drempel en niet de ruimere waarschuwingsdrempel van de reviewtool: een
-  // sonde die faalt moet ergens over gaan.
-  const kernen = artikelen.map(({ tegel, art }) => ({
-    tegel, art, kern: kernUitTekst(art.titel || ""),
-  }));
+  // DEDUP_JACCARD_MIN uit lib/config.js — de drempel waarop de cron BESLIST,
+  // niet de ruimere waarschuwingsdrempel van de reviewtool.
+  //
+  // Twee afbakeningen, allebei nodig om echte bevindingen over te houden:
+  //   1. Alleen LIVE tegels. De archieftegel bevat per definitie de oudere
+  //      versie van verhalen die live een vervolg kregen; die twee naast
+  //      elkaar leggen levert structureel valse treffers op.
+  //   2. Op kop + tekst, niet op de kale titel. zelfdeVerhaal() is gemaakt
+  //      voor de kern van de VOLLEDIGE tekst; op losse titels betekent
+  //      dezelfde drempel iets anders — en dan is het feitelijk een nieuwe
+  //      drempel. Formuleachtige koppen ("Zeven departementen … oranje voor
+  //      onweer" vs "Zestien departementen … oranje voor onweer") zijn dan
+  //      bijna gelijk terwijl het twee verschillende waarschuwingen zijn.
+  const kernen = artikelen
+    .filter(({ tegel }) => tegel.soort !== "archief" && tegel.id !== "archief")
+    .map(({ tegel, art }) => ({
+      tegel, art, kern: kernUitTekst(`${art.titel || ""} ${art.tekst || art.summary || ""}`),
+    }));
   for (let i = 0; i < kernen.length; i += 1) {
     for (let j = i + 1; j < kernen.length; j += 1) {
       if (zelfdeVerhaal(kernen[i].kern, kernen[j].kern)) {
@@ -194,6 +206,7 @@ async function main() {
     }
   }
 
+  toonInventaris(data, artikelen);
   return klaar(nu);
 }
 
@@ -213,6 +226,25 @@ function hostVan(u) {
 function kort(s, n = 70) {
   const t = String(s || "");
   return t.length > n ? `${t.slice(0, n - 1)}…` : t;
+}
+
+// Wat heeft de sonde gezien? Altijd een compacte inventaris, zodat een run
+// achteraf te lezen is zonder hem opnieuw te draaien. Met SONDE_TOON_LINKS=1
+// ook elke titel met de bron-URL erachter — voor als je één specifiek item wilt
+// natrekken.
+function toonInventaris(data, artikelen) {
+  console.log(`Tegels: ${(data.tegels || []).length}, artikelen: ${artikelen.length}`);
+  for (const t of data.tegels || []) {
+    console.log(`  ${t.id} (${t.soort}): ${(t.artikelen || []).length} artikel(en)`);
+  }
+  if (process.env.SONDE_TOON_LINKS !== "1") return;
+  console.log("\nTitel -> bron-URL:");
+  for (const { tegel, art } of artikelen) {
+    const urls = (art.bronnen || []).map((b) => b.url || `(geweigerd: ${b.urlGeweigerd || "?"})`);
+    console.log(`  [${tegel.id}] ${art.titel}`);
+    console.log(`      artikel-URL: ${art.url || "(geen)"}`);
+    for (const u of urls) console.log(`      bron:        ${u}`);
+  }
 }
 
 async function klaar(nu) {

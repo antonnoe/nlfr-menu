@@ -17,6 +17,11 @@ on:
     # het drukst en lopen geplande runs vertraging op.
     - cron: '20 6 * * *'
   workflow_dispatch:
+    inputs:
+      toon_links:
+        description: 'Elke titel met zijn bron-URL afdrukken (om één item na te trekken)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,4 +47,5 @@ jobs:
           # Ontbreekt de secret, dan is de variabele leeg en slaat de sonde de
           # POST stilzwijgend over. De bewaking zelf werkt onverminderd.
           SONDE_WEBHOOK_URL: ${{ secrets.SONDE_WEBHOOK_URL }}
+          SONDE_TOON_LINKS: ${{ inputs.toon_links && '1' || '0' }}
         run: node scripts/sonde.mjs

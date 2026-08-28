@@ -88,9 +88,10 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
   hot-clusters bepalen (≥ 3 onafhankelijke bronnen) en gepubliceerde
   redactiesyntheses bovenaan zetten. Een kapotte feed wordt overgeslagen; de
   rest blijft werken.
-- `/api/actueel-tekst` — de **tekst-levering**: per artikel de volledige
-  NL-tekst en de volledige bronnenlijst, in één verzoek voor alle artikelen.
-  Zie "De twee leveringen" hieronder.
+- `/api/actueel-tekst` — de **tekst-levering**: per artikel buiten het archief
+  de volledige NL-tekst en de volledige bronnenlijst, in één verzoek.
+- `/api/actueel-archief` — de **archieflevering**: de artikelen van de
+  archieftegel plus hun tekst en bronnen. Zie "De drie leveringen" hieronder.
 - `/api/schoolvakanties` — eerstvolgende schoolvakantie per zone, live uit de
   open data van het onderwijsministerie, met vaste link naar service-public.
 - `/api/cron` — serverless job (Vercel Cron, elke 15 min) die voor nieuwe
@@ -101,56 +102,95 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
 - `/review?token=…` — mobielvriendelijke reviewtool. Publiceer / Weg / inline
   bewerken. Concepten verlopen automatisch na 48 uur.
 
-### De twee leveringen
+### De drie leveringen
 
-De pagina wordt in **twee stukken** geserveerd. Reden: het volledige antwoord
-was 317.675 bytes (88 kB over de lijn) voor 152 artikelen, en daarvan was het
-veld `tekst` samen 117.303 bytes en waren de `bronnen`-arrays 114.154 bytes —
-ruim 70% — terwijl de lezer die pas ziet zodra hij een artikel **openklapt**.
+De pagina wordt in **drie stukken** geserveerd, elk met een eigen route. Twee
+metingen op productie liggen daaraan ten grondslag:
 
-| | `/api/actueel` (compact) | `/api/actueel-tekst` |
-| --- | --- | --- |
-| `bijgewerkt`, `gebakkenOp` | ✔ | ✔ (hetzelfde bakmoment) |
-| `tegels` met `label`, `soort`, `thema`, `hot` | ✔ | — |
-| per artikel `id`, `titel`, `summary`, `soort`, `datum`, `url`, `label`, `restDagen` | ✔ | — |
-| per artikel **`bronMeta`** — `{naam, datum}` van de eerste bron | ✔ | — |
-| per artikel **`bronAantal`** — het aantal bronnen | ✔ | — |
-| `agenda`, `bronStatus` | ✔ | — |
-| per artikel `tekst` (volledige NL-tekst) | — | ✔ |
-| per artikel `bronnen` (volledige array, incl. `url`/`urlGeweigerd`) | — | ✔ |
+1. Het volledige antwoord was 317.675 bytes (88 kB over de lijn) voor 152
+   artikelen; het veld `tekst` was daarvan samen 117.303 bytes en de
+   `bronnen`-arrays 114.154 bytes — ruim 70% — terwijl de lezer die pas ziet
+   zodra hij een artikel **openklapt**.
+2. Van die 152 artikelen zitten er **86 in de tegel "archief"**, die standaard
+   **dicht** staat. Die 86 waren 174.180 van de 241.393 bytes van de
+   tekst-levering: een lezer die het archief nooit aanraakt, betaalde er wel voor.
+
+| | `/api/actueel` (compact) | `/api/actueel-tekst` | `/api/actueel-archief` |
+| --- | --- | --- | --- |
+| `bijgewerkt`, `gebakkenOp` | ✔ | ✔ (zelfde bakmoment) | ✔ (zelfde bakmoment) |
+| `tegels` met `label`, `soort`, `thema`, `hot` | ✔ | — | — |
+| per tegel **`artikelAantal`** — wat de kop toont | ✔ | — | — |
+| per tegel **`artikelenApart`** — true op de archieftegel | ✔ | — | — |
+| artikelen van de tegels **buiten** het archief | ✔ | — | — |
+| artikelen van de **archieftegel** | — (alleen de tegel zelf) | — | ✔ |
+| per artikel `id`, `titel`, `summary`, `soort`, `datum`, `url`, `label`, `restDagen` | ✔ | — | ✔ |
+| per artikel **`bronMeta`** — `{naam, datum}` van de eerste bron | ✔ | — | ✔ |
+| per artikel **`bronAantal`** — het aantal bronnen | ✔ | — | ✔ |
+| `agenda`, `bronStatus` | ✔ | — | — |
+| per artikel `tekst` en `bronnen`, buiten het archief | — | ✔ | — |
+| per artikel `tekst` en `bronnen`, in het archief | — | — | ✔ (`teksten`) |
 
 `bronMeta` en `bronAantal` zijn er omdat de dichte staat die twee dingen wél
 toont: `bronMeta` is de onderregel onder een overheids-, Infofrankrijk- of
 verenigingsartikel ("Service-Public · 27 augustus"), `bronAantal` is het getal
 op de knop "Bronnen (n)". Een perssynthese toont daar de NLFR-byline en gebruikt
-`bronMeta` niet.
+`bronMeta` niet. `artikelAantal` staat op **elke** tegel, zodat de kop ("86
+artikelen") één bron van waarheid heeft — ook op de archieftegel, waar de
+artikelen zelf niet zijn meegestuurd.
 
-De tekst-levering is een object op sleutel **`tegelId/artikelId`**, niet op het
-kale artikel-id: hetzelfde artikel-id kan in twee tegels voorkomen (een
+De tekst- en archieflevering hangen aan de sleutel **`tegelId/artikelId`**, niet
+aan het kale artikel-id: hetzelfde artikel-id kan in twee tegels voorkomen (een
 perssynthese die van de live-tegel naar het archief verhuist).
 
 ```json
+// /api/actueel-tekst
 { "bijgewerkt": "...", "gebakkenOp": "...",
   "artikelen": { "overheid-douane/a1": { "tekst": "...", "bronnen": [ ... ] } } }
+
+// /api/actueel-archief
+{ "bijgewerkt": "...", "gebakkenOp": "...", "tegelId": "archief",
+  "artikelen": [ { "id": "...", "titel": "...", "bronMeta": {}, "bronAantal": 2 } ],
+  "teksten":   { "archief/a1": { "tekst": "...", "bronnen": [ ... ] } } }
 ```
 
-**Hoe de pagina ze gebruikt** (`actueel.html`): renderen gebeurt op de compacte
-levering; de tekst-levering wordt daarná op de achtergrond opgehaald en houdt de
-eerste weergave niet op. Klapt de lezer een artikel open voordat die binnen is,
-dan ziet hij de summary met de regel "Volledige tekst wordt geladen…" en een
-niet-aanklikbare "Bronnen (n)" — het aantal is dan al bekend uit `bronAantal`.
-Zodra de levering binnen is, rendert de pagina opnieuw (open/dicht-standen en
-scrollpositie blijven staan). Mislukt de levering helemaal, dan blijft de
-summary staan met "De volledige tekst kon niet worden geladen"; de 5-minutenlus
-probeert het vanzelf opnieuw. Een lege bak of een knop die niets doet komt er
-dus in geen van de gevallen.
+**Wanneer de pagina welke ophaalt** (`actueel.html`):
 
-**De sonde toetst beide leveringen.** `scripts/sonde.mjs` haalt ze allebei op en
+| levering | moment |
+| --- | --- |
+| 1 — compact | meteen; hierop wordt gerenderd |
+| 2 — tekst | direct ná de eerste weergave, op de achtergrond |
+| 3 — archief | **pas als de lezer de archieftegel opent** |
+
+Levering 3 wordt bewust *niet* meegeladen: dat is precies het verbruik dat de
+splitsing weghaalt. Klapt de lezer een artikel open voordat levering 2 binnen
+is, dan ziet hij de summary met de regel "Volledige tekst wordt geladen…" en een
+niet-aanklikbare "Bronnen (n)" — het aantal is dan al bekend uit `bronAantal`.
+Opent hij de archieftegel, dan staat er "Archief wordt geladen…" met de kop al
+op het juiste aantal. Zodra een levering binnen is, rendert de pagina opnieuw;
+open/dicht-standen en scrollpositie blijven staan. Mislukt levering 2, dan blijft
+de summary staan ("De volledige tekst kon niet worden geladen") en probeert de
+5-minutenlus het opnieuw; mislukt levering 3, dan zegt de tegel dat, en een
+dicht-en-weer-open doet een nieuwe poging. Een lege bak of een knop die niets
+doet komt er in geen van de gevallen.
+
+**De sonde toetst alle drie de leveringen.** `scripts/sonde.mjs` haalt ze op en
 voegt ze per `tegelId/artikelId` weer samen, zodat de bronlinktoetsen (I3, I4,
 I9) en de tekstinvarianten (I5) op dezelfde artikelvorm blijven werken als vóór
-de splitsing. Twee toetsen zijn erbij gekomen: **I10** (de leveringen dekken
-elkaar exact en komen uit dezelfde ronde) en **I11** (`bronAantal` en `bronMeta`
-kloppen met de volledige bronnenlijst).
+de splitsing — de 86 archiefartikelen inbegrepen. Zou hij de derde levering
+overslaan, dan zouden die 86 buiten élke invariant vallen. Drie toetsen zijn
+erbij gekomen:
+
+- **I10** — de leveringen dekken elkaar: elk artikel heeft een tekst-record.
+  Bakmomenten mogen binnen één croninterval uiteenlopen (elke route heeft een
+  eigen edge-cache-entry; de ene kan net ververst zijn terwijl de andere nog
+  stale wordt geserveerd) — daarboven is het een bevinding.
+- **I11** — `bronAantal` en `bronMeta` kloppen met de volledige bronnenlijst.
+- **I12** — de archieftegel: `artikelAantal` in de kop klopt met het aantal
+  artikelen dat de derde levering bevat, en die levering hoort bij die tegel.
+
+> **Niet te verwarren met `/archief`.** Die pagina toont het duurzame
+> regelgevingsregister en draait op `/api/register`. Daar staat de
+> archief**tegel** van de nieuwspagina helemaal los van.
 
 ### Hoe de leveringen tot stand komen
 
@@ -161,21 +201,23 @@ De traagste externe site bepaalde de responstijd — gemeten 12,0 tot 12,5 s, te
 
 1. **De cron bakt voor.** Aan het eind van elke ronde (elke 15 min) stelt
    `/api/cron` het volledige antwoordobject samen — `bijgewerkt`, `tegels`,
-   `agenda`, `bronStatus` — splitst het in de twee leveringen en schrijft die
-   weg onder **`actueel:snapshot:v2`** (compact) en
-   **`actueel:snapshot-tekst:v1`** (tekst), allebei met een **TTL van 6 uur**.
-   Die TTL is ruim langer dan de croninterval: een paar gemiste rondes geven dus
-   nog geen lege pagina. Het veld `bijgewerkt` is het **bakmoment**, niet de
-   requesttijd; beide leveringen dragen datzelfde moment ook als `gebakkenOp`.
+   `agenda`, `bronStatus` — splitst het in de drie leveringen en schrijft die
+   weg onder **`actueel:snapshot:v3`** (compact),
+   **`actueel:snapshot-tekst:v2`** (tekst) en
+   **`actueel:snapshot-archief:v1`** (archief), alle drie met een **TTL van 6
+   uur**. Die TTL is ruim langer dan de croninterval: een paar gemiste rondes
+   geven dus nog geen lege pagina. Het veld `bijgewerkt` is het **bakmoment**,
+   niet de requesttijd; alle drie de leveringen dragen datzelfde moment ook als
+   `gebakkenOp`.
 2. **Elke route leest haar eigen sleutel** en antwoordt ermee. Dat is één
    KV-round-trip, geen enkele feed.
 3. **Ontbreekt de snapshot, of is hij ouder dan 60 minuten**, dan stelt de route
    het volledige antwoord alsnog zelf samen (live feeds + KV) — via dezelfde
    functie als de cron, `lib/antwoord.js` → `bouwAntwoord()`, dus functioneel
    identiek aan het oude gedrag, inclusief `bronStatus` — splitst het, en
-   **schrijft BEIDE leveringen weg**. Wie de ene route mist, warmt dus meteen
-   ook de andere op; de tweede route hoeft de feeds daarna niet nóg een keer op
-   te halen. Er is bewust **geen lock of wachtrij** bij gelijktijdige missers:
+   **schrijft alle DRIE de leveringen weg**. Wie de ene route mist, warmt dus
+   meteen ook de andere twee op; die hoeven de feeds daarna niet nóg een keer op
+   te halen, en de drie dragen hetzelfde bakmoment. Er is bewust **geen lock of wachtrij** bij gelijktijdige missers:
    twee keer bakken mag, dat is de complexiteit niet waard.
 4. **Zonder KV** (env-vars niet ingesteld) valt stap 1 en 3 weg: er is geen
    snapshot te lezen en niet te schrijven, en de routes stellen het antwoord elke
@@ -213,7 +255,8 @@ Die waarden staan in `lib/config.js` (`FEED_MAX_AGE_S`, `FEED_SWR_S`,
 
 Meten: `node scripts/meet-actueel.mjs` doet per route drie miss-metingen (met
 cache-buster in de querystring, want een nieuwe URL is altijd een edge-miss), de
-hit-meting en beide payloadgroottes, plus wat een lezer in totaal binnenhaalt.
+hit-meting en beide payloadgroottes, plus wat een lezer binnenhaalt in de drie
+scenario's (niets aanraken / een artikel openklappen / het archief openen).
 Drukt het af als markdown-tabel.
 
 ### Env-vars (in Vercel instellen, zie `.env.example`)

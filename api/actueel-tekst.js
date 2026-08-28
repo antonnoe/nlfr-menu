@@ -1,9 +1,10 @@
 // GET /api/actueel-tekst — de tweede levering bij /api/actueel.
 // ---------------------------------------------------------------------------
-// Levert per artikel wat de lezer pas ziet als hij OPENKLAPT: de volledige
-// NL-tekst en de volledige bronnen-array (met titel, naam, datum en de al
-// gevalideerde bron-URL, of `url: null` met `urlGeweigerd` als de server hem
-// heeft geweigerd — zie lib/bronurl.js).
+// Levert per artikel BUITEN HET ARCHIEF wat de lezer pas ziet als hij
+// OPENKLAPT: de volledige NL-tekst en de volledige bronnen-array (met titel,
+// naam, datum en de al gevalideerde bron-URL, of `url: null` met
+// `urlGeweigerd` als de server hem heeft geweigerd — zie lib/bronurl.js).
+// De archiefartikelen staan in /api/actueel-archief.
 //
 // Vorm:
 //   { bijgewerkt, gebakkenOp, artikelen: { "<tegelId>/<artikelId>": { tekst, bronnen } } }

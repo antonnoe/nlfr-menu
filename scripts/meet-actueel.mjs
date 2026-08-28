@@ -26,7 +26,8 @@ const RONDES = Number(process.env.MEET_RONDES || 3);
 
 const ROUTES = [
   { naam: "compact", pad: "/api/actueel", uitleg: "levering 1 — wat de dichte staat toont" },
-  { naam: "tekst", pad: "/api/actueel-tekst", uitleg: "levering 2 — tekst + bronnen" },
+  { naam: "tekst", pad: "/api/actueel-tekst", uitleg: "levering 2 — tekst + bronnen, buiten het archief" },
+  { naam: "archief", pad: "/api/actueel-archief", uitleg: "levering 3 — de archieftegel, pas bij openen" },
 ];
 
 // Eén curl-meting. `-w` levert de cijfers die ertoe doen: time_starttransfer is
@@ -105,49 +106,63 @@ for (const route of ROUTES) {
 
 // ---- Wat een lezer werkelijk binnenhaalt ----------------------------------
 // De pagina rendert op levering 1 en haalt levering 2 daarna op de ACHTERGROND
-// op. Openklappen kost dus geen extra verzoek: scenario (a) en (b) halen
-// dezelfde bytes binnen. Wat wél verschilt is het moment — en dat is precies
-// waar de splitsing voor is.
+// op; levering 3 (het archief) komt er PAS bij als de lezer die tegel opent.
+// Vandaar drie scenario's — (a) is het geval dat verreweg het vaakst voorkomt.
 const compact = samenvatting.find((r) => r.naam === "compact");
 const tekst = samenvatting.find((r) => r.naam === "tekst");
-if (compact && tekst) {
+const archief = samenvatting.find((r) => r.naam === "archief");
+if (compact && tekst && archief) {
+  const regel3 = (label, delen) => {
+    const br = delen.reduce((n, d) => n + d.brotli, 0);
+    const ru = delen.reduce((n, d) => n + d.onbewerkt, 0);
+    return `| ${label} | ${br} | ${ru} |`;
+  };
   console.log("## Wat een lezer binnenhaalt\n");
   console.log("| scenario | over de lijn (brotli) | onbewerkt |");
   console.log("| --- | --- | --- |");
-  console.log(`| vóór de eerste weergave | ${compact.brotli} | ${compact.onbewerkt} |`);
-  console.log(
-    `| (a) pagina openen, niets openklappen | ${compact.brotli + tekst.brotli} | ${compact.onbewerkt + tekst.onbewerkt} |`
-  );
-  console.log(
-    `| (b) pagina openen, één artikel openklappen | ${compact.brotli + tekst.brotli} | ${compact.onbewerkt + tekst.onbewerkt} |`
-  );
+  console.log(regel3("vóór de eerste weergave", [compact]));
+  console.log(regel3("(a) pagina openen, niets aanraken", [compact, tekst]));
+  console.log(regel3("(b) één artikel buiten het archief openklappen", [compact, tekst]));
+  console.log(regel3("(c) de archieftegel openen", [compact, tekst, archief]));
   console.log(
     "\n(a) en (b) zijn gelijk: levering 2 wordt na de eerste weergave op de " +
-      "achtergrond opgehaald, dus openklappen kost geen extra verzoek."
+      "achtergrond opgehaald, dus openklappen kost geen extra verzoek. Levering 3 " +
+      "komt er alleen bij in geval (c)."
   );
 }
 
 // ---- Bakmoment en inhoudstelling uit de antwoorden zelf --------------------
 try {
-  const [c, t] = await Promise.all([
-    fetch(`${BASIS}/api/actueel`, { headers: { Accept: "application/json" } }).then((r) => r.json()),
-    fetch(`${BASIS}/api/actueel-tekst`, { headers: { Accept: "application/json" } }).then((r) => r.json()),
+  const haal = (pad) =>
+    fetch(`${BASIS}${pad}`, { headers: { Accept: "application/json" } }).then((r) => r.json());
+  const [c, t, a] = await Promise.all([
+    haal("/api/actueel"),
+    haal("/api/actueel-tekst"),
+    haal("/api/actueel-archief"),
   ]);
-  const artikelen = (c.tegels || []).reduce((n, x) => n + (x.artikelen || []).length, 0);
+  const buitenArchief = (c.tegels || []).reduce((n, x) => n + (x.artikelen || []).length, 0);
+  const inArchief = (a.artikelen || []).length;
   console.log(
-    `\nBakmoment compact: ${c.bijgewerkt || "(ontbreekt)"}  ·  tekst: ${t.bijgewerkt || "(ontbreekt)"}`
+    `\nBakmoment compact: ${c.bijgewerkt || "(ontbreekt)"}` +
+      `  ·  tekst: ${t.bijgewerkt || "(ontbreekt)"}` +
+      `  ·  archief: ${a.bijgewerkt || "(ontbreekt)"}`
   );
   console.log(
-    `Inhoud: ${(c.tegels || []).length} tegels, ${artikelen} artikelen, ` +
-      `${Object.keys(t.artikelen || {}).length} tekst-records, ` +
+    `Inhoud: ${(c.tegels || []).length} tegels, ${buitenArchief + inArchief} artikelen ` +
+      `(${buitenArchief} buiten het archief + ${inArchief} erin), ` +
+      `${Object.keys(t.artikelen || {}).length} + ${Object.keys(a.teksten || {}).length} tekst-records, ` +
       `${(c.bronStatus || []).length} bronnen in bronStatus`
   );
   // Hoe de bytes verdeeld zijn — het cijfer waar de splitsing op gebaseerd is.
-  const veldBytes = (kies) =>
-    Object.values(t.artikelen || {}).reduce((n, a) => n + JSON.stringify(kies(a) ?? "").length, 0);
+  const veldBytes = (records, kies) =>
+    Object.values(records || {}).reduce((n, x) => n + JSON.stringify(kies(x) ?? "").length, 0);
   console.log(
-    `Waarvan in levering 2: tekst ${veldBytes((a) => a.tekst)} bytes, ` +
-      `bronnen ${veldBytes((a) => a.bronnen)} bytes (onbewerkt)`
+    `Waarvan in levering 2: tekst ${veldBytes(t.artikelen, (x) => x.tekst)} bytes, ` +
+      `bronnen ${veldBytes(t.artikelen, (x) => x.bronnen)} bytes (onbewerkt)`
+  );
+  console.log(
+    `Waarvan in levering 3: tekst ${veldBytes(a.teksten, (x) => x.tekst)} bytes, ` +
+      `bronnen ${veldBytes(a.teksten, (x) => x.bronnen)} bytes (onbewerkt)`
   );
 } catch (e) {
   console.log(`\nBakmoment/inhoud niet op te halen: ${e.message}`);

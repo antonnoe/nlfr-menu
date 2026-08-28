@@ -9,7 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { splitsAntwoord, artikelSleutel } from "../lib/levering.js";
+import { splitsAntwoord, artikelSleutel, isArchiefTegel } from "../lib/levering.js";
 
 function volAntwoord() {
   return {
@@ -57,17 +57,41 @@ function volAntwoord() {
           { id: "p2", soort: "pers", titel: "Zonder bronnen", summary: "S.", tekst: "T.", bronnen: [] },
         ],
       },
+      {
+        id: "archief",
+        soort: "archief",
+        label: "Archief",
+        artikelen: [
+          {
+            id: "p1", // zelfde id als in pers-landelijk: de oude versie
+            soort: "pers",
+            titel: "Synthese",
+            summary: "Kort.",
+            tekst: "OUDE synthesetekst.",
+            bronnen: [{ naam: "Le Monde", titel: "Un", url: "https://www.lemonde.fr/un", datum: "2026-08-20" }],
+          },
+          { id: "o1", soort: "pers", titel: "Ouder bericht", summary: "O.", tekst: "Oud.", bronnen: [] },
+        ],
+      },
     ],
   };
 }
 
-test("de compacte levering bevat geen tekst en geen bronnen-array", () => {
-  const { compact } = splitsAntwoord(volAntwoord());
-  for (const t of compact.tegels) {
-    for (const a of t.artikelen) {
-      assert.equal("tekst" in a, false, `${a.id} draagt nog tekst mee`);
-      assert.equal("bronnen" in a, false, `${a.id} draagt nog een bronnen-array mee`);
-    }
+test("geen enkel compact artikel draagt tekst of een bronnen-array mee", () => {
+  const { compact, archief } = splitsAntwoord(volAntwoord());
+  // De archieftegel heeft in de compacte levering helemaal geen artikelenlijst
+  // meer; zijn artikelen staan in de derde levering en moeten daar even compact
+  // zijn.
+  const alle = [
+    ...compact.tegels.flatMap((t) => t.artikelen || []),
+    ...archief.artikelen,
+  ];
+  assert.equal(alle.length, 5, "drie buiten het archief plus twee erin");
+  for (const a of alle) {
+    assert.equal("tekst" in a, false, `${a.id} draagt nog tekst mee`);
+    assert.equal("bronnen" in a, false, `${a.id} draagt nog een bronnen-array mee`);
+    assert.equal(typeof a.bronAantal, "number");
+    assert.ok("bronMeta" in a);
   }
 });
 
@@ -105,7 +129,7 @@ test("een artikel zonder bronnen krijgt bronMeta null en bronAantal 0", () => {
   assert.equal(p2.bronAantal, 0);
 });
 
-test("de tekst-levering bevat elk artikel, op sleutel tegelId/artikelId", () => {
+test("de tekst-levering bevat elk niet-archiefartikel, op sleutel tegelId/artikelId", () => {
   const { tekst } = splitsAntwoord(volAntwoord());
   assert.deepEqual(Object.keys(tekst.artikelen).sort(), [
     "overheid-douane/a1",
@@ -121,36 +145,78 @@ test("de tekst-levering bevat elk artikel, op sleutel tegelId/artikelId", () => 
   assert.equal(p1.bronnen[1].urlGeweigerd, "vreemde host");
 });
 
-test("hetzelfde artikel-id in twee tegels botst niet", () => {
-  // Een perssynthese die van de live-tegel naar het archief verhuist heeft in
-  // beide tegels hetzelfde id. Op het kale id zouden die elkaar overschrijven.
+test("de drie leveringen samen zijn weer het volledige antwoord", () => {
   const vol = volAntwoord();
-  vol.tegels.push({
-    id: "archief",
-    soort: "archief",
-    label: "Archief",
-    artikelen: [{ id: "p1", soort: "pers", titel: "Synthese", summary: "Kort.", tekst: "OUDE versie.", bronnen: [] }],
-  });
-  const { tekst } = splitsAntwoord(vol);
-  assert.equal(tekst.artikelen["pers-landelijk/p1"].tekst, "Lange synthesetekst.");
-  assert.equal(tekst.artikelen["archief/p1"].tekst, "OUDE versie.");
-});
-
-test("de twee leveringen samen zijn weer het volledige antwoord", () => {
-  const vol = volAntwoord();
-  const { compact, tekst } = splitsAntwoord(vol);
+  const { compact, tekst, archief } = splitsAntwoord(vol);
+  const teksten = { ...tekst.artikelen, ...archief.teksten };
+  const vul = (tegelId, a) => {
+    const { bronMeta, bronAantal, ...rest } = a;
+    const extra = teksten[artikelSleutel(tegelId, a.id)];
+    return { ...rest, tekst: extra.tekst, bronnen: extra.bronnen };
+  };
   const hersteld = {
     ...compact,
-    tegels: compact.tegels.map((t) => ({
-      ...t,
-      artikelen: t.artikelen.map((a) => {
-        const { bronMeta, bronAantal, ...rest } = a;
-        const extra = tekst.artikelen[artikelSleutel(t.id, a.id)];
-        return { ...rest, tekst: extra.tekst, bronnen: extra.bronnen };
-      }),
-    })),
+    tegels: compact.tegels.map((t) => {
+      const { artikelAantal, artikelenApart, ...rest } = t;
+      const lijst = artikelenApart ? archief.artikelen : t.artikelen;
+      return { ...rest, artikelen: lijst.map((a) => vul(t.id, a)) };
+    }),
   };
   assert.deepEqual(hersteld, vol, "niets verloren, niets veranderd");
+});
+
+test("de archieftegel gaat zonder artikelenlijst mee, mét een kloppende telling", () => {
+  const { compact, archief } = splitsAntwoord(volAntwoord());
+  const tegel = compact.tegels.find((t) => t.id === "archief");
+  assert.equal("artikelen" in tegel, false, "de 86 records gaan niet mee");
+  assert.equal(tegel.artikelAantal, 2, "maar de kop weet hoeveel het er zijn");
+  assert.equal(tegel.artikelenApart, true, "en de pagina weet dat ze apart komen");
+  assert.equal(tegel.label, "Archief", "kop en accent blijven");
+  assert.equal(tegel.soort, "archief");
+  assert.equal(archief.artikelen.length, tegel.artikelAantal, "levering en telling lopen gelijk");
+  assert.equal(archief.tegelId, "archief");
+});
+
+test("de tekst-levering bevat GEEN archiefartikelen meer", () => {
+  const { tekst, archief } = splitsAntwoord(volAntwoord());
+  assert.deepEqual(Object.keys(tekst.artikelen).sort(), [
+    "overheid-douane/a1",
+    "pers-landelijk/p1",
+    "pers-landelijk/p2",
+  ]);
+  assert.deepEqual(Object.keys(archief.teksten).sort(), ["archief/o1", "archief/p1"]);
+});
+
+test("dezelfde synthese in de live-tegel en in het archief blijft uit elkaar", () => {
+  // Op het kale artikel-id zouden deze twee elkaar overschrijven; op
+  // tegelId/artikelId niet.
+  const { tekst, archief } = splitsAntwoord(volAntwoord());
+  assert.equal(tekst.artikelen["pers-landelijk/p1"].tekst, "Lange synthesetekst.");
+  assert.equal(archief.teksten["archief/p1"].tekst, "OUDE synthesetekst.");
+});
+
+test("elke tegel met een artikelenlijst draagt een kloppend artikelAantal", () => {
+  const { compact } = splitsAntwoord(volAntwoord());
+  for (const t of compact.tegels) {
+    if (t.artikelenApart) continue;
+    assert.equal(t.artikelAantal, t.artikelen.length, `tegel ${t.id}`);
+  }
+});
+
+test("alle drie de leveringen dragen hetzelfde bakmoment", () => {
+  const { compact, tekst, archief } = splitsAntwoord(volAntwoord());
+  assert.equal(tekst.gebakkenOp, compact.gebakkenOp);
+  assert.equal(archief.gebakkenOp, compact.gebakkenOp);
+  assert.equal(tekst.bijgewerkt, compact.bijgewerkt);
+  assert.equal(archief.bijgewerkt, compact.bijgewerkt);
+});
+
+test("de archieftegel wordt op id én op soort herkend", () => {
+  // Zo schakelt een hernoeming van één van de twee de splitsing niet stil uit.
+  assert.equal(isArchiefTegel({ id: "archief", soort: "pers" }), true);
+  assert.equal(isArchiefTegel({ id: "oud-nieuws", soort: "archief" }), true);
+  assert.equal(isArchiefTegel({ id: "pers-landelijk", soort: "pers" }), false);
+  assert.equal(isArchiefTegel(null), false);
 });
 
 test("splitsen laat het oorspronkelijke antwoord ongemoeid", () => {
@@ -160,16 +226,15 @@ test("splitsen laat het oorspronkelijke antwoord ongemoeid", () => {
 });
 
 test("een tegel zonder artikelen overleeft de splitsing", () => {
-  const { compact, tekst } = splitsAntwoord({
+  const { compact, tekst, archief } = splitsAntwoord({
     bijgewerkt: "x",
     tegels: [{ id: "links", soort: "links", label: "Links" }],
   });
   assert.deepEqual(compact.tegels[0], { id: "links", soort: "links", label: "Links" });
   assert.deepEqual(tekst.artikelen, {});
+  // Geen archieftegel -> een lege archieflevering, geen ontbrekende.
+  assert.deepEqual(archief.artikelen, []);
+  assert.deepEqual(archief.teksten, {});
+  assert.equal(archief.tegelId, null);
 });
 
-test("de tekst-levering draagt hetzelfde bakmoment als de compacte", () => {
-  const { compact, tekst } = splitsAntwoord(volAntwoord());
-  assert.equal(tekst.bijgewerkt, compact.bijgewerkt);
-  assert.equal(tekst.gebakkenOp, compact.gebakkenOp);
-});

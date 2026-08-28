@@ -442,19 +442,33 @@
     var body;
     if (t.plat){ body = t.plat; }
     else {
-      var arts = t.artikelen||[];
+      // De archieftegel krijgt zijn artikelen uit een EIGEN levering
+      // (/api/actueel-archief), die pas wordt opgehaald als de lezer hem opent.
+      // Tot dat moment is `artikelen` leeg en staat `artikelenApart` op de tegel.
+      var arts = t.artikelenApart ? (archiefArtikelen || []) : (t.artikelen||[]);
       // De archief-tegel bevat alleen nog perssyntheses; wet- en regelgeving
       // gaat naar het duurzame register op /archief.
       var intro = t.soort==="archief"
         ? '<div class="archief-intro">Verlopen nieuwsberichten, blijven hier maximaal 14 dagen staan. '+
           'Wet- en regelgeving verhuist naar het <a href="/archief" target="_top">Regelgevingsarchief</a>.</div>'
         : "";
-      // Geen aparte bullet-lijst meer: die herhaalde exact de titels van de
-      // artikelen eronder. De artikellijst zelf ís nu het overzicht.
-      body = intro + '<div class="artikelen">'+arts.map(function(a){ return artikelHTML(cat,t,a); }).join("")+'</div>';
+      if (t.artikelenApart && !archiefArtikelen){
+        // Nog onderweg, of mislukt. Zelfde soort laadstaat en terugval als bij
+        // de tekst-levering: nooit een lege bak zonder uitleg.
+        body = intro + '<div class="artikelen"><p class="tekstlaad">'+(archiefStatus==="mislukt"
+          ? "Het archief kon niet worden geladen. Klap de tegel dicht en weer open om het opnieuw te proberen."
+          : "Archief wordt geladen…")+'</p></div>';
+      } else {
+        // Geen aparte bullet-lijst meer: die herhaalde exact de titels van de
+        // artikelen eronder. De artikellijst zelf ís nu het overzicht.
+        body = intro + '<div class="artikelen">'+arts.map(function(a){ return artikelHTML(cat,t,a); }).join("")+'</div>';
+      }
     }
     var catLabel = (CATS.filter(function(c){return c.key===cat;})[0]||{}).label || "";
-    var telling = t.plat ? esc(t.meta||"") : meerv((t.artikelen||[]).length);
+    // `artikelAantal` komt uit de compacte levering en klopt ook als de
+    // artikelen zelf nog niet zijn meegestuurd (de archieftegel).
+    var aantalArt = typeof t.artikelAantal === "number" ? t.artikelAantal : (t.artikelen||[]).length;
+    var telling = t.plat ? esc(t.meta||"") : meerv(aantalArt);
     var hot = t.hot ? '<span class="hot"><span class="hotdot"></span>Actueel</span>' : "";
     return '<article class="tegel cat-'+cat+(isOpen?" open":"")+'" data-tegel="'+esc(t.id)+'">'+
       '<button type="button" class="kop" aria-expanded="'+(isOpen?"true":"false")+'">'+
@@ -586,6 +600,14 @@
     // Alleen bij OPENklappen naar de tegel scrollen; bij inklappen blijft de
     // scrollpositie staan waar de lezer hem had.
     if(wantOpen) scrollNaarTegel(tg);
+    // Pas HIERNA de aparte levering ophalen: haalArchief() rendert de scroller
+    // opnieuw, waarmee `tg` uit de DOM verdwijnt. De open-stand overleeft dat
+    // (die zit in `open`), maar het werk hierboven moet wel eerst af zijn.
+    // Bij een eerdere mislukking mag dicht-en-weer-open een nieuwe poging doen.
+    if (wantOpen && heeftAparteArtikelen(id)){
+      if (archiefStatus === "mislukt") archiefStatus = "niet-nodig";
+      haalArchief();
+    }
   }
 
   allesBtn.addEventListener("click", function(){
@@ -653,6 +675,46 @@
   var teksten = null;
   var tekstStatus = "laden"; // laden | klaar | mislukt
 
+  // De DERDE levering: de artikelen van de archieftegel plus hun tekst en
+  // bronnen. Wordt PAS opgehaald als de lezer de archieftegel opent — niet op
+  // de achtergrond meegeladen, want dat is precies het verbruik (80 kB van de
+  // 105 kB) dat deze splitsing weghaalt.
+  var archiefArtikelen = null;
+  var archiefStatus = "niet-nodig"; // niet-nodig | laden | klaar | mislukt
+
+  // Opnieuw renderen zonder de scrollpositie te verliezen: renderScroller()
+  // vervangt de innerHTML, dus die springt anders naar boven.
+  function herrender(){
+    var sc = scrollerEl.scrollTop;
+    render();
+    scrollerEl.scrollTop = sc;
+    werkVervaagBij();
+  }
+
+  function haalArchief(){
+    if (archiefStatus === "laden" || archiefStatus === "klaar") return;
+    archiefStatus = "laden";
+    herrender(); // laadstaat meteen tonen
+    fetch("/api/actueel-archief")
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; })
+      .then(function(d){
+        if (d && Array.isArray(d.artikelen)){
+          archiefArtikelen = d.artikelen;
+          // De teksten gaan in dezelfde map als die van levering 2, op dezelfde
+          // sleutel tegelId/artikelId; artikelHTML() merkt geen verschil.
+          if (d.teksten){
+            if (!teksten) teksten = {};
+            for (var k in d.teksten){ if (Object.prototype.hasOwnProperty.call(d.teksten,k)) teksten[k] = d.teksten[k]; }
+          }
+          archiefStatus = "klaar";
+        } else {
+          archiefStatus = "mislukt";
+        }
+        herrender();
+      });
+  }
+
   function haalTeksten(){
     return fetch("/api/actueel-tekst")
       .then(function(r){ return r.ok ? r.json() : null; })
@@ -667,13 +729,16 @@
           tekstStatus = "mislukt";
         }
         // Opnieuw renderen met wat er nu is. De open/dicht-standen zitten in
-        // `open` en `artOpen`, dus die overleven het; de scrollpositie zetten
-        // we zelf terug, want renderScroller() vervangt de innerHTML.
-        var sc = scrollerEl.scrollTop;
-        render();
-        scrollerEl.scrollTop = sc;
-        werkVervaagBij();
+        // `open` en `artOpen`, dus die overleven het.
+        herrender();
       });
+  }
+
+  // Heeft deze tegel zijn artikelen in een aparte levering staan?
+  function heeftAparteArtikelen(id){
+    var lijst = (laatste && laatste[actief]) || [];
+    for (var i=0;i<lijst.length;i++){ if (lijst[i].id === id) return !!lijst[i].artikelenApart; }
+    return false;
   }
 
   function laad(){
@@ -695,6 +760,9 @@
       werkVervaagBij();
       // Pas NA de eerste weergave, en zonder die op te houden.
       haalTeksten();
+      // Stond de archieftegel al open (bewaarde stand, of een verversing terwijl
+      // de lezer erin zat), dan hoort zijn inhoud er ook te zijn.
+      if (open["archief"]) haalArchief();
     });
   }
 

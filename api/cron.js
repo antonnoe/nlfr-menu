@@ -8,12 +8,13 @@
 // 2) PERS: items eerst door de faits-divers-zeef; daarna clusteren. Een cluster
 //    met >= SYNTHESE_MIN_BRONNEN (2) onafhankelijke bronnen krijgt een NL-
 //    synthese als CONCEPT (48 u TTL) -> reviewtool -> pas na akkoord live.
-// 3) SNAPSHOT: aan het eind van elke ronde worden BEIDE leveringen van de
-//    nieuwspagina voorgebakken en in KV gezet (actueel:snapshot:v2 voor de
-//    compacte levering van /api/actueel, actueel:snapshot-tekst:v1 voor
-//    /api/actueel-tekst; TTL 6 uur). Daardoor hoeft geen van beide routes bij
-//    een cache-miss nog 16 feeds live op te halen. Zie lib/antwoord.js en
-//    lib/levering.js.
+// 3) SNAPSHOT: aan het eind van elke ronde worden ALLE DRIE de leveringen van
+//    de nieuwspagina voorgebakken en in KV gezet (actueel:snapshot:v3 voor de
+//    compacte levering van /api/actueel, actueel:snapshot-tekst:v2 voor
+//    /api/actueel-tekst en actueel:snapshot-archief:v1 voor
+//    /api/actueel-archief; TTL 6 uur). Daardoor hoeft geen van de drie routes
+//    bij een cache-miss nog 16 feeds live op te halen, en dragen ze alle drie
+//    hetzelfde bakmoment. Zie lib/antwoord.js en lib/levering.js.
 // `?force=1` beperkt de ronde tot het best scorende perscluster (max. 1), zodat
 // je gericht één concept kunt testen. Force beïnvloedt ALLEEN de sortering en de
 // limiet: de faits-divers-zeef en de eis van >= 2 onafhankelijke outlets gelden
@@ -44,6 +45,7 @@ import {
   OVERHEID_ARCHIEF_NA_DAGEN,
   KEY_ACTUEEL_SNAPSHOT,
   KEY_ACTUEEL_TEKST_SNAPSHOT,
+  KEY_ACTUEEL_ARCHIEF_SNAPSHOT,
   SNAPSHOT_TTL_S,
 } from "../lib/config.js";
 import { dedupOverheid, alBekend, overheidSleutel } from "../lib/overheid.js";
@@ -370,7 +372,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ---- 3) SNAPSHOT: beide leveringen van de nieuwspagina voorbakken --------
+  // ---- 3) SNAPSHOT: alle drie de leveringen voorbakken ---------------------
   // Pas hier, aan het EIND van de ronde: dan zit alles wat deze ronde live is
   // gegaan (overheid, registeropname, opgeruimde concepten) er al in. De items
   // uit het begin van de ronde worden hergebruikt, zodat de cron de 16 feeds
@@ -384,22 +386,31 @@ export default async function handler(req, res) {
   let snapshot;
   try {
     const antwoord = await bouwAntwoord({ nu: Date.now(), vooraf: { items, bronStatus } });
-    const { compact, tekst } = splitsAntwoord(antwoord);
+    const { compact, tekst, archief } = splitsAntwoord(antwoord);
     await setJSON(KEY_ACTUEEL_SNAPSHOT, compact, SNAPSHOT_TTL_S);
     await setJSON(KEY_ACTUEEL_TEKST_SNAPSHOT, tekst, SNAPSHOT_TTL_S);
+    await setJSON(KEY_ACTUEEL_ARCHIEF_SNAPSHOT, archief, SNAPSHOT_TTL_S);
+    const buitenArchief = compact.tegels.reduce((n, t) => n + (t.artikelen || []).length, 0);
     snapshot = {
       ok: true,
-      sleutels: [KEY_ACTUEEL_SNAPSHOT, KEY_ACTUEEL_TEKST_SNAPSHOT],
+      sleutels: [KEY_ACTUEEL_SNAPSHOT, KEY_ACTUEEL_TEKST_SNAPSHOT, KEY_ACTUEEL_ARCHIEF_SNAPSHOT],
       gebakkenOp: antwoord.gebakkenOp,
       tegels: compact.tegels.length,
-      artikelen: compact.tegels.reduce((n, t) => n + (t.artikelen || []).length, 0),
-      // Moet gelijk zijn aan `artikelen`: elk artikel hoort in beide leveringen
-      // te staan. Loopt dit uiteen, dan is de koppeling stuk.
-      tekstArtikelen: Object.keys(tekst.artikelen).length,
+      // De optelling die moet blijven kloppen: buiten het archief + in het
+      // archief = alle artikelen van de pagina.
+      artikelen: buitenArchief + archief.artikelen.length,
+      artikelenBuitenArchief: buitenArchief,
+      artikelenArchief: archief.artikelen.length,
+      // Moeten gelijk zijn aan de twee tellingen hierboven: elk artikel hoort
+      // precies één tekst-record te hebben. Loopt dit uiteen, dan is de
+      // koppeling stuk en ziet de lezer een artikel dat niet opengaat.
+      tekstRecords: Object.keys(tekst.artikelen).length,
+      archiefTekstRecords: Object.keys(archief.teksten).length,
       agenda: antwoord.agenda.length,
       bytes: {
         compact: JSON.stringify(compact).length,
         tekst: JSON.stringify(tekst).length,
+        archief: JSON.stringify(archief).length,
       },
     };
   } catch (e) {

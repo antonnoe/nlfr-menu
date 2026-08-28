@@ -18,7 +18,13 @@ process.env.KV_REST_API_TOKEN = "test-token";
 
 const { default: handler } = await import("../api/actueel.js");
 const { default: tekstHandler } = await import("../api/actueel-tekst.js");
-const { KEY_ACTUEEL_SNAPSHOT, KEY_ACTUEEL_TEKST_SNAPSHOT, KV_PREFIX } = await import("../lib/config.js");
+const { default: archiefHandler } = await import("../api/actueel-archief.js");
+const {
+  KEY_ACTUEEL_SNAPSHOT,
+  KEY_ACTUEEL_TEKST_SNAPSHOT,
+  KEY_ACTUEEL_ARCHIEF_SNAPSHOT,
+  KV_PREFIX,
+} = await import("../lib/config.js");
 
 // Twee overheidsdocumenten in KV; genoeg om echte tegels te laten ontstaan
 // zonder van een externe feed af te hangen.
@@ -133,6 +139,7 @@ test("terugvalpad bakt zelf, snapshotpad geeft exact hetzelfde antwoord", async 
   assert.ok(telling.feeds > 0, "het terugvalpad haalt de feeds wél live op");
   assert.ok(kv.has(KEY_ACTUEEL_SNAPSHOT), "en schrijft de compacte levering weg");
   assert.ok(kv.has(KEY_ACTUEEL_TEKST_SNAPSHOT), "én meteen de tekst-levering");
+  assert.ok(kv.has(KEY_ACTUEEL_ARCHIEF_SNAPSHOT), "én de archieflevering");
 
   const feedsNaRonde1 = telling.feeds;
 
@@ -218,6 +225,90 @@ test("de tweede route levert per artikel de tekst en de volledige bronnen", asyn
   }
 });
 
+test("de derde route levert de archiefartikelen mét hun tekst en bronnen", async () => {
+  // De KV-voorraad hier levert geen archieftegel op (die ontstaat pas als een
+  // publicatie oud genoeg is), dus getoetst wordt de VORM en de koppeling met
+  // wat de compacte levering over die tegel zegt.
+  const kv = kvVoorraad();
+  zetWereldOp(kv);
+
+  const compactRes = nepRes();
+  await handler({ method: "GET", headers: {} }, compactRes);
+  const archiefRes = nepRes();
+  await archiefHandler({ method: "GET", headers: {} }, archiefRes);
+
+  assert.ok(Array.isArray(archiefRes.body.artikelen), "een lijst compacte artikelen");
+  assert.equal(typeof archiefRes.body.teksten, "object", "en hun tekst-records");
+  assert.equal(
+    archiefRes.body.bijgewerkt,
+    compactRes.body.bijgewerkt,
+    "zelfde bakmoment als de compacte levering"
+  );
+
+  // Wat de compacte levering over de archieftegel zegt, moet kloppen met wat
+  // deze route levert — precies wat de sonde in I12 toetst.
+  const apart = compactRes.body.tegels.filter((t) => t.artikelenApart);
+  for (const t of apart) {
+    assert.equal(t.artikelAantal, archiefRes.body.artikelen.length);
+    assert.equal("artikelen" in t, false, "de tegel draagt zijn artikelen niet mee");
+    assert.equal(archiefRes.body.tegelId, t.id);
+  }
+  // En elk geleverd archiefartikel heeft een tekst-record.
+  for (const a of archiefRes.body.artikelen) {
+    const extra = archiefRes.body.teksten[`${archiefRes.body.tegelId}/${a.id}`];
+    assert.ok(extra, `geen tekst-record voor ${a.id}`);
+    assert.equal(typeof extra.tekst, "string");
+    assert.ok(Array.isArray(extra.bronnen));
+    assert.equal(a.bronAantal, extra.bronnen.length);
+  }
+});
+
+test("elke tegel in de compacte levering draagt een kloppend artikelAantal", async () => {
+  const kv = kvVoorraad();
+  zetWereldOp(kv);
+  const res = nepRes();
+  await handler({ method: "GET", headers: {} }, res);
+  for (const t of res.body.tegels) {
+    if (t.artikelenApart) {
+      assert.equal("artikelen" in t, false);
+      assert.equal(typeof t.artikelAantal, "number");
+    } else if (Array.isArray(t.artikelen)) {
+      assert.equal(t.artikelAantal, t.artikelen.length, `tegel ${t.id}`);
+    }
+  }
+});
+
+test("een miss op de derde route warmt de andere twee op", async () => {
+  const kv = kvVoorraad();
+  const telling = zetWereldOp(kv);
+
+  const res = nepRes();
+  await archiefHandler({ method: "GET", headers: {} }, res);
+  assert.equal(res.headers["x-actueel-herkomst"], "vers-ontbrekend");
+  assert.ok(kv.has(KEY_ACTUEEL_SNAPSHOT));
+  assert.ok(kv.has(KEY_ACTUEEL_TEKST_SNAPSHOT));
+  assert.ok(kv.has(KEY_ACTUEEL_ARCHIEF_SNAPSHOT));
+
+  const feedsNa = telling.feeds;
+  for (const h of [handler, tekstHandler]) {
+    const r = nepRes();
+    await h({ method: "GET", headers: {} }, r);
+    assert.equal(r.headers["x-actueel-herkomst"], "snapshot");
+  }
+  assert.equal(telling.feeds, feedsNa, "de andere routes hoeven niets meer op te halen");
+});
+
+test("de drie routes leveren hetzelfde bakmoment", async () => {
+  const kv = kvVoorraad();
+  zetWereldOp(kv);
+  const res = [nepRes(), nepRes(), nepRes()];
+  await handler({ method: "GET", headers: {} }, res[0]);
+  await tekstHandler({ method: "GET", headers: {} }, res[1]);
+  await archiefHandler({ method: "GET", headers: {} }, res[2]);
+  assert.equal(res[1].body.gebakkenOp, res[0].body.gebakkenOp);
+  assert.equal(res[2].body.gebakkenOp, res[0].body.gebakkenOp);
+});
+
 test("een miss op de tweede route warmt ook de compacte levering op", async () => {
   const kv = kvVoorraad();
   const telling = zetWereldOp(kv);
@@ -235,16 +326,18 @@ test("een miss op de tweede route warmt ook de compacte levering op", async () =
   assert.equal(telling.feeds, feedsNa, "de compacte route hoeft niets meer op te halen");
 });
 
-test("de tweede route heeft dezelfde cacheheaders als de eerste", async () => {
+test("alle drie de routes hebben dezelfde cacheheaders", async () => {
   const kv = kvVoorraad();
   zetWereldOp(kv);
   const a = nepRes();
-  const b = nepRes();
   await handler({ method: "GET", headers: {} }, a);
-  await tekstHandler({ method: "GET", headers: {} }, b);
-  assert.equal(b.headers["cache-control"], a.headers["cache-control"]);
-  assert.equal(b.headers["cdn-cache-control"], a.headers["cdn-cache-control"]);
-  assert.equal(b.headers["vercel-cdn-cache-control"], a.headers["vercel-cdn-cache-control"]);
+  for (const h of [tekstHandler, archiefHandler]) {
+    const b = nepRes();
+    await h({ method: "GET", headers: {} }, b);
+    assert.equal(b.headers["cache-control"], a.headers["cache-control"]);
+    assert.equal(b.headers["cdn-cache-control"], a.headers["cdn-cache-control"]);
+    assert.equal(b.headers["vercel-cdn-cache-control"], a.headers["vercel-cdn-cache-control"]);
+  }
 });
 
 test("een te oude snapshot wordt overgebakken, niet geserveerd", async () => {

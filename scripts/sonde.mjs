@@ -28,15 +28,21 @@ import {
 
 const BASIS = (process.env.SONDE_URL || "https://nlfr-menu.vercel.app").replace(/\/+$/, "");
 const API = `${BASIS}/api/actueel`;
-// De nieuwspagina wordt in TWEE leveringen geserveerd (zie lib/levering.js).
+// De nieuwspagina wordt in DRIE leveringen geserveerd (zie lib/levering.js).
 // `tekst` en de volledige `bronnen`-arrays staan niet meer in /api/actueel maar
-// hier. De sonde MOET die er dus bij halen en per artikel weer samenvoegen —
-// anders zouden de bronlinktoetsen (I3, I4, I9) en de tekstinvarianten (I5)
-// stilzwijgend over lege velden lopen en altijd groen zijn. Precies de
-// bewaking die ze moeten leveren, zou dan wegvallen.
+// in de tweede levering, en de 86 ARTIKELEN VAN DE ARCHIEFTEGEL staan compleet
+// in de derde. De sonde MOET die er dus allebei bij halen en per artikel weer
+// samenvoegen — anders zouden de bronlinktoetsen (I3, I4, I9) en de
+// tekstinvarianten (I5) stilzwijgend over lege velden lopen, en zouden 86
+// artikelen buiten élke invariant vallen. Precies de bewaking die ze moeten
+// leveren, zou dan wegvallen.
 const API_TEKST = `${BASIS}/api/actueel-tekst`;
+const API_ARCHIEF = `${BASIS}/api/actueel-archief`;
 const STATISCH = `${BASIS}/actueel.json`;
 const DAG = 24 * 60 * 60 * 1000;
+// De croninterval (vercel.json: */15). Binnen dit venster mogen de leveringen
+// uit verschillende rondes komen zonder dat er iets stuk is — zie I10.
+const CRON_INTERVAL_MS = 15 * 60 * 1000;
 
 // Ruimste bewaartermijn die de code zelf hanteert, plus een dag speling voor
 // caching. Alles daarbuiten is per definitie fout: het had opgeruimd moeten zijn.
@@ -63,21 +69,30 @@ async function haalJson(url) {
   }
 }
 
-// Alle artikelen uit alle tegels, met hun tegel erbij, en met `tekst` en
-// `bronnen` uit de TWEEDE levering er weer aan geplakt. Vanaf hier kijkt de
-// rest van de sonde naar dezelfde artikelvorm als vóór de splitsing.
-function alleArtikelen(data, teksten) {
-  const perSleutel = (teksten && teksten.artikelen) || {};
+// Alle artikelen van de pagina, met hun tegel erbij, en met `tekst` en
+// `bronnen` uit de tweede/derde levering er weer aan geplakt. Vanaf hier kijkt
+// de rest van de sonde naar dezelfde artikelvorm als vóór de splitsing.
+//
+// De archieftegel komt in de compacte levering ZONDER artikelen binnen (alleen
+// `artikelAantal` en `artikelenApart`); zijn artikelen worden hier uit de derde
+// levering aangevuld.
+function alleArtikelen(data, teksten, archief) {
+  const perSleutel = {
+    ...((teksten && teksten.artikelen) || {}),
+    ...((archief && archief.teksten) || {}),
+  };
+  const archiefArtikelen = (archief && Array.isArray(archief.artikelen) ? archief.artikelen : []);
   const uit = [];
   for (const t of data.tegels || []) {
-    for (const a of t.artikelen || []) {
+    const lijst = t.artikelenApart ? archiefArtikelen : (t.artikelen || []);
+    for (const a of lijst) {
       const sleutel = artikelSleutel(t.id, a.id);
       const extra = perSleutel[sleutel] || null;
       uit.push({
         tegel: t,
         art: extra ? { ...a, tekst: extra.tekst, bronnen: extra.bronnen } : { ...a },
         sleutel,
-        // Of dit artikel een tegenhanger in de tekst-levering had. I10 toetst
+        // Of dit artikel een tegenhanger in een tekstlevering had. I10 toetst
         // dat; de overige invarianten mogen niet stil doorlopen op een gat.
         gekoppeld: Boolean(extra),
       });
@@ -97,43 +112,105 @@ async function main() {
     meld("I1 api-bereikbaar", `${API}: ${e.message}`);
     return klaar(nu);
   }
-  // De tweede levering. Ontbreekt die, dan is dat zelf een bevinding EN mogen
-  // de bronlinktoetsen hieronder niet stilzwijgend groen worden.
+  // De tweede en derde levering. Ontbreekt er een, dan is dat zelf een
+  // bevinding EN mogen de bronlinktoetsen hieronder niet stilzwijgend groen
+  // worden.
   let teksten = null;
+  let archief = null;
   try {
     teksten = await haalJson(API_TEKST);
   } catch (e) {
     meld("I10 tekstlevering", `${API_TEKST}: ${e.message}`);
   }
+  try {
+    archief = await haalJson(API_ARCHIEF);
+  } catch (e) {
+    meld("I10 tekstlevering", `${API_ARCHIEF}: ${e.message}`);
+  }
 
-  const artikelen = alleArtikelen(data, teksten);
+  const artikelen = alleArtikelen(data, teksten, archief);
   if (!artikelen.length) {
     meld("I1 items-aanwezig", `${API} leverde 0 artikelen in ${(data.tegels || []).length} tegels`);
   }
 
-  // ---- I10. De twee leveringen dekken elkaar exact --------------------------
-  // Elk artikel uit de compacte levering hoort een tekst-record te hebben, en
-  // andersom mag de tekst-levering geen wezen bevatten. Loopt dat uiteen, dan
-  // klapt de lezer een artikel open en krijgt hij niets.
-  if (teksten) {
+  // ---- I10. De drie leveringen dekken elkaar exact -------------------------
+  // Elk artikel van de pagina hoort een tekst-record te hebben, en andersom
+  // mogen de tekstleveringen geen wezen bevatten. Loopt dat uiteen, dan klapt
+  // de lezer een artikel open en krijgt hij niets.
+  //
+  // OVER DE BAKMOMENTEN. Elke levering heeft een eigen URL en dus een eigen
+  // edge-cache-entry; die kunnen binnen één cronronde uit elkaar lopen zonder
+  // dat er iets stuk is (de ene is net ververst, de andere wordt nog stale
+  // geserveerd). Daarom is een verschil pas een bevinding als het GROTER is dan
+  // de croninterval — dan hangt een levering echt achter. En daarom telt een
+  // wees (een tekst-record zonder artikel) alleen als de bakmomenten gelijk
+  // zijn: bij normale skew draagt de oudere levering nog records van artikelen
+  // die inmiddels verlopen zijn, en dáár heeft geen lezer last van.
+  //
+  // Een ONTBREKEND record telt altijd: dat is de kant die de lezer wél merkt.
+  const bakmomenten = [
+    ["compact", data.gebakkenOp],
+    ["tekst", teksten && teksten.gebakkenOp],
+    ["archief", archief && archief.gebakkenOp],
+  ].filter(([, v]) => Boolean(v));
+  const tijden = bakmomenten.map(([, v]) => Date.parse(v)).filter((t) => !Number.isNaN(t));
+  const spreiding = tijden.length > 1 ? Math.max(...tijden) - Math.min(...tijden) : 0;
+  const gelijkGebakken = spreiding === 0;
+  if (spreiding > CRON_INTERVAL_MS) {
+    meld(
+      "I10 leveringen",
+      `bakmomenten lopen ${Math.round(spreiding / 60000)} min uiteen (meer dan de croninterval): ` +
+        bakmomenten.map(([n, v]) => `${n} ${v}`).join(", ")
+    );
+  }
+
+  if (teksten || archief) {
     const zonder = artikelen.filter((r) => !r.gekoppeld);
     for (const r of zonder.slice(0, 10)) {
-      meld("I10 tekstlevering", `geen tekst-record voor ${r.sleutel} · "${kort(r.art.titel)}"`);
+      meld("I10 leveringen", `geen tekst-record voor ${r.sleutel} · "${kort(r.art.titel)}"`);
     }
     if (zonder.length > 10) {
-      meld("I10 tekstlevering", `... en nog ${zonder.length - 10} artikel(en) zonder tekst-record`);
+      meld("I10 leveringen", `... en nog ${zonder.length - 10} artikel(en) zonder tekst-record`);
     }
-    const bekend = new Set(artikelen.map((r) => r.sleutel));
-    const wezen = Object.keys(teksten.artikelen || {}).filter((k) => !bekend.has(k));
-    for (const k of wezen.slice(0, 10)) {
-      meld("I10 tekstlevering", `tekst-record ${k} hoort bij geen enkel artikel`);
+    if (gelijkGebakken) {
+      const bekend = new Set(artikelen.map((r) => r.sleutel));
+      const wezen = [
+        ...Object.keys((teksten && teksten.artikelen) || {}),
+        ...Object.keys((archief && archief.teksten) || {}),
+      ].filter((k) => !bekend.has(k));
+      for (const k of wezen.slice(0, 10)) {
+        meld("I10 leveringen", `tekst-record ${k} hoort bij geen enkel artikel`);
+      }
     }
-    // Uit dezelfde cronronde? Anders kan de lezer een tekst bij een titel uit
-    // een andere ronde krijgen.
-    if (teksten.gebakkenOp && data.gebakkenOp && teksten.gebakkenOp !== data.gebakkenOp) {
+  }
+
+  // ---- I12. De archieftegel klopt met zijn eigen levering -------------------
+  // De kop toont "86 artikelen" uit `artikelAantal`, terwijl de artikelen zelf
+  // uit de derde levering komen. Lopen die twee uiteen, dan belooft de kop iets
+  // anders dan de tegel levert.
+  for (const t of data.tegels || []) {
+    if (!t.artikelenApart) continue;
+    const geleverd = (archief && Array.isArray(archief.artikelen) ? archief.artikelen : []).length;
+    if (!archief) {
+      meld("I12 archieflevering", `tegel ${t.id} verwijst naar een aparte levering, maar die is niet opgehaald`);
+    } else if (t.artikelAantal !== geleverd) {
       meld(
-        "I10 tekstlevering",
-        `bakmomenten lopen uiteen: compact ${data.gebakkenOp} vs tekst ${teksten.gebakkenOp}`
+        "I12 archieflevering",
+        `tegel ${t.id}: kop belooft ${t.artikelAantal} artikelen, levering bevat er ${geleverd}`
+      );
+    }
+    if (archief && archief.tegelId && archief.tegelId !== t.id) {
+      meld("I12 archieflevering", `levering hoort bij tegel ${archief.tegelId}, niet bij ${t.id}`);
+    }
+  }
+  // En andersom: een tegel met artikelenlijst hoort een kloppend artikelAantal
+  // te hebben, want dat is wat de kop toont.
+  for (const t of data.tegels || []) {
+    if (t.artikelenApart || !Array.isArray(t.artikelen)) continue;
+    if (typeof t.artikelAantal === "number" && t.artikelAantal !== t.artikelen.length) {
+      meld(
+        "I12 archieflevering",
+        `tegel ${t.id}: artikelAantal ${t.artikelAantal} maar ${t.artikelen.length} artikelen meegestuurd`
       );
     }
   }
@@ -307,7 +384,7 @@ async function main() {
     }
   }
 
-  toonInventaris(data, artikelen, teksten);
+  toonInventaris(data, artikelen, teksten, archief);
   return klaar(nu);
 }
 
@@ -333,12 +410,19 @@ function kort(s, n = 70) {
 // achteraf te lezen is zonder hem opnieuw te draaien. Met SONDE_TOON_LINKS=1
 // ook elke titel met de bron-URL erachter — voor als je één specifiek item wilt
 // natrekken.
-function toonInventaris(data, artikelen, teksten) {
+function toonInventaris(data, artikelen, teksten, archief) {
   console.log(`Tegels: ${(data.tegels || []).length}, artikelen: ${artikelen.length}`);
   const tekstAantal = teksten ? Object.keys(teksten.artikelen || {}).length : "(niet opgehaald)";
-  console.log(`Tekst-levering: ${tekstAantal} artikel(en), bronStatus: ${(data.bronStatus || []).length} bron(nen)`);
+  const archiefAantal = archief ? (archief.artikelen || []).length : "(niet opgehaald)";
+  console.log(
+    `Tekst-levering: ${tekstAantal} record(s), archieflevering: ${archiefAantal} artikel(en), ` +
+      `bronStatus: ${(data.bronStatus || []).length} bron(nen)`
+  );
   for (const t of data.tegels || []) {
-    console.log(`  ${t.id} (${t.soort}): ${(t.artikelen || []).length} artikel(en)`);
+    const n = t.artikelenApart
+      ? `${typeof t.artikelAantal === "number" ? t.artikelAantal : "?"} (aparte levering)`
+      : (t.artikelen || []).length;
+    console.log(`  ${t.id} (${t.soort}): ${n} artikel(en)`);
   }
   if (process.env.SONDE_TOON_LINKS !== "1") return;
   // Optioneel filter op titel: bij ~150 artikelen is de volledige lijst

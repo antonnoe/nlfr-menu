@@ -22,6 +22,10 @@ on:
         description: 'Elke titel met zijn bron-URL afdrukken (om één item na te trekken)'
         type: boolean
         default: false
+      toon_filter:
+        description: 'Beperk die lijst tot titels die deze tekst bevatten'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -48,4 +52,5 @@ jobs:
           # POST stilzwijgend over. De bewaking zelf werkt onverminderd.
           SONDE_WEBHOOK_URL: ${{ secrets.SONDE_WEBHOOK_URL }}
           SONDE_TOON_LINKS: ${{ inputs.toon_links && '1' || '0' }}
+          SONDE_TOON_FILTER: ${{ inputs.toon_filter }}
         run: node scripts/sonde.mjs

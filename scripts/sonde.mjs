@@ -11,7 +11,9 @@
 // code 1, zodat GitHub Actions de run rood maakt en zelf mailt.
 //
 // Draaien: node scripts/sonde.mjs
-//   SONDE_URL       overschrijft de productie-URL (standaard nlfr-menu.vercel.app)
+//   SONDE_URL          overschrijft de productie-URL (standaard nlfr-menu.vercel.app)
+//   SONDE_TOON_LINKS=1 drukt elke titel met zijn bron-URL af
+//   SONDE_TOON_FILTER  beperkt die lijst tot titels die deze tekst bevatten
 //   SONDE_WEBHOOK_URL  optioneel; ontbreekt hij, dan wordt die stap overgeslagen.
 
 import { laadBronnen } from "../lib/feeds.js";
@@ -251,8 +253,14 @@ function toonInventaris(data, artikelen) {
     console.log(`  ${t.id} (${t.soort}): ${(t.artikelen || []).length} artikel(en)`);
   }
   if (process.env.SONDE_TOON_LINKS !== "1") return;
-  console.log("\nTitel -> bron-URL:");
-  for (const { tegel, art } of artikelen) {
+  // Optioneel filter op titel: bij ~150 artikelen is de volledige lijst
+  // onleesbaar als je één item wilt natrekken.
+  const filter = (process.env.SONDE_TOON_FILTER || "").trim().toLowerCase();
+  const tonen = filter
+    ? artikelen.filter(({ art }) => String(art.titel || "").toLowerCase().includes(filter))
+    : artikelen;
+  console.log(`\nTitel -> bron-URL${filter ? ` (filter: "${filter}", ${tonen.length} treffer(s))` : ""}:`);
+  for (const { tegel, art } of tonen) {
     const urls = (art.bronnen || []).map((b) => b.url || `(geweigerd: ${b.urlGeweigerd || "?"})`);
     console.log(`  [${tegel.id}] ${art.titel}`);
     console.log(`      artikel-URL: ${art.url || "(geen)"}`);

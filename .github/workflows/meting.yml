@@ -1,0 +1,51 @@
+# Meting van /api/actueel op productie.
+# ---------------------------------------------------------------------------
+# Handmatig te starten (workflow_dispatch), nooit vanzelf: dit is een meetlat,
+# geen bewaking. Draait scripts/meet-actueel.mjs vanaf een GitHub-runner, die
+# wél onbelemmerd bij productie kan — een ontwikkelomgeving achter een
+# egress-policy kan dat niet, en dan is er geen meting maar een 403.
+#
+# De uitvoer is een markdown-tabel (miss-metingen met cache-buster, de hit, en
+# de payload onbewerkt en brotli), klaar om onder docs/ te plakken. Ook in de
+# job-samenvatting, zodat je hem niet uit de logs hoeft te vissen.
+#
+# Net als de sonde: bewust ZONDER npm ci. Het script is dependency-vrij.
+
+name: Meting
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Basis-URL (standaard https://nlfr-menu.vercel.app)'
+        type: string
+        default: 'https://nlfr-menu.vercel.app'
+      rondes:
+        description: 'Aantal miss-metingen'
+        type: string
+        default: '3'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meting
+  cancel-in-progress: false
+
+jobs:
+  meting:
+    name: Responstijd en payload van /api/actueel
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Meten
+        env:
+          MEET_URL: ${{ inputs.url }}
+          MEET_RONDES: ${{ inputs.rondes }}
+        run: node scripts/meet-actueel.mjs | tee -a "$GITHUB_STEP_SUMMARY"

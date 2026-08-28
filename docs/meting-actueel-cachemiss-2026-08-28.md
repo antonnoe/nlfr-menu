@@ -68,6 +68,20 @@ Mediaan van de missen: **0,421 s**.
 Bakmoment van het geserveerde antwoord: `2026-08-28T16:51:51.662Z`.
 Inhoud: **13 tegels, 152 artikelen**.
 
+## Ná — run 3, 17:03:45 UTC (na een cronronde)
+
+| meting | tijd tot eerste byte | bytes | herkomst | edge |
+| --- | --- | --- | --- | --- |
+| miss 1 (cache-buster) | **0,712 s** | 317675 | `snapshot` | MISS |
+| hit (zonder querystring) | 0,701 s | 317675 | `snapshot` | MISS |
+| hit, brotli | 0,177 s | 88182 | `snapshot` | HIT |
+
+Bakmoment: `2026-08-28T17:01:07.743Z` — in run 2 was dat nog
+`2026-08-28T16:51:51.662Z`, het moment waarop de ROUTE zelf bakte omdat er nog
+geen snapshot lag. Het bakmoment is dus meegeschoven met de cronronde van 17:00
+UTC: **de cron bakt aantoonbaar voor**, en de route serveert wat de cron heeft
+neergelegd. Inhoud onveranderd: 13 tegels, 152 artikelen.
+
 ## Samengevat
 
 | | vóór | ná |

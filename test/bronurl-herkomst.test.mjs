@@ -174,3 +174,17 @@ test("de aggregaatbron laat vreemde hosts toe maar nooit assets of lege paden", 
   assert.equal(bronUrlOordeel("https://vereniging.example", agg).ok, false);
   assert.equal(bronUrlOordeel("https://goedinfrankrijk.com/x", agg).ok, false);
 });
+
+test("een uitgever met een tweede merkdomein houdt zijn bronlinks", () => {
+  // Franceinfo zet zijn feed op francetvinfo.fr maar zijn artikelen op
+  // franceinfo.fr (en regiosubdomeinen daarvan). Zonder linkDomeinen weigert
+  // de herkomsttoets die links en verliest een deel van de perssyntheses zijn
+  // bron — een regressie die de sonde op productie aan het licht bracht.
+  const fi = laadBronnen().find((b) => b.naam.startsWith("Franceinfo"));
+  assert.ok(fi, "de Franceinfo-bron hoort te bestaan");
+  assert.equal(bronUrlOordeel("https://www.franceinfo.fr/societe/x.html", fi).ok, true);
+  assert.equal(bronUrlOordeel("https://france3-regions.franceinfo.fr/occitanie/x.html", fi).ok, true);
+  assert.equal(bronUrlOordeel("https://www.francetvinfo.fr/titres/x.html", fi).ok, true);
+  // Een lookalike-domein mag er niet doorheen glippen.
+  assert.equal(bronUrlOordeel("https://kwaadfranceinfo.fr/x", fi).ok, false);
+});

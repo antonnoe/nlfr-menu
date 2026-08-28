@@ -93,10 +93,20 @@ async function main() {
   // regels als de productiecode (lib/bronurl.js).
   for (const { tegel, art } of artikelen) {
     for (const b of art.bronnen || []) {
-      // Een bewust onderdrukte link (url null + reden) is GOED gedrag, geen
-      // schending: de server heeft hem al geweigerd. Wel melden als er een
-      // klikbare URL staat die de toets niet haalt.
-      if (!b.url) continue;
+      // Een onderdrukte link (url null + reden) is op zichzelf goed gedrag —
+      // de server heeft hem al geweigerd. Maar hij is wél een bevinding: de
+      // lezer verliest een bronlink, en de oorzaak is meestal dat een uitgever
+      // onder een tweede domein publiceert dat nog niet in `linkDomeinen`
+      // staat. Precies zo bleek Franceinfo zijn artikelen op franceinfo.fr te
+      // zetten terwijl de feed op francetvinfo.fr staat. Stil laten passeren
+      // is hoe de oorspronkelijke storing zo lang onzichtbaar bleef.
+      if (!b.url) {
+        meld(
+          "I9 onderdrukte-bronlink",
+          `tegel ${tegel.id} · "${kort(art.titel)}" · bron ${b.naam || "?"} · ${b.urlGeweigerd || "reden onbekend"}`
+        );
+        continue;
+      }
       const bron = bronVoorNaam(b.naam) || {};
       const oordeel = bronUrlOordeel(b.url, bron);
       if (!oordeel.ok) {

@@ -121,6 +121,8 @@
     {
       "naam": "Franceinfo — Titres",
       "feed": "https://www.francetvinfo.fr/titres.rss",
+      "linkDomeinen": ["franceinfo.fr"],
+      "_linkDomeinen": "Franceinfo publiceert onder twee merkdomeinen: de feed staat op francetvinfo.fr, maar de artikelen staan op www.franceinfo.fr en op regiosubdomeinen als france3-regions.franceinfo.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js die links terecht-maar-onterecht en verliest een deel van de perssyntheses zijn bronlink.",
       "thema": "landelijk-fr",
       "regime": "pers",
       "taal": "fr",

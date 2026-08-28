@@ -212,7 +212,9 @@
       "verificatie": "geverifieerd",
       "verificatieDatum": "2026-08-04",
       "vensterDagen": 30,
-      "_opmerking": "Aggregaat-JSON van antonnoe/verenigingen-kalender (GitHub Pages). Bundelt de nieuwsfeeds van NL-verenigingen in Frankrijk. Ruimer venster (30 dagen), want laagfrequent."
+      "linkAggregaat": true,
+      "_opmerking": "Aggregaat-JSON van antonnoe/verenigingen-kalender (GitHub Pages). Bundelt de nieuwsfeeds van NL-verenigingen in Frankrijk. Ruimer venster (30 dagen), want laagfrequent.",
+      "_linkAggregaat": "De itemlinks wijzen naar de websites van de verenigingen zelf, niet naar antonnoe.github.io. De herkomsttoets 'host hoort bij de feed-host' kan hier dus niet gelden; zou hij dat wel doen, dan verdwijnt elke verenigingslink. Alle andere toetsen uit lib/bronurl.js blijven onverkort gelden: absolute http(s)-URL, niet-leeg pad, geen asset-host, geen geblokkeerd domein. De sonde (.github/workflows/sonde.yml) rapporteert welke hosts de aggregaat aanlevert, zodat deze lijst later een expliciete linkDomeinen-allowlist kan worden."
     }
   ]
 }

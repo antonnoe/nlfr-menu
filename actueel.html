@@ -165,6 +165,8 @@
   .bronlijst a{ font-family:var(--body); font-weight:600; font-size:13px; line-height:18px; color:var(--ink-body); text-decoration:none; }
   .bronlijst a:hover{ text-decoration:underline; }
   .bronlijst .uitg{ font-family:var(--body); font-weight:500; font-size:12px; color:var(--ink-meta); }
+  /* Bron zonder bruikbare URL: zelfde plek in de lijst, maar duidelijk geen link. */
+  .bronlijst .bronzonderlink{ font-family:var(--body); font-weight:600; font-size:13px; line-height:18px; color:var(--ink-meta); }
 
   /* Sluitknop onder de tegel */
   .sluitrij{ padding:2px 16px 14px; }
@@ -350,7 +352,13 @@
 
   function bronHTML(b){
     var t=b.titel||b.naam||"bron";
-    return '<li><a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(t)+'</a>'+(b.naam?'<span class="uitg">'+esc(b.naam)+(b.datum?" · "+esc(datum(b.datum)):"")+'</span>':'')+'</li>';
+    var uitg = b.naam?'<span class="uitg">'+esc(b.naam)+(b.datum?" · "+esc(datum(b.datum)):"")+'</span>':'';
+    // Geen bruikbare bron-URL (de server heeft hem geweigerd, zie
+    // lib/bronurl.js) -> de bron blijft staan als attributie, maar zonder link.
+    // Een <a href="null"> zou de lezer naar een kapotte of vreemde pagina
+    // sturen; dat is precies de storing die dit voorkomt.
+    if(!b.url) return '<li><span class="bronzonderlink">'+esc(t)+'</span>'+uitg+'</li>';
+    return '<li><a href="'+esc(b.url)+'" target="_blank" rel="noopener">'+esc(t)+'</a>'+uitg+'</li>';
   }
 
   function artikelHTML(cat, t, a){

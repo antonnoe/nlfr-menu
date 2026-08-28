@@ -50,6 +50,12 @@
   .kop-balk { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   .nb-link { flex:none; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; text-decoration:none; border-radius:999px; padding:8px 14px; min-height:40px; display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(47,107,58,.3); background:rgba(47,107,58,.08); color:var(--actueel); white-space:nowrap; margin-top:4px; }
   .nb-link:hover { background:rgba(47,107,58,.15); }
+  /* Geweigerde bronlinks: opvallend maar niet alarmerend rood-op-rood. */
+  .weigeringen{ list-style:none; margin:0 0 18px; padding:0; display:grid; gap:8px; }
+  .weigeringen li{ border:1px solid #e6c9c9; background:#fdf6f6; border-radius:6px; padding:10px 12px; }
+  .weigeringen .uitg{ color:#7a6a6a; font-size:12px; }
+  .weigeringen .wreden{ margin-top:4px; font-size:13px; color:#8a2b2b; }
+  .weigeringen .wurl{ margin-top:2px; font-size:12px; color:#7a6a6a; word-break:break-all; font-family:ui-monospace,Menlo,Consolas,monospace; }
   .melding { padding:12px 14px; border-radius:10px; margin-bottom:14px; font-size:14px; }
   .fout { background:rgba(128,0,0,.08); color:var(--brand); border:1px solid rgba(128,0,0,.25); }
   /* Waarschuwing binnen een conceptkaart: te smalle bronbasis of een door de
@@ -102,7 +108,7 @@
   if (nbEl){ nbEl.href = PREVIEW_URL; }
   var meldingEl = document.getElementById("melding");
   var inhoudEl = document.getElementById("inhoud");
-  var state = { concepten: [], index: 0, duplicaten: 0, totaal: 0, publicaties: [], overheid: [] };
+  var state = { concepten: [], index: 0, duplicaten: 0, totaal: 0, publicaties: [], overheid: [], bronUrlWeigeringen: [] };
 
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
@@ -252,8 +258,30 @@
       'Voegt de perssynthese hier echt iets aan toe? Zo niet: "Weg".</div>';
   }
 
+  // ---- Geweigerde bron-URL's -------------------------------------------------
+  // Een bronlink die de validatie in lib/bronurl.js niet haalt (vreemde host,
+  // leeg pad, asset-host) wordt op /actueel NIET klikbaar getoond. Zonder deze
+  // sectie zou dat stil gebeuren — en juist dat maakte de storing waarbij
+  // Infofrankrijk-items naar fonts.googleapis.com wezen zo lang onzichtbaar.
+  function bronUrlWeigeringenHtml(){
+    var w = state.bronUrlWeigeringen || [];
+    if (!w.length) return "";
+    var rijen = w.map(function(x){
+      return '<li><b>'+esc(x.titel||"(zonder titel)")+'</b>'+
+        '<span class="uitg"> · '+esc(x.soort)+(x.bron?" · "+esc(x.bron):"")+(x.datum?" · "+esc(datum(x.datum)):"")+'</span>'+
+        '<div class="wreden">'+esc(x.reden)+'</div>'+
+        (x.url?'<div class="wurl">'+esc(x.url)+'</div>':'')+
+      '</li>';
+    }).join("");
+    return '<h2>Geweigerde bronlinks ('+w.length+')</h2>'+
+      '<div class="melding fout">Deze bronnen worden zonder klikbare link getoond. Er is niets verwijderd.</div>'+
+      '<ul class="weigeringen">'+rijen+'</ul>';
+  }
+
   function render(){
     var html = "";
+
+    html += bronUrlWeigeringenHtml();
 
     // ---- Concepten: pager (één voor één) ----
     html += '<h2>Concepten</h2>';
@@ -447,6 +475,7 @@
         state.totaal = res.data.totaalConcepten || state.concepten.length;
         state.publicaties = res.data.publicaties || [];
         state.overheid = res.data.overheid || [];
+        state.bronUrlWeigeringen = res.data.bronUrlWeigeringen || [];
         if (state.index >= state.concepten.length) state.index = 0;
         render();
       } else { melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout"); inhoudEl.innerHTML = ""; }

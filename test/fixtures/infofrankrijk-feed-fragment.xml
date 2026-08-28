@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ECHT FRAGMENT uit de Infofrankrijk-feed, ingekort tot twee items.
+  Bron-URL   : https://infofrankrijk.com/feed/
+  Opgehaald  : 2026-08-28
+  Waarom     : deze twee artikelen beginnen hun <content:encoded> met een
+               ingesloten Divi-blok dat zijn eigen Google-Fonts-links meebrengt.
+               Op productie leverde de parser die links aan als BRON-URL:
+               het eerste item gaf https://fonts.googleapis.com (leeg pad), het
+               tweede de stylesheet-URL met family=Poppins en family=Mulish.
+               De <link>-elementen hieronder zijn onveranderd overgenomen; de
+               artikeltekst en de categorieën zijn ingekort.
+-->
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel>
+	<title>Infofrankrijk</title>
+	<atom:link href="https://infofrankrijk.com/feed/" rel="self" type="application/rss+xml" xmlns:atom="http://www.w3.org/2005/Atom" />
+	<link>https://infofrankrijk.com</link>
+	<item>
+		<title>Handleiding voor een woning opgetrokken uit leem</title>
+		<link>https://infofrankrijk.com/handleiding-voor-een-woning-opgetrokken-uit-leem/</link>
+					<comments>https://infofrankrijk.com/handleiding-voor-een-woning-opgetrokken-uit-leem/#respond</comments>
+		
+		<dc:creator><![CDATA[Redactieteam]]></dc:creator>
+		<pubDate>Tue, 18 Aug 2026 10:39:09 +0000</pubDate>
+		<guid isPermaLink="false">https://infofrankrijk.com/?p=233313</guid>
+
+					<description><![CDATA[<p>Ingekort voor de fixture.</p>]]></description>
+		<content:encoded><![CDATA[<p><!-- START CODE VOOR DIVI / WORDPRESS -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300;0,400;0,600;0,700;1,400&#038;family=Poppins:ital,wght@0,500;0,600;0,700;1,600&#038;family=JetBrains+Mono:wght@400;500&#038;display=swap" rel="stylesheet">
+<p>Artikeltekst hier ingekort.</p>]]></content:encoded>
+	</item>
+	<item>
+		<title>CAK, vroegpensioen en zorg in Frankrijk</title>
+		<link>https://infofrankrijk.com/cak-vroegpensioen-en-zorg-in-frankrijk/</link>
+					<comments>https://infofrankrijk.com/cak-vroegpensioen-en-zorg-in-frankrijk/#respond</comments>
+		
+		<dc:creator><![CDATA[Redactieteam]]></dc:creator>
+		<pubDate>Thu, 20 Aug 2026 13:53:34 +0000</pubDate>
+		<guid isPermaLink="false">https://infofrankrijk.com/?p=233495</guid>
+
+					<description><![CDATA[<p>Ingekort voor de fixture.</p>]]></description>
+		<content:encoded><![CDATA[<p><!-- START CODE VOOR DIVI / WORDPRESS -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&#038;family=Mulish:ital,wght@0,400;0,600;0,700;1,400&#038;display=swap" rel="stylesheet">
+<p>Artikeltekst hier ingekort.</p>]]></content:encoded>
+	</item>
+</channel>
+</rss>

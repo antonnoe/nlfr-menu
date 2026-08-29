@@ -4,8 +4,11 @@
 // met een verzoek te beantwoorden in plaats van met een aanname:
 //
 //   1. IS ER EEN FEED, en werkt hij? Veel instanties hebben er wel een maar
-//      linken hem alleen in de <head>. Deze verkenner leest die <link
-//      rel="alternate">-regels uit en probeert ze meteen.
+//      kondigen hem niet aan. De verkenner kijkt daarom op drie plaatsen, in
+//      afnemende zekerheid: de <link rel="alternate">-regels in de <head>, de
+//      feedlinks die de PAGINA zelf aanbiedt (een "RSS-feeds"- of
+//      "nieuwsbrieven"-pagina, zoals rijksoverheid.nl er een heeft), en pas
+//      daarna een handvol gebruikelijke paden.
 //   2. LEEFT HIJ NOG? Een feed met een nieuwste item van 2019 is dood gewicht:
 //      hij kost elk kwartier een verzoek en levert nooit iets.
 //   3. MAG HET? Franse overheidsteksten vallen NIET automatisch onder de
@@ -23,6 +26,13 @@
 
 const TIMEOUT_MS = 20000;
 const UA = "NLFR-bronverkenner/1.0 (+https://nederlanders.fr)";
+// Sommige sites (svb.nl, dutchculture.nl) beantwoorden een onbekende agent met
+// een 403. Dat zegt niets over de feed en alles over de User-Agent, dus krijgt
+// zo'n weigering nog één poging als gewone browser.
+const UA_BROWSER =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+const ACCEPT_FEED =
+  "application/rss+xml,application/atom+xml,application/xml;q=0.9,*/*;q=0.8";
 
 // Sporen die iets zeggen over hergebruik. Bewust ook de negatieve: "tous
 // droits réservés" op een overheidssite betekent dat er iets uit te zoeken valt,
@@ -36,14 +46,14 @@ const LICENTIESPOREN = [
   { patroon: /reproduction\s+interdite/i, oordeel: "“reproduction interdite”", goed: false },
 ];
 
-async function haal(url, accept) {
+async function eenmaalHalen(url, accept, agent) {
   const ctrl = new AbortController();
   const klok = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     const r = await fetch(url, {
       redirect: "follow",
       signal: ctrl.signal,
-      headers: { "User-Agent": UA, Accept: accept },
+      headers: { "User-Agent": agent, Accept: accept },
     });
     const tekst = await r.text();
     return { ok: r.ok, status: r.status, type: r.headers.get("content-type") || "", tekst, url: r.url };
@@ -52,6 +62,13 @@ async function haal(url, accept) {
   } finally {
     clearTimeout(klok);
   }
+}
+
+async function haal(url, accept) {
+  const eerste = await eenmaalHalen(url, accept, UA);
+  if (eerste.status !== 403) return eerste;
+  const tweede = await eenmaalHalen(url, accept, UA_BROWSER);
+  return tweede.ok ? { ...tweede, browserNodig: true } : eerste;
 }
 
 // Lang niet elke site kondigt zijn feed aan in de <head>; overheidssites doen
@@ -65,6 +82,9 @@ async function haal(url, accept) {
 // een pad dat niemand raadt. Deze verkenner is dus betrouwbaar om een feed te
 // BEVESTIGEN en ongeschikt om er een uit te sluiten. De uitvoer zegt dat er
 // met zoveel woorden bij; meer gokpaden stapelen maakt dat niet beter.
+// Hoeveel op de pagina gelinkte feedkandidaten we hooguit natrekken.
+const MAX_GELINKT = 25;
+
 const GEBRUIKELIJKE_PADEN = [
   "/rss", "/rss.xml", "/feed", "/feed/", "/flux-rss", "/flux-rss.xml",
   "/atom.xml", "/index.rss", "/actualites/rss", "/actualites.rss",
@@ -91,6 +111,30 @@ function feedsUitPagina(html, basis) {
     } catch { /* onbruikbare href */ }
   }
   return uit;
+}
+
+// Feeds die de site in de PAGINA zelf aanbiedt in plaats van in de <head>.
+// Rijksoverheid, RVO en KVK hebben een pagina "RSS-feeds" of "nieuwsbrieven"
+// waar de feeds als doodgewone links staan. Wie alleen de <head> leest ziet
+// daar niets en concludeert ten onrechte "geen feed". Dit is nadrukkelijk geen
+// gokken: het volgt uitsluitend links die de site zelf publiceert.
+function feedLinksUitTekst(html, basis) {
+  const uit = new Map();
+  const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]{0,300}?)<\/a>/gi;
+  let m;
+  while ((m = re.exec(html))) {
+    const href = m[1];
+    const tekst = m[2].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    const lijktUrl = /\.rss(\?|$)|\.atom(\?|$)|\.xml(\?|$)|(^|[/.?=&-])rss([/.?&=-]|$)|(^|[/?=&-])feed([/.?&=-]|$)/i.test(href);
+    const lijktTekst = /\brss\b|\batom[\s-]?feed\b/i.test(tekst);
+    if (!lijktUrl && !lijktTekst) continue;
+    try {
+      const url = new URL(href, basis).href;
+      if (!/^https?:/i.test(url)) continue;
+      if (!uit.has(url)) uit.set(url, tekst.slice(0, 60));
+    } catch { /* onbruikbare href */ }
+  }
+  return [...uit].map(([url, titel]) => ({ url, titel }));
 }
 
 function feedSamenvatting(tekst) {
@@ -123,11 +167,12 @@ async function verken(ingang) {
 
   const feeds = [];
   let geprobeerd = 0;
+  let gelinkt = 0;
   if (isFeed(eerste.type, eerste.tekst)) {
-    feeds.push({ url: eerste.url, titel: "(opgegeven URL is zelf een feed)", ...feedSamenvatting(eerste.tekst), status: eerste.status });
+    feeds.push({ url: eerste.url, titel: "(opgegeven URL is zelf een feed)", geldig: true, ...feedSamenvatting(eerste.tekst), status: eerste.status });
   } else {
     for (const kandidaat of feedsUitPagina(eerste.tekst, eerste.url).slice(0, 6)) {
-      const f = await haal(kandidaat.url, "application/rss+xml,application/atom+xml,application/xml;q=0.9,*/*;q=0.8");
+      const f = await haal(kandidaat.url, ACCEPT_FEED);
       feeds.push({
         url: kandidaat.url,
         titel: kandidaat.titel,
@@ -138,8 +183,20 @@ async function verken(ingang) {
     }
     regels.push(`pagina: HTTP ${eerste.status}, ${feeds.length} aangekondigde feed(s)`);
 
-    // Niets aangekondigd? Dan de gebruikelijke paden proberen voordat we
-    // "geen feed" durven zeggen.
+    // Niets in de <head>? Dan de links die de pagina zelf aanbiedt. Dit vóór de
+    // gokpaden, want een gepubliceerde link is een feit en een gokpad niet.
+    if (!feeds.some((f) => f.geldig)) {
+      const gelinkte = feedLinksUitTekst(eerste.tekst, eerste.url).slice(0, MAX_GELINKT);
+      gelinkt = gelinkte.length;
+      for (const kandidaat of gelinkte) {
+        if (feeds.some((f) => f.url === kandidaat.url)) continue;
+        const f = await haal(kandidaat.url, ACCEPT_FEED);
+        if (!f.ok || !isFeed(f.type, f.tekst)) continue;
+        feeds.push({ url: kandidaat.url, titel: kandidaat.titel || "(link op de pagina)", status: f.status, geldig: true, ...feedSamenvatting(f.tekst) });
+      }
+    }
+
+    // Nog steeds niets? Dan pas de gebruikelijke paden.
     if (!feeds.some((f) => f.geldig)) {
       for (const pad of GEBRUIKELIJKE_PADEN) {
         let kandidaat;
@@ -149,7 +206,7 @@ async function verken(ingang) {
           continue;
         }
         if (feeds.some((f) => f.url === kandidaat)) continue;
-        const f = await haal(kandidaat, "application/rss+xml,application/atom+xml,application/xml;q=0.9,*/*;q=0.8");
+        const f = await haal(kandidaat, ACCEPT_FEED);
         if (!f.ok || !isFeed(f.type, f.tekst)) continue;
         feeds.push({ url: kandidaat, titel: "(gevonden op een gebruikelijk pad)", status: f.status, geldig: true, ...feedSamenvatting(f.tekst) });
       }
@@ -169,7 +226,7 @@ async function verken(ingang) {
     break;
   }
 
-  return { ingang, bereikbaar: true, status: eerste.status, feeds, geprobeerd, sporen: licentieSporen(sporenTekst), regels };
+  return { ingang, bereikbaar: true, status: eerste.status, browserNodig: !!eerste.browserNodig, feeds, geprobeerd, gelinkt, sporen: licentieSporen(sporenTekst), regels };
 }
 
 // ---- uitvoer ---------------------------------------------------------------
@@ -194,7 +251,8 @@ for (const ingang of ingangen) {
   }
   if (!r.feeds.length) {
     console.log(
-      `Bereikbaar (HTTP ${r.status}), maar **hier geen feed gevonden**: niets aangekondigd in de pagina` +
+      `Bereikbaar (HTTP ${r.status}), maar **hier geen feed gevonden**: niets aangekondigd in de <head>` +
+        (r.gelinkt ? `, ${r.gelinkt} op de pagina gelinkte kandidaten waren geen feed` : ", en geen enkele link op de pagina zag eruit als een feed") +
         (r.geprobeerd ? `, en ${r.geprobeerd} gebruikelijke paden leverden ook niets op` : "") +
         ".\n\n> Let op: dit betekent NIET dat er geen feed is. Dezelfde toets mist de " +
         "feed van service-public.fr, die we aantoonbaar gebruiken. Zoek de URL op de " +
@@ -208,6 +266,9 @@ for (const ingang of ingangen) {
       console.log(`| ${f.url} | ${f.status}${f.geldig === false ? " (geen feed)" : ""} | ${f.items} | ${versheid} | ${f.titel || ""} |`);
     }
     console.log("");
+  }
+  if (r.browserNodig) {
+    console.log("Let op: deze site weigert een onbekende User-Agent met een 403; gemeten met een browser-User-Agent.\n");
   }
   if (r.sporen.length) {
     console.log("Licentiesporen op de site: " + r.sporen.map((s) => `${s.goed ? "✓" : "⚠"} ${s.oordeel}`).join(" · "));

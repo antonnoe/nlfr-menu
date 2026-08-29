@@ -1,0 +1,48 @@
+# Kandidaat-bronnen verkennen vóórdat ze in bronnen.json belanden.
+# ---------------------------------------------------------------------------
+# Handmatig te starten. Draait scripts/verken-bronnen.mjs vanaf een
+# GitHub-runner, die onbelemmerd het web op kan — een ontwikkelomgeving achter
+# een egress-policy krijgt op .gouv.fr en .nl een 403 en kan dus niets
+# vaststellen.
+#
+# Per opgegeven site: welke feeds hij aankondigt, of die werken, hoeveel items
+# ze bevatten, hoe oud het nieuwste item is, en welke licentiesporen er op de
+# site staan. Dat laatste is een AANWIJZING, geen toestemming — de licentie
+# blijft mensenwerk.
+#
+# Net als de sonde en de meting: bewust ZONDER npm ci, het script is
+# dependency-vrij.
+
+name: Bronnen verkennen
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs, gescheiden door spaties of komma’s'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bronnen-verkennen
+  cancel-in-progress: false
+
+jobs:
+  verkennen:
+    name: Feeds en licentiesporen van kandidaat-bronnen
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verkennen
+        env:
+          BRONNEN: ${{ inputs.urls }}
+        run: node scripts/verken-bronnen.mjs | tee -a "$GITHUB_STEP_SUMMARY"

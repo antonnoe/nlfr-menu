@@ -54,11 +54,17 @@ async function haal(url, accept) {
   }
 }
 
-// Lang niet elke site kondigt zijn feed aan in de <head>; Franse
-// overheidssites doen dat opvallend vaak niet. "Niet aangekondigd" is dus geen
-// bewijs van "niet aanwezig" — daarom probeert de verkenner daarna deze
-// gebruikelijke paden. Pas als die óók niets opleveren, is de conclusie iets
-// waard.
+// Lang niet elke site kondigt zijn feed aan in de <head>; overheidssites doen
+// dat opvallend vaak niet. "Niet aangekondigd" is dus geen bewijs van "niet
+// aanwezig" — daarom probeert de verkenner daarna deze gebruikelijke paden.
+//
+// EN OOK DAN BLIJFT EEN "NEE" ZWAK. Beproefd op 22 instanties (Frans en
+// Nederlands) vond deze methode er geen enkele, terwijl service-public.fr —
+// dat in bronnen.json staat en aantoonbaar werkt — er óók als "geen feed" uit
+// kwam: zijn feed zit op /abonnements/rss/actu-actualites-particuliers.rss,
+// een pad dat niemand raadt. Deze verkenner is dus betrouwbaar om een feed te
+// BEVESTIGEN en ongeschikt om er een uit te sluiten. De uitvoer zegt dat er
+// met zoveel woorden bij; meer gokpaden stapelen maakt dat niet beter.
 const GEBRUIKELIJKE_PADEN = [
   "/rss", "/rss.xml", "/feed", "/feed/", "/flux-rss", "/flux-rss.xml",
   "/atom.xml", "/index.rss", "/actualites/rss", "/actualites.rss",
@@ -188,9 +194,11 @@ for (const ingang of ingangen) {
   }
   if (!r.feeds.length) {
     console.log(
-      `Bereikbaar (HTTP ${r.status}), maar **geen feed gevonden**: niets aangekondigd in de pagina` +
-        (r.geprobeerd ? `, en ${r.geprobeerd} gebruikelijke paden (/rss, /feed, /flux-rss, …) leverden ook niets op` : "") +
-        ".\n"
+      `Bereikbaar (HTTP ${r.status}), maar **hier geen feed gevonden**: niets aangekondigd in de pagina` +
+        (r.geprobeerd ? `, en ${r.geprobeerd} gebruikelijke paden leverden ook niets op` : "") +
+        ".\n\n> Let op: dit betekent NIET dat er geen feed is. Dezelfde toets mist de " +
+        "feed van service-public.fr, die we aantoonbaar gebruiken. Zoek de URL op de " +
+        "site zelf (\"RSS\", \"flux RSS\", \"abonnementen\") en laat die hier nalopen.\n"
     );
   } else {
     console.log("| feed | http | items | nieuwste | titel |");

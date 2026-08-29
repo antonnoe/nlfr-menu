@@ -87,18 +87,21 @@
   .ifgekozen { list-style:none; margin:0 0 8px; padding:0; display:grid; gap:5px; }
   .ifgekozen li { display:flex; gap:8px; align-items:center; background:#fff; border:1px solid rgba(47,107,58,.25); border-radius:8px; padding:6px 10px; font-size:13.5px; }
   .ifgekozen a { color:var(--brand); text-decoration:none; flex:1; }
-  .ifgekozen button { flex:none; border:none; background:none; color:var(--brand); cursor:pointer; font-size:16px; line-height:1; padding:4px 6px; }
+  .ifgekozen button { flex:none; border:none; background:none; color:var(--brand); cursor:pointer; font-size:20px; line-height:1; min-width:44px; min-height:44px; }
   .ifzoekrij { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
   .ifzoekrij input { flex:1; min-width:180px; font-family:'Mulish',sans-serif; font-size:14px; padding:8px 10px; border:1px solid rgba(128,0,0,.2); border-radius:8px; }
-  .ifknop { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; border-radius:8px; padding:8px 12px; min-height:38px; cursor:pointer; border:1px solid rgba(47,107,58,.3); background:#fff; color:var(--actueel); }
-  .ifknop.klein { min-height:32px; padding:4px 10px; font-size:12.5px; }
+  /* TIKDOELEN: 44px, dezelfde maat als button.actie hierboven. Deze tool wordt
+     op een telefoon gebruikt; 32px-knopjes in een dichte lijst zijn daar niet
+     betrouwbaar te raken — gemeten op 390px breed. */
+  .ifknop { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; border-radius:8px; padding:8px 14px; min-height:44px; cursor:pointer; border:1px solid rgba(47,107,58,.3); background:#fff; color:var(--actueel); }
+  .ifknop.klein { min-height:44px; padding:6px 12px; font-size:13px; }
   .ifuitleg { font-size:12px; color:#8a7f7c; margin-bottom:8px; }
   .ifkandidaten { list-style:none; margin:0; padding:0; display:grid; gap:5px; }
   .ifkandidaten li { display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:#fff; border:1px solid rgba(128,0,0,.12); border-radius:8px; padding:6px 10px; }
   .ifkandidaten .ifdatum { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:#8a7f7c; flex:none; }
   .ifkandidaten .iftitel { flex:1; min-width:160px; font-size:13.5px; }
   .ifkandidaten .iftitel a { color:#3a3330; text-decoration:none; }
-  .ifkandidaten .ifacties { display:flex; gap:6px; flex:none; }
+  .ifkandidaten .ifacties { display:flex; gap:8px; flex:none; margin-left:auto; }
   .ifkandidaten li.alverwezen { background:rgba(47,107,58,.07); }
   .nakijklijst { list-style:none; margin:0 0 18px; padding:0; display:grid; gap:8px; }
   .nakijklijst li { border:1px solid rgba(176,90,0,.3); background:rgba(176,90,0,.05); border-radius:8px; padding:10px 12px; }
@@ -112,7 +115,7 @@
   <div class="kop-balk">
     <div>
       <h1>Redactie — Actueel</h1>
-      <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 48 uur. Beoordeel ze één voor één; bewerk de tekst gerust vóór publicatie.</div>
+      <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 36 uur. Beoordeel ze één voor één; bewerk de tekst gerust vóór publicatie.</div>
     </div>
     <a id="nbLink" class="nb-link" href="/actueel" target="_blank" rel="noopener">Bekijk nieuwspagina ↗</a>
   </div>
@@ -426,8 +429,6 @@
     var html = "";
 
     html += bronUrlWeigeringenHtml();
-    html += nakijkenHtml();
-    html += bijnaVerlopenHtml();
 
     // ---- Concepten: pager (één voor één) ----
     html += '<h2>Concepten</h2>';
@@ -497,6 +498,12 @@
         '<div class="knoppen"><button class="actie wegbtn" data-act="verwijder-overheid">Van de site halen</button></div>'+
       '</div>';
     });
+
+    // De Infofrankrijk-lijsten staan ONDERAAN, na de drie stromen hierboven.
+    // Wie de curatie overneemt, moet bovenaan de dagelijkse taak vinden — de
+    // conceptenwachtrij — en niet eerst langs nawerk scrollen.
+    html += nakijkenHtml();
+    html += bijnaVerlopenHtml();
 
     inhoudEl.innerHTML = html;
     koppel();

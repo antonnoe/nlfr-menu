@@ -4,7 +4,7 @@
 // GET  -> lijst met concepten + publicaties (token vereist).
 // POST -> { actie, id, tekst? } met actie:
 //           "publiceer"   concept -> publicatie (evt. met bewerkte tekst)
-//           "weg"         concept verwijderen + 48u-afwijzing (cron regenereert niet)
+//           "weg"         concept verwijderen + afwijzing voor CONCEPT_TTL_S (cron regenereert niet)
 //           "bewerk"      concepttekst bijwerken (TTL vernieuwt)
 //           "depubliceer" publicatie verwijderen (verdwijnt van de feed)
 //           "verwijs"     Infofrankrijk-verwijzing onder een bericht zetten
@@ -12,7 +12,7 @@
 //           "nakijken"    IF-artikel op de auditlijst zetten (lezer ziet niets)
 //           "nakijken-klaar" van de auditlijst af
 // GET ?deel=if&artikel=<id>[&zoek=…] -> Infofrankrijk-kandidaten bij één bericht.
-// Concepten verlopen automatisch na 48 uur (TTL in KV). Standaard = niet
+// Concepten verlopen automatisch na CONCEPT_TTL_S (nu 36 uur, TTL in KV). Standaard = niet
 // gepubliceerd.
 
 import crypto from "node:crypto";

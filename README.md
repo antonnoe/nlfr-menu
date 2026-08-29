@@ -102,7 +102,7 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
   (`lib/config.js` → `AI_CONFIG`). Aan het eind van elke ronde **bakt de cron
   beide leveringen voor** en zet ze in KV.
 - `/review?token=…` — mobielvriendelijke reviewtool. Publiceer / Weg / inline
-  bewerken. Concepten verlopen automatisch na 48 uur.
+  bewerken. Concepten verlopen automatisch na `CONCEPT_TTL_S` (nu 36 uur).
 
 ### De drie leveringen
 

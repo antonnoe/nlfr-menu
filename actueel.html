@@ -178,8 +178,15 @@
   .verwijs{ margin-top:12px; padding:10px 12px; border-radius:4px; border:1px solid var(--hair); border-left:3px solid var(--groen); background:var(--bg); }
   .verwijs b{ display:block; font-family:var(--disp); font-weight:600; font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--groen); margin-bottom:5px; }
   .verwijs ul{ list-style:none; margin:0; padding:0; display:grid; gap:4px; }
-  .verwijs a{ font-family:var(--body); font-weight:600; font-size:13px; line-height:18px; color:var(--ink-body); text-decoration:none; }
+  /* Elke verwijzing is een blokje met eigen hoogte, niet een kale tekstregel:
+     op een telefoon moet je hem kunnen raken zonder te mikken (gemeten op
+     390px breed was de kale regel 15px hoog). */
+  .verwijs a{ display:block; padding:12px 0; min-height:20px; font-family:var(--body); font-weight:600; font-size:13px; line-height:20px; color:var(--ink-body); text-decoration:none; }
   .verwijs a:hover{ text-decoration:underline; }
+  /* Pijltje als aanwijzing dat je de site verlaat — dezelfde vorm als de link
+     "Regelgevingsarchief →" bovenaan. In CSS, niet in de tekst, zodat de
+     linktitel zelf onaangeroerd blijft. */
+  .verwijs a::after{ content:" \2192"; color:var(--groen); }
 
   /* Sluitknop onder de tegel */
   .sluitrij{ padding:2px 16px 14px; }

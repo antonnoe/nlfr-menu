@@ -383,6 +383,33 @@ en elke URL moet de bron-URL-toets van Infofrankrijk doorstaan (`lib/bronurl.js`
 de laag die is gebouwd nadat IF-items naar `fonts.googleapis.com` bleken te
 wijzen), zowel bij het opslaan als bij het samenstellen van de tegels.
 
+### De uitlegpagina `/uitleg`
+
+De curatie wordt niet altijd door dezelfde persoon gedaan. `uitleg.html` legt in
+gewone taal uit wat er vanzelf gebeurt, wat een mens moet doen en hoe de
+schermen eruitzien; de knop **?** rechtsboven in de reviewtool opent hem in een
+nieuw tabblad. Bewust een pagina op deze site en geen los document: wie invalt
+heeft er dan altijd bij gekund, zonder account en zonder link die kwijtraakt.
+De pagina staat op `noindex`.
+
+De schermafdrukken in `schermen/` zijn **echt**, gemaakt op 390 × 844 (telefoon)
+met verzonnen maar realistische inhoud — nooit met productiedata, want daar
+staan namen en bronnen in die morgen anders zijn. Verversen na een wijziging in
+de tool:
+
+```bash
+npm install --no-save playwright-core     # staat bewust niet in package.json
+node scripts/demo-uitleg.mjs &            # namaakproductie op poort 8790
+node scripts/schermen.mjs                 # schrijft schermen/*.webp
+```
+
+`scripts/schermen.mjs` meet bij elk scherm ook **of de pagina zijwaarts uitloopt
+en of elk tikdoel minstens 44 px hoog is** — de maat die de tool aanhoudt. Die
+tweede toets bracht vier echte fouten aan het licht die op het oog niet
+opvielen. `test/uitleg.test.mjs` bewaakt dat elke afbeelding waarnaar de pagina
+verwijst ook bestaat, dat de knop in de tool ernaartoe wijst, en dat de getallen
+in de uitleg (36 uur, 14 dagen, twaalf maanden) kloppen met `lib/config.js`.
+
 ### Env-vars (in Vercel instellen, zie `.env.example`)
 
 `ANTHROPIC_API_KEY`, `REVIEW_TOKEN`, `CRON_SECRET`, en een gekoppelde Vercel KV

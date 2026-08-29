@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Nieuwscuratie NLFR — hoe de nieuwspagina wordt samengesteld</title>
+<!--
+  UITLEGPAGINA BIJ DE REVIEWTOOL (/uitleg), bereikbaar met de knop "?" in
+  review.html. Bewust een gewone pagina op deze site en geen los document:
+  wie de curatie overneemt heeft er dan altijd bij gekund, zonder account en
+  zonder link die kwijtraakt.
+
+  DE SCHERMEN in /schermen/ zijn echte schermafdrukken op 390 x 844 (telefoon),
+  gemaakt met scripts/schermen.mjs tegen scripts/demo-uitleg.mjs. Verandert de
+  tool, draai dat dan opnieuw — zie de kop van die twee bestanden.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Palet en letters komen uit de tool zelf (review.html, actueel.html), zodat
+     deze gids leest als onderdeel van hetzelfde product en niet als een
+     losstaand document. */
+  :root{
+    --grond:#faf6f4;
+    --vlak:#ffffff;
+    --vlak2:#f3ece9;
+    --inkt:#2b2521;
+    --zwak:#877b76;
+    --lijn:#e7dbd6;
+    --brand:#7a0d0d;
+    --brand-zacht:rgba(122,13,13,.08);
+    --groen:#2c6538;
+    --groen-zacht:rgba(44,101,56,.09);
+    --let-op:#8a4500;
+    --let-op-zacht:rgba(176,90,0,.10);
+    --disp:'Poppins',system-ui,sans-serif;
+    --body:'Mulish',system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --grond:#191412;
+      --vlak:#221b19;
+      --vlak2:#2c2422;
+      --inkt:#f1e9e5;
+      --zwak:#a2938d;
+      --lijn:#3a2f2c;
+      --brand:#e79a9a;
+      --brand-zacht:rgba(231,154,154,.12);
+      --groen:#8ac79a;
+      --groen-zacht:rgba(138,199,154,.12);
+      --let-op:#e8ad6b;
+      --let-op-zacht:rgba(232,173,107,.12);
+    }
+  }
+  :root[data-theme="dark"]{
+    --grond:#191412;
+    --vlak:#221b19;
+    --vlak2:#2c2422;
+    --inkt:#f1e9e5;
+    --zwak:#a2938d;
+    --lijn:#3a2f2c;
+    --brand:#e79a9a;
+    --brand-zacht:rgba(231,154,154,.12);
+    --groen:#8ac79a;
+    --groen-zacht:rgba(138,199,154,.12);
+    --let-op:#e8ad6b;
+    --let-op-zacht:rgba(232,173,107,.12);
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    background:var(--grond); color:var(--inkt);
+    font-family:var(--body); font-size:16px; line-height:1.65;
+    margin:0; padding:28px 20px 72px;
+  }
+  .blad{ max-width:1080px; margin:0 auto; display:flex; flex-direction:column; gap:44px; }
+  .kolom{ max-width:64ch; }
+
+  h1{ font-family:var(--disp); font-weight:700; font-size:clamp(28px,5vw,40px); line-height:1.15; margin:0 0 10px; color:var(--brand); text-wrap:balance; }
+  h2{ font-family:var(--disp); font-weight:600; font-size:clamp(19px,3vw,23px); line-height:1.25; margin:0 0 6px; text-wrap:balance; }
+  h3{ font-family:var(--disp); font-weight:600; font-size:16px; margin:0 0 4px; }
+  p{ margin:0 0 14px; }
+  p:last-child{ margin-bottom:0; }
+  a{ color:var(--brand); }
+  strong{ font-weight:700; }
+  .lead{ font-size:clamp(17px,2.4vw,19px); color:var(--inkt); }
+  .oog{ font-family:var(--disp); font-weight:600; font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--zwak); margin:0 0 8px; }
+  .sectie{ display:flex; flex-direction:column; gap:18px; }
+  hr{ border:0; border-top:1px solid var(--lijn); margin:0; }
+
+  /* ---- stappen: een echte volgorde, vandaar de nummering ---- */
+  ol.stappen{ list-style:none; margin:0; padding:0; display:grid; gap:14px; counter-reset:stap; }
+  ol.stappen > li{ counter-increment:stap; display:grid; grid-template-columns:34px 1fr; gap:14px; align-items:start; }
+  ol.stappen > li::before{
+    content:counter(stap); font-family:var(--disp); font-weight:700; font-size:14px;
+    width:34px; height:34px; border-radius:50%; display:grid; place-items:center;
+    background:var(--brand-zacht); color:var(--brand); border:1px solid var(--lijn);
+  }
+  ol.stappen .wat{ font-family:var(--disp); font-weight:600; }
+  ol.stappen .uitleg{ color:var(--zwak); font-size:15px; }
+
+  /* ---- schermen ---- */
+  .strip{ display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
+  figure.telefoon{ margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure.telefoon .frame{
+    border:1px solid var(--lijn); border-radius:18px; padding:7px; background:var(--vlak);
+    box-shadow:0 18px 40px -32px rgba(60,20,10,.7);
+  }
+  figure.telefoon img{ display:block; width:100%; height:auto; border-radius:12px; }
+  figure.telefoon figcaption{ font-size:14px; color:var(--zwak); }
+  figure.telefoon figcaption b{ color:var(--inkt); font-family:var(--disp); font-weight:600; display:block; font-size:14.5px; }
+
+  /* ---- kaarten en waarschuwingen ---- */
+  .kaart{ background:var(--vlak); border:1px solid var(--lijn); border-radius:12px; padding:16px 18px; }
+  .rooster{ display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); }
+  .merk{ border-left:3px solid var(--brand); }
+  .groenrand{ border-left:3px solid var(--groen); }
+  .letop{ background:var(--let-op-zacht); border:1px solid var(--let-op); border-radius:12px; padding:16px 18px; }
+  .letop h3{ color:var(--let-op); }
+
+  ul.plat{ margin:0; padding:0; list-style:none; display:grid; gap:10px; }
+  ul.plat li{ padding-left:18px; position:relative; }
+  ul.plat li::before{ content:""; position:absolute; left:0; top:.62em; width:7px; height:7px; border-radius:2px; background:var(--brand); }
+  ul.plat.groen li::before{ background:var(--groen); }
+
+  code{ font-family:var(--mono); font-size:13.5px; background:var(--vlak2); padding:1px 5px; border-radius:4px; }
+
+  /* ---- tabel ---- */
+  .tabelwrap{ overflow-x:auto; }
+  table{ border-collapse:collapse; width:100%; min-width:420px; font-size:15px; }
+  th,td{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--lijn); vertical-align:top; }
+  th{ font-family:var(--disp); font-weight:600; font-size:12.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--zwak); }
+  td.getal{ font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ja{ color:var(--groen); font-weight:700; }
+
+  /* ---- diagram ---- */
+  figure.fig{ margin:0; display:flex; flex-direction:column; gap:12px; }
+  figure.fig .doek{ overflow-x:auto; background:var(--vlak); border:1px solid var(--lijn); border-radius:12px; padding:16px; }
+  figure.fig svg{ display:block; width:100%; min-width:640px; height:auto; color:var(--inkt); }
+  figure.fig figcaption{ font-size:14.5px; color:var(--zwak); max-width:64ch; }
+
+  .voet{ font-size:14px; color:var(--zwak); }
+  :focus-visible{ outline:2px solid var(--brand); outline-offset:3px; border-radius:3px; }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none!important; transition:none!important; } }
+</style>
+
+<div class="blad">
+
+  <header class="kolom">
+    <p class="oog">Nederlanders.fr · redactie</p>
+    <h1>De nieuwspagina samenstellen</h1>
+    <p class="lead">Wat er vanzelf gebeurt, wat een mens moet doen, en hoe die schermen eruitzien op een telefoon. Bedoeld om door te geven aan wie de curatie tijdelijk overneemt.</p>
+    <p class="voet">Deze pagina hoort bij de reviewtool en staat op dezelfde site. Hij is met de knop <b>?</b> rechtsboven in de tool te openen; sluit dit tabblad om terug te gaan naar je werk.</p>
+  </header>
+
+  <hr>
+
+  <section class="sectie">
+    <div class="kolom">
+      <p class="oog">Het geheel</p>
+      <h2>Drie stromen, twee daarvan wachten op een mens</h2>
+      <p>De cron draait elk kwartier. Overheidsberichten gaan zelfstandig live; perssyntheses blijven staan tot iemand ze goedkeurt, en een verwijzing naar Infofrankrijk komt er alleen als iemand hem aanklikt.</p>
+    </div>
+
+    <figure class="fig">
+      <div class="doek">
+        <svg viewBox="0 0 900 470" role="img" aria-label="Drie stromen naar de nieuwspagina: persfeeds worden geclusterd tot een concept dat wacht op goedkeuring; overheidsfeeds worden samengevat en gaan zonder review live; de Infofrankrijk-index levert kandidaten waaruit de redactie handmatig een verwijzing kiest.">
+          <defs>
+            <marker id="pijl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"></path>
+            </marker>
+          </defs>
+
+          <!-- de mensgrens -->
+          <line x1="628" y1="34" x2="628" y2="452" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 5" opacity=".55"></line>
+          <rect x="524" y="10" width="208" height="20" fill="var(--vlak)"></rect>
+          <text x="628" y="24" text-anchor="middle" font-family="Poppins,sans-serif" font-size="12.5" font-weight="600" fill="currentColor" opacity=".8">hier beslist een mens</text>
+
+          <!-- lane A: pers -->
+          <rect x="14" y="62" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="89" y="86" text-anchor="middle" font-size="12.5" fill="currentColor">16 persfeeds</text>
+          <text x="89" y="104" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">FR + NL, alleen koppen</text>
+
+          <line x1="164" y1="91" x2="216" y2="91" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
+
+          <rect x="218" y="62" width="160" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="298" y="86" text-anchor="middle" font-size="12.5" fill="currentColor">cron clustert</text>
+          <text x="298" y="104" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">elk kwartier</text>
+
+          <line x1="378" y1="91" x2="432" y2="91" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
+          <text x="405" y="56" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">≥ 2 kranten</text>
+
+          <rect x="434" y="62" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3"></rect>
+          <text x="509" y="86" text-anchor="middle" font-size="12.5" fill="currentColor">concept</text>
+          <text x="509" y="104" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">vervalt na 36 uur</text>
+
+          <line x1="584" y1="91" x2="676" y2="91" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
+          <circle cx="628" cy="91" r="7" fill="var(--brand)" stroke="none"></circle>
+          <rect x="556" y="131" width="144" height="18" fill="var(--vlak)"></rect>
+          <text x="628" y="144" text-anchor="middle" font-size="11.5" fill="var(--brand)" font-weight="600">Publiceer / Weg</text>
+
+          <rect x="678" y="62" width="208" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="782" y="86" text-anchor="middle" font-size="12.5" fill="currentColor">live op de pagina</text>
+          <text x="782" y="104" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">36 u, dan archief, na 14 d weg</text>
+
+          <!-- lane B: overheid -->
+          <rect x="14" y="212" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="89" y="236" text-anchor="middle" font-size="12.5" fill="currentColor">5 overheidsfeeds</text>
+          <text x="89" y="254" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">Bercy, Service-Public…</text>
+
+          <line x1="164" y1="241" x2="216" y2="241" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
+
+          <rect x="218" y="212" width="160" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="298" y="236" text-anchor="middle" font-size="12.5" fill="currentColor">cron vat samen</text>
+          <text x="298" y="254" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">2–4 zinnen Nederlands</text>
+
+          <line x1="378" y1="241" x2="676" y2="241" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
+          <text x="500" y="230" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">Licence Ouverte — geen review</text>
+
+          <rect x="678" y="212" width="208" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="782" y="236" text-anchor="middle" font-size="12.5" fill="currentColor">meteen live</text>
+          <text x="782" y="254" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">14 d, dan regelgevingsarchief</text>
+
+          <!-- lane C: infofrankrijk -->
+          <rect x="14" y="362" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="89" y="386" text-anchor="middle" font-size="12.5" fill="currentColor">351 IF-artikelen</text>
+          <text x="89" y="404" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">eigen site</text>
+
+          <line x1="164" y1="391" x2="216" y2="391" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
+
+          <rect x="218" y="362" width="160" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="298" y="386" text-anchor="middle" font-size="12.5" fill="currentColor">index in de cron</text>
+          <text x="298" y="404" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">hooguit elke 6 uur</text>
+
+          <line x1="378" y1="391" x2="432" y2="391" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
+          <text x="405" y="356" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">categorie + 12 mnd</text>
+
+          <rect x="434" y="362" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3"></rect>
+          <text x="509" y="386" text-anchor="middle" font-size="12.5" fill="currentColor">kandidatenlijst</text>
+          <text x="509" y="404" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">oudste bovenaan</text>
+
+          <line x1="584" y1="391" x2="676" y2="391" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
+          <circle cx="628" cy="391" r="7" fill="var(--groen)" stroke="none"></circle>
+          <rect x="536" y="431" width="184" height="18" fill="var(--vlak)"></rect>
+          <text x="628" y="444" text-anchor="middle" font-size="11.5" fill="var(--groen)" font-weight="600">Verwijzen / Nakijken</text>
+
+          <rect x="678" y="362" width="208" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
+          <text x="782" y="386" text-anchor="middle" font-size="12.5" fill="currentColor">link onder het bericht</text>
+          <text x="782" y="404" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">of op de takenlijst</text>
+        </svg>
+      </div>
+      <figcaption>De stippellijn is het punt waarop een mens nodig is. De persstroom en de Infofrankrijk-verwijzing komen er niet langs zonder klik; de overheidsstroom gaat eronderdoor en publiceert zichzelf.</figcaption>
+    </figure>
+  </section>
+
+  <hr>
+
+  <section class="sectie">
+    <div class="kolom">
+      <p class="oog">De dagelijkse taak</p>
+      <h2>Wat je doet als je het overneemt</h2>
+      <p>Open <code>/review?token=…</code> op je telefoon. Het token staat in het bericht waarmee je de sleutel hebt gekregen; zonder token zie je niets.</p>
+    </div>
+
+    <ol class="stappen kolom">
+      <li>
+        <div>
+          <span class="wat">Bovenaan staat de conceptenwachtrij.</span>
+          <div class="uitleg">Eén concept tegelijk, met ‹ Vorige en Volgende ›. Boven de tekst staat op hoeveel onafhankelijke kranten hij steunt.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <span class="wat">Lees de tekst en beslis.</span>
+          <div class="uitleg"><b>Publiceer</b> zet hem op de site. <b>Weg</b> gooit hem weg én onthoudt dat, zodat de cron hem niet een kwartier later opnieuw maakt. <b>Bewaar tekst</b> als je eerst wilt bijschaven.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <span class="wat">Twijfel je? Dan blokkeert de server al het meeste.</span>
+          <div class="uitleg">Eén bron, misdaadnieuws of een tekst die te dicht op een bronkop zit, gaat er niet doorheen. Lijkt het op iets dat al live staat, dan vraagt hij om bevestiging in plaats van te weigeren.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <span class="wat">Niets doen mag ook.</span>
+          <div class="uitleg">Een concept dat je laat staan, verdwijnt vanzelf na 36 uur. Er komt nooit iets ongezien op de site.</div>
+        </div>
+      </li>
+    </ol>
+
+    <div class="strip">
+      <figure class="telefoon">
+        <div class="frame"><img src="/schermen/01-review-boven.webp" width="780" height="1688" loading="lazy" decoding="async" alt="Bovenkant van de reviewtool op een telefoon: de kop Redactie — Actueel en daaronder de conceptenwachtrij."></div>
+        <figcaption><b>Waar je landt</b>De wachtrij staat bovenaan: dat is het werk. Het nawerk staat onderaan de pagina.</figcaption>
+      </figure>
+      <figure class="telefoon">
+        <div class="frame"><img src="/schermen/02-review-concept.webp" width="780" height="1688" loading="lazy" decoding="async" alt="Een conceptkaart met de kop, het aantal onafhankelijke outlets, de tekst in een bewerkbaar veld en de knoppen Publiceer, Bewaar tekst en Weg."></div>
+        <figcaption><b>Eén concept</b>Tekst is bewerkbaar. De bronnen staan eronder; de drie knoppen zijn de hele beslissing.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <hr>
+
+  <section class="sectie">
+    <div class="kolom">
+      <p class="oog">Nieuw sinds gisteren</p>
+      <h2>Verwijzen naar Infofrankrijk</h2>
+      <p>Onder elk gepubliceerd bericht kun je een link zetten naar een achtergrondartikel op infofrankrijk.com. Andersom werkt het ook: een nieuwe aankondiging van Bercy kan betekenen dat een fiscaal artikel op Infofrankrijk nagekeken moet worden — dat is de knop <b>Nakijken</b>, en die ziet de lezer niet.</p>
+    </div>
+
+    <div class="rooster">
+      <div class="kaart merk">
+        <h3>Er gebeurt niets vanzelf</h3>
+        <p>De lijst is een voorstel. Klik je niets aan, dan komt er geen verwijzing. De cron kiest nooit zelf — dat is met een test vastgelegd.</p>
+      </div>
+      <div class="kaart groenrand">
+        <h3>Een verwijzing is geen bron</h3>
+        <p>De bronnenlijst verantwoordt de Franse originelen. Een eigen achtergrondartikel is “verder lezen” en staat daarom in een eigen blok eronder.</p>
+      </div>
+      <div class="kaart">
+        <h3>Twee filters doen het zoekwerk</h3>
+        <p>De categorieën die bij het thema van het bericht horen, en niets dat langer dan twaalf maanden niet is bijgewerkt. Het zoekveld negeert de categorieën, de twaalf maanden nooit.</p>
+      </div>
+    </div>
+
+    <div class="strip">
+      <figure class="telefoon">
+        <div class="frame"><img src="/schermen/03-review-overheid-ifblok.webp" width="780" height="1688" loading="lazy" decoding="async" alt="Een overheidsbericht in de reviewtool met daaronder het blok Infofrankrijk en de knop Infofrankrijk erbij zoeken."></div>
+        <figcaption><b>Het blok staat op elke kaart</b>Onder een gepubliceerde synthese en onder elk overheidsbericht. Dicht tot je erop tikt.</figcaption>
+      </figure>
+      <figure class="telefoon">
+        <div class="frame"><img src="/schermen/04-review-kandidaten.webp" width="780" height="1688" loading="lazy" decoding="async" alt="De kandidatenlijst: per regel de wijzigingsdatum, de titel van het Infofrankrijk-artikel en de knoppen Verwijzen en Nakijken."></div>
+        <figcaption><b>Oudste bovenaan</b>Dat is de auditvolgorde: wat het langst niet is aangeraakt, verdient de eerste blik.</figcaption>
+      </figure>
+      <figure class="telefoon">
+        <div class="frame"><img src="/schermen/05-review-zoeken.webp" width="780" height="1688" loading="lazy" decoding="async" alt="Het zoekveld boven de kandidatenlijst met de zoekterm bank en één resultaat."></div>
+        <figcaption><b>Zoeken voor de rest</b>Voor alles wat de categorietabel niet dekt. Eén resultaat aanklikken is genoeg.</figcaption>
+      </figure>
+      <figure class="telefoon">
+        <div class="frame"><img src="/schermen/08-lezer-overheid-verwijzing.webp" width="780" height="1688" loading="lazy" decoding="async" alt="De nieuwspagina op een telefoon: een opengeklapt overheidsbericht met de bronnenknop en daaronder het blok Meer hierover op Infofrankrijk met twee links."></div>
+        <figcaption><b>Wat de lezer ziet</b>Een eigen blok onder de bronnen, pas zichtbaar als het artikel openklapt.</figcaption>
+      </figure>
+    </div>
+
+    <div class="kaart kolom">
+      <h3>Een verwijzing is niet meteen zichtbaar</h3>
+      <p>De pagina wordt elk kwartier voorgebakken, dus je klik verschijnt bij de eerstvolgende ronde — hooguit vijftien minuten later. De tool zegt dat er ook bij. Schrik dus niet als je meteen gaat kijken en er nog niets staat.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section class="sectie">
+    <div class="kolom">
+      <p class="oog">Nagemeten, niet aangenomen</p>
+      <h2>Het werkt op een telefoon</h2>
+      <p>Alle schermen hierboven zijn gemaakt op 390 × 844 pixels — het formaat van een gangbare telefoon — en op dat formaat nagemeten. Twee dingen zijn getoetst: of de pagina zijwaarts uitloopt, en of elke knop groot genoeg is om te raken.</p>
+    </div>
+    <div class="tabelwrap kolom">
+      <table>
+        <thead>
+          <tr><th>Scherm</th><th>Zijwaartse overloop</th><th>Knoppen ≥ 44 px</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Reviewtool, bovenkant</td><td class="getal">0 px</td><td class="ja">ja</td></tr>
+          <tr><td>Conceptkaart</td><td class="getal">0 px</td><td class="ja">ja</td></tr>
+          <tr><td>Overheidskaart met IF-blok</td><td class="getal">0 px</td><td class="ja">ja</td></tr>
+          <tr><td>Kandidatenlijst</td><td class="getal">0 px</td><td class="ja">ja</td></tr>
+          <tr><td>Zoeken</td><td class="getal">0 px</td><td class="ja">ja</td></tr>
+          <tr><td>Nieuwspagina, dicht</td><td class="getal">0 px</td><td class="ja">ja</td></tr>
+          <tr><td>Nieuwspagina met verwijzing</td><td class="getal">0 px</td><td class="ja">ja</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="kolom">
+      <p class="voet">De meting bracht vijf dingen aan het licht die daarna zijn gerepareerd: de knoppen <i>Verwijzen</i> en <i>Nakijken</i> waren 32 px hoog, het kruisje om een verwijzing weg te halen 24 × 21 px, de knop <i>Wachtrij persconcepten wissen</i> 40 px, de verwijzingen op de nieuwspagina waren een kale tekstregel van 15 px, en de twee Infofrankrijk-lijsten stonden bovenaan de reviewtool in plaats van onder het dagelijkse werk.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section class="sectie">
+    <div class="kolom">
+      <p class="oog">Voor de invaller</p>
+      <h2>Wat vanzelf doorloopt, en wat je beter laat staan</h2>
+    </div>
+    <div class="rooster">
+      <div class="kaart groenrand">
+        <h3>Loopt door zonder jou</h3>
+        <ul class="plat groen">
+          <li>Overheidsberichten gaan elk kwartier automatisch live.</li>
+          <li>Gepubliceerde syntheses schuiven na 36 uur naar het archief en verdwijnen na veertien dagen.</li>
+          <li>De schoolvakantiezin en de verenigingsagenda werken zelfstandig.</li>
+        </ul>
+      </div>
+      <div class="letop">
+        <h3>Laat dit met rust</h3>
+        <ul class="plat">
+          <li><b>Wachtrij persconcepten wissen</b> — leegt de hele wachtrij. Er is een bevestiging, maar er is geen weg terug.</li>
+          <li><b>Van de site halen</b> bij een overheidsbericht — dat is de noodrem, niet een opruimknop.</li>
+          <li>De pagina <code>/archief</code> staat hier helemaal los van.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="kolom">
+      <p class="voet">Sla je een paar dagen over, dan raakt de site niet leeg: de overheidsstroom blijft vullen. Wat je wél merkt is dat er minder eigen syntheses staan — die wachten immers op een mens.</p>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

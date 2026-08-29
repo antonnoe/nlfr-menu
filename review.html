@@ -18,7 +18,7 @@
 
   .balk { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
   .balk .tel { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:var(--brand); margin-right:auto; }
-  .balk button { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; border-radius:999px; padding:8px 14px; cursor:pointer; min-height:40px; border:1px solid rgba(128,0,0,.2); background:rgba(128,0,0,.06); color:var(--brand); }
+  .balk button { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; border-radius:999px; padding:8px 14px; cursor:pointer; min-height:44px; border:1px solid rgba(128,0,0,.2); background:rgba(128,0,0,.06); color:var(--brand); }
   .balk button:hover { background:rgba(128,0,0,.12); }
   .balk button.gevaar { border-color:rgba(128,0,0,.3); }
 
@@ -48,8 +48,15 @@
   .bewaarbtn { background:rgba(128,0,0,.06); color:var(--brand); border:1px solid rgba(128,0,0,.2); }
 
   .kop-balk { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-  .nb-link { flex:none; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; text-decoration:none; border-radius:999px; padding:8px 14px; min-height:40px; display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(47,107,58,.3); background:rgba(47,107,58,.08); color:var(--actueel); white-space:nowrap; margin-top:4px; }
+  .kopknoppen { flex:none; display:flex; align-items:center; gap:8px; margin-top:4px; }
+  .nb-link { flex:none; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; text-decoration:none; border-radius:999px; padding:8px 14px; min-height:44px; display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(47,107,58,.3); background:rgba(47,107,58,.08); color:var(--actueel); white-space:nowrap; }
   .nb-link:hover { background:rgba(47,107,58,.15); }
+  /* Uitleg bij de tool: /uitleg, in een nieuw tabblad zodat het werk blijft
+     staan. Rond en 44px, net als de andere tikdoelen. */
+  .hulp-link { flex:none; width:44px; height:44px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center;
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; text-decoration:none;
+    border:1px solid rgba(128,0,0,.25); background:rgba(128,0,0,.05); color:var(--brand); }
+  .hulp-link:hover { background:rgba(128,0,0,.12); }
   /* Geweigerde bronlinks: opvallend maar niet alarmerend rood-op-rood. */
   .weigeringen{ list-style:none; margin:0 0 18px; padding:0; display:grid; gap:8px; }
   .weigeringen li{ border:1px solid #e6c9c9; background:#fdf6f6; border-radius:6px; padding:10px 12px; }
@@ -117,7 +124,10 @@
       <h1>Redactie — Actueel</h1>
       <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 36 uur. Beoordeel ze één voor één; bewerk de tekst gerust vóór publicatie.</div>
     </div>
-    <a id="nbLink" class="nb-link" href="/actueel" target="_blank" rel="noopener">Bekijk nieuwspagina ↗</a>
+    <div class="kopknoppen">
+      <a class="hulp-link" href="/uitleg" target="_blank" rel="noopener" title="Hoe werkt dit? Uitleg met schermen" aria-label="Uitleg over deze tool">?</a>
+      <a id="nbLink" class="nb-link" href="/actueel" target="_blank" rel="noopener">Bekijk nieuwspagina ↗</a>
+    </div>
   </div>
   <div id="melding"></div>
   <div id="inhoud"><div class="leeg">Laden…</div></div>

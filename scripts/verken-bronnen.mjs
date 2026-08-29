@@ -91,8 +91,12 @@ const GEBRUIKELIJKE_PADEN = [
   "/fr/rss.xml", "/rss/actualites.xml", "/?feed=rss2",
 ];
 
-const isFeed = (type, tekst) =>
-  /xml|rss|atom/i.test(type) || /<rss[\s>]|<feed[\s>]|<rdf:RDF/i.test(tekst.slice(0, 2000));
+// Een feed herken je aan zijn WORTELELEMENT, niet aan zijn content-type. Een
+// sitemap.xml wordt ook als application/xml geserveerd en is geen feed; wie op
+// de content-type afgaat haalt die binnen als "gevonden feed". Vandaar deze
+// toets op de inhoud. Het venster is ruim: sommige feeds beginnen met een lange
+// XML-prolog en een stylesheet-verwijzing.
+const isFeed = (type, tekst) => /<rss[\s>]|<feed[\s>]|<rdf:RDF/i.test(tekst.slice(0, 4000));
 
 // Feeds die in de <head> van een gewone pagina staan aangekondigd.
 function feedsUitPagina(html, basis) {
@@ -118,23 +122,41 @@ function feedsUitPagina(html, basis) {
 // waar de feeds als doodgewone links staan. Wie alleen de <head> leest ziet
 // daar niets en concludeert ten onrechte "geen feed". Dit is nadrukkelijk geen
 // gokken: het volgt uitsluitend links die de site zelf publiceert.
+// Hoe zeker een kandidaat eruitziet. Bepaalt de volgorde waarin we ze proberen,
+// want we trekken er hooguit MAX_GELINKT na.
+function feedScore(url) {
+  if (/sitemap/i.test(url)) return 0;             // XML, maar nooit een feed
+  if (/\.rss(\?|$)/i.test(url)) return 5;
+  if (/\.atom(\?|$)/i.test(url)) return 5;
+  if (/(^|[/.?=&-])rss([/.?&=-]|$)/i.test(url)) return 4;
+  if (/(^|[/?=&-])feed([/.?&=-]|$)/i.test(url)) return 3;
+  if (/\.xml(\?|$)/i.test(url)) return 1;
+  return 0;
+}
+
 function feedLinksUitTekst(html, basis) {
-  const uit = new Map();
-  const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]{0,300}?)<\/a>/gi;
+  // Bewust NIET alleen <a href>. rijksoverheid.nl is een Next.js-app: 223 kB
+  // HTML met 25 <a>-tags, want de feedlijst zit in de JavaScript-payload en
+  // niet in de opmaak. Wie alleen ankers leest, ziet daar niets. We halen de
+  // URL's daarom uit de hele respons — nog steeds uitsluitend adressen die de
+  // site zelf publiceert, alleen niet meer afhankelijk van waar ze staan.
+  const kaal = html.replace(/\\\//g, "/").replace(/\\u002[fF]/g, "/").replace(/&amp;/g, "&");
+  const scores = new Map();
+  const re = /https?:\/\/[^\s"'<>\\)\]}]+|\/[A-Za-z0-9._~%+-]+(?:\/[A-Za-z0-9._~%+-]+)*/g;
   let m;
-  while ((m = re.exec(html))) {
-    const href = m[1];
-    const tekst = m[2].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-    const lijktUrl = /\.rss(\?|$)|\.atom(\?|$)|\.xml(\?|$)|(^|[/.?=&-])rss([/.?&=-]|$)|(^|[/?=&-])feed([/.?&=-]|$)/i.test(href);
-    const lijktTekst = /\brss\b|\batom[\s-]?feed\b/i.test(tekst);
-    if (!lijktUrl && !lijktTekst) continue;
+  while ((m = re.exec(kaal))) {
+    const kandidaat = m[0].replace(/[.,;:)\]]+$/, "");
+    const score = feedScore(kandidaat);
+    if (!score) continue;
     try {
-      const url = new URL(href, basis).href;
+      const url = new URL(kandidaat, basis).href;
       if (!/^https?:/i.test(url)) continue;
-      if (!uit.has(url)) uit.set(url, tekst.slice(0, 60));
-    } catch { /* onbruikbare href */ }
+      if ((scores.get(url) || 0) < score) scores.set(url, score);
+    } catch { /* onbruikbaar adres */ }
   }
-  return [...uit].map(([url, titel]) => ({ url, titel }));
+  return [...scores]
+    .sort((a, b) => b[1] - a[1])
+    .map(([url]) => ({ url, titel: "" }));
 }
 
 function feedSamenvatting(tekst) {

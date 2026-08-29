@@ -55,3 +55,26 @@ test("de tool draagt geen belofte meer die de code niet waarmaakt", async () => 
     `de ondertitel noemt niet ${uren} uur, terwijl CONCEPT_TTL_S dat wel is`
   );
 });
+
+// ---- De wachtrij: breedste bronbasis eerst ---------------------------------
+// Afgesproken werkwijze: TWEE onafhankelijke outlets blijft de ondergrens (dat
+// is de auteursrechtelijke regel), maar drie of meer is een steviger verhaal en
+// dat hoort bovenaan te staan. Wie halverwege de wachtrij stopt, heeft dan de
+// beste stukken gehad in plaats van de toevallig nieuwste.
+
+test("de reviewtool markeert een concept dat op precies twee kranten steunt", () => {
+  assert.match(review, /function smalleBasisHtml\(c\)\{/);
+  assert.match(review, /onafhankelijkeOutlets !== 2/, "de markering hoort alleen bij precies twee");
+  assert.match(review, /Smalle basis — twee kranten/);
+  // Het is een signaal, geen blokkade: de knop Publiceer blijft gewoon staan.
+  assert.match(review, /smalleBasisHtml\(c\)\+/, "de markering wordt ook echt getoond");
+});
+
+test("de wachtrij sorteert op bronbreedte, daarna op recentheid", async () => {
+  const route = readFileSync(new URL("../api/review.js", import.meta.url), "utf8");
+  assert.match(route, /const breedte = \(c\) =>/);
+  assert.match(route, /breedte\(b\) - breedte\(a\) \|\|/, "breedte moet vóór de datum komen");
+  // En de ondergrens zelf is NIET verschoven: dat blijft de poort.
+  const { SYNTHESE_MIN_BRONNEN } = await import("../lib/config.js");
+  assert.equal(SYNTHESE_MIN_BRONNEN, 2, "de ondergrens hoort ongewijzigd twee te zijn");
+});

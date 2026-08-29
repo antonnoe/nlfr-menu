@@ -349,8 +349,20 @@ export default async function handler(req, res) {
         ? vindPrimaireBron(c, overheid, registerRecords, nuMs)
         : null;
     }
+    // VOLGORDE VAN DE WACHTRIJ: breedste bronbasis eerst, daarbinnen het
+    // nieuwste bovenaan. De huisregel blijft twee onafhankelijke outlets — dat
+    // is de auteursrechtelijke ondergrens en die verandert hier niet — maar een
+    // verhaal dat door drie of meer kranten wordt gemeld is een steviger
+    // synthese, en dat hoort de redacteur het eerst te zien. Wie halverwege de
+    // wachtrij stopt, heeft dan de beste stukken al gehad in plaats van de
+    // toevallig nieuwste.
+    const breedte = (c) => (c.poort && typeof c.poort.onafhankelijkeOutlets === "number"
+      ? c.poort.onafhankelijkeOutlets
+      : 0);
     besten.sort(
-      (a, b) => (Date.parse(b.aangemaaktOp) || 0) - (Date.parse(a.aangemaaktOp) || 0)
+      (a, b) =>
+        breedte(b) - breedte(a) ||
+        (Date.parse(b.aangemaaktOp) || 0) - (Date.parse(a.aangemaaktOp) || 0)
     );
     publicaties.sort(
       (a, b) =>

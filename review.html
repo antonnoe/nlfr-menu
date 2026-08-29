@@ -222,6 +222,21 @@
       (c.bronnenTerugval?' · <span class="terugval">bronnenlijst ongefilterd</span>':'');
   }
 
+  // Een concept op precies het minimum (twee kranten) mag gepubliceerd worden,
+  // maar het is de zwakste soort: één van de twee blijkt achteraf nog wel eens
+  // dezelfde bron na te vertellen. Geen blokkade, wel een zichtbaar merkteken,
+  // zodat je bij twijfel eerder "Weg" kiest. Drie of meer krijgt het niet.
+  function smalleBasisHtml(c){
+    var p = c.poort || {};
+    if (!p.persconcept || p.publiceerbaar === false) return "";
+    if (p.onafhankelijkeOutlets !== 2) return "";
+    return '<div class="waarschuwing"><b>Smalle basis — twee kranten</b>'+
+      'Dit verhaal wordt door precies twee onafhankelijke outlets gemeld'+
+      ((p.outletNamen||[]).length ? ' ('+esc(p.outletNamen.join(", "))+')' : "")+
+      '. Dat mag, maar het is de dunste onderbouwing die de huisregels toelaten. '+
+      'Kijk bij twijfel of het tweede bericht niet gewoon het eerste navertelt.</div>';
+  }
+
   // Waarschuwingsblok bij een te smalle bronbasis. Zo'n concept hoort door de
   // serverpoort niet meer publiceerbaar te zijn; de teller staat er sowieso.
   function outletWaarschuwing(c){
@@ -493,6 +508,7 @@
         '<textarea>'+esc(c.tekst)+'</textarea>'+
         bronnenHtml(c.bronnen)+
         outletWaarschuwing(c)+
+        smalleBasisHtml(c)+
         gelijkenisHtml(c)+
         primaireBronHtml(c)+
         outletnaamHtml(c)+

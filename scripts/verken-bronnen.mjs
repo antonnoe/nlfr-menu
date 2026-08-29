@@ -158,12 +158,27 @@ function licentieSporen(html) {
   return gevonden;
 }
 
+// Diagnose. Als een verkenning een uitkomst geeft die niet kan kloppen — "geen
+// feedlink" op een pagina die de feedlijst van de Rijksoverheid is — dan is de
+// vraag niet welke regexp beter moet, maar WAT de runner eigenlijk binnenkrijgt.
+// Met BRON_DUMP=1 toont hij dat: de lengte, het aantal links, de content-type
+// en het begin van de HTML. Een JS-schil of een WAF-uitdaging zie je zo meteen.
+function toonRuw(r) {
+  const links = (r.tekst.match(/<a\b/gi) || []).length;
+  console.log("```");
+  console.log(`HTTP ${r.status} · ${r.type || "geen content-type"} · ${r.tekst.length} tekens · ${links} <a>-tags`);
+  console.log(r.tekst.slice(0, 1200).replace(/\s+/g, " "));
+  console.log("```\n");
+}
+
 async function verken(ingang) {
   const regels = [];
   const eerste = await haal(ingang, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
   if (!eerste.ok && !eerste.tekst) {
     return { ingang, bereikbaar: false, reden: eerste.fout || `HTTP ${eerste.status}`, feeds: [], sporen: [] };
   }
+
+  if (process.env.BRON_DUMP) toonRuw(eerste);
 
   const feeds = [];
   let geprobeerd = 0;

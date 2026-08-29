@@ -22,6 +22,11 @@ on:
         description: 'URLs, gescheiden door spaties of komma’s'
         type: string
         required: true
+      dump:
+        description: 'Toon ook de ruwe HTML die de runner binnenkrijgt (diagnose)'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -45,4 +50,5 @@ jobs:
       - name: Verkennen
         env:
           BRONNEN: ${{ inputs.urls }}
+          BRON_DUMP: ${{ inputs.dump && '1' || '' }}
         run: node scripts/verken-bronnen.mjs | tee -a "$GITHUB_STEP_SUMMARY"

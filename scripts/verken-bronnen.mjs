@@ -54,6 +54,17 @@ async function haal(url, accept) {
   }
 }
 
+// Lang niet elke site kondigt zijn feed aan in de <head>; Franse
+// overheidssites doen dat opvallend vaak niet. "Niet aangekondigd" is dus geen
+// bewijs van "niet aanwezig" — daarom probeert de verkenner daarna deze
+// gebruikelijke paden. Pas als die óók niets opleveren, is de conclusie iets
+// waard.
+const GEBRUIKELIJKE_PADEN = [
+  "/rss", "/rss.xml", "/feed", "/feed/", "/flux-rss", "/flux-rss.xml",
+  "/atom.xml", "/index.rss", "/actualites/rss", "/actualites.rss",
+  "/fr/rss.xml", "/rss/actualites.xml", "/?feed=rss2",
+];
+
 const isFeed = (type, tekst) =>
   /xml|rss|atom/i.test(type) || /<rss[\s>]|<feed[\s>]|<rdf:RDF/i.test(tekst.slice(0, 2000));
 
@@ -105,6 +116,7 @@ async function verken(ingang) {
   }
 
   const feeds = [];
+  let geprobeerd = 0;
   if (isFeed(eerste.type, eerste.tekst)) {
     feeds.push({ url: eerste.url, titel: "(opgegeven URL is zelf een feed)", ...feedSamenvatting(eerste.tekst), status: eerste.status });
   } else {
@@ -119,6 +131,24 @@ async function verken(ingang) {
       });
     }
     regels.push(`pagina: HTTP ${eerste.status}, ${feeds.length} aangekondigde feed(s)`);
+
+    // Niets aangekondigd? Dan de gebruikelijke paden proberen voordat we
+    // "geen feed" durven zeggen.
+    if (!feeds.some((f) => f.geldig)) {
+      for (const pad of GEBRUIKELIJKE_PADEN) {
+        let kandidaat;
+        try {
+          kandidaat = new URL(pad, eerste.url).href;
+        } catch {
+          continue;
+        }
+        if (feeds.some((f) => f.url === kandidaat)) continue;
+        const f = await haal(kandidaat, "application/rss+xml,application/atom+xml,application/xml;q=0.9,*/*;q=0.8");
+        if (!f.ok || !isFeed(f.type, f.tekst)) continue;
+        feeds.push({ url: kandidaat, titel: "(gevonden op een gebruikelijk pad)", status: f.status, geldig: true, ...feedSamenvatting(f.tekst) });
+      }
+      geprobeerd = GEBRUIKELIJKE_PADEN.length;
+    }
   }
 
   // Licentiesporen: op de pagina zelf plus, als die er is, de juridische pagina.
@@ -133,7 +163,7 @@ async function verken(ingang) {
     break;
   }
 
-  return { ingang, bereikbaar: true, status: eerste.status, feeds, sporen: licentieSporen(sporenTekst), regels };
+  return { ingang, bereikbaar: true, status: eerste.status, feeds, geprobeerd, sporen: licentieSporen(sporenTekst), regels };
 }
 
 // ---- uitvoer ---------------------------------------------------------------
@@ -157,7 +187,11 @@ for (const ingang of ingangen) {
     continue;
   }
   if (!r.feeds.length) {
-    console.log(`Bereikbaar (HTTP ${r.status}), maar **geen feed aangekondigd in de pagina**. Handmatig zoeken, of afvallen.\n`);
+    console.log(
+      `Bereikbaar (HTTP ${r.status}), maar **geen feed gevonden**: niets aangekondigd in de pagina` +
+        (r.geprobeerd ? `, en ${r.geprobeerd} gebruikelijke paden (/rss, /feed, /flux-rss, …) leverden ook niets op` : "") +
+        ".\n"
+    );
   } else {
     console.log("| feed | http | items | nieuwste | titel |");
     console.log("| --- | --- | --- | --- | --- |");

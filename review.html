@@ -20,7 +20,23 @@
   .balk .tel { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:var(--brand); margin-right:auto; }
   .balk button { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; border-radius:999px; padding:8px 14px; cursor:pointer; min-height:44px; border:1px solid rgba(128,0,0,.2); background:rgba(128,0,0,.06); color:var(--brand); }
   .balk button:hover { background:rgba(128,0,0,.12); }
-  .balk button.gevaar { border-color:rgba(128,0,0,.3); }
+  /* OPRUIMEN ZIT IN EEN LAATJE. "Wachtrij wissen" stond als volwaardige knop
+     naast de tellers: even prominent als de knoppen die je de hele dag
+     gebruikt, terwijl hij onomkeerbaar is en zelden nodig. Nu moet je hem
+     eerst openklappen — één handeling extra, precies waar je die wilt. */
+  /* Bewust GEEN <details>: het inklappen daarvan hangt af van de
+     browserstijl, en dat is precies de laag die je niet kunt nameten. Hier
+     doet één klasse het werk, met [hidden] als harde vangregel. */
+  .opruimknop { flex:none; min-height:44px; padding:8px 14px; border-radius:999px; cursor:pointer;
+    font-family:'Poppins',sans-serif; font-weight:600; font-size:13px;
+    color:#8a7f7c; background:none; border:1px solid transparent; }
+  .opruimknop:hover { border-color:rgba(128,0,0,.15); color:var(--brand); }
+  .opruimknop[aria-expanded="true"] { color:var(--brand); border-color:rgba(128,0,0,.2); }
+  .opruimlade { flex-basis:100%; margin-top:4px; padding:12px 14px; border:1px solid rgba(128,0,0,.25);
+    border-radius:12px; background:rgba(128,0,0,.04); display:grid; gap:10px; max-width:520px; }
+  .opruimlade[hidden] { display:none; }
+  .opruimlade p { margin:0; font-size:13px; color:#6d6360; }
+  .balk button.gevaar { border-color:rgba(128,0,0,.35); background:#fff; }
 
   .kaart { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 10px 30px -24px rgba(90,0,0,.5); }
   .kaart.pub { border-color:rgba(47,107,58,.4); background:rgba(47,107,58,.05); }
@@ -82,7 +98,9 @@
   .keten .ketenrij { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:4px 0; }
   .keten .ketenrij.tweede { border-top:1px dashed rgba(128,0,0,.18); margin-top:6px; padding-top:8px; }
   .keten .ketenknoppen { display:inline-flex; gap:6px; flex:none; }
-  .keten button.actie { min-height:36px; padding:6px 14px; font-size:13px; }
+  /* De ja/nee-knoppen bij een keten-vraag stonden op 36 px — de laatste die
+     onder de maat zat. Zie test/reviewtool.test.mjs. */
+  .keten button.actie { min-height:44px; padding:8px 16px; font-size:13.5px; }
   .keten .ketenbtn { background:var(--actueel); color:#fff; }
   .keten .ketennee { background:#fff; color:var(--brand); border:1px solid rgba(128,0,0,.25); }
   .keten.klaar { background:rgba(47,107,58,.07); border-color:rgba(47,107,58,.3); color:var(--actueel); font-weight:600; }
@@ -445,7 +463,16 @@
     html += '<div class="balk"><span class="tel">'+state.concepten.length+' concept'+(state.concepten.length===1?"":"en")+
       (state.duplicaten?' · '+state.duplicaten+' duplicaten':"")+'</span>';
     if (state.duplicaten){ html += '<button id="ontdubbel">Ontdubbelen ('+state.duplicaten+')</button>'; }
-    if (state.totaal){ html += '<button id="wisAlles" class="gevaar" title="Leegt alleen de wachtrij met persconcepten. Gepubliceerde artikelen en de overheidsberichten blijven staan.">Wachtrij persconcepten wissen</button>'; }
+    if (state.totaal){
+      // Onomkeerbaar en zelden nodig: dus niet naast de dagelijkse knoppen,
+      // maar achter een laatje dat je bewust openklapt.
+      html += '<button type="button" class="opruimknop" id="opruimToggle" aria-expanded="false" aria-controls="opruimLade">Opruimen…</button>'+
+        '<div class="opruimlade" id="opruimLade" hidden>'+
+          '<p>Dit leegt de wachtrij met <b>'+state.totaal+' persconcept'+(state.totaal===1?"":"en")+'</b>. '+
+          'Gepubliceerde artikelen, de overheidsberichten en de verenigingsitems blijven staan. Er is geen weg terug.</p>'+
+          '<div><button id="wisAlles" class="gevaar">Wachtrij persconcepten wissen</button></div>'+
+        '</div>';
+    }
     html += '</div>';
 
     if (!state.concepten.length){
@@ -533,6 +560,14 @@
         else { melding((res.data&&res.data.fout)||"Mislukt.", "fout"); ontdubbelBtn.disabled=false; }
       });
     });
+    var opruimToggle = document.getElementById("opruimToggle");
+    if (opruimToggle) opruimToggle.addEventListener("click", function(){
+      var lade = document.getElementById("opruimLade");
+      var open = lade.hasAttribute("hidden");
+      if (open) lade.removeAttribute("hidden"); else lade.setAttribute("hidden", "");
+      opruimToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
     var wisAllesBtn = document.getElementById("wisAlles");
     if (wisAllesBtn) wisAllesBtn.addEventListener("click", function(){
       if (!window.confirm("De wachtrij met "+state.totaal+" persconcepten wissen?\n\nAlleen nog niet gepubliceerde persconcepten verdwijnen. Gepubliceerde artikelen, de overheidsberichten (live én archief) en de verenigingsitems blijven ongewijzigd.")) return;

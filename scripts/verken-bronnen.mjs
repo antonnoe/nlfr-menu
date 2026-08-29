@@ -58,7 +58,23 @@ async function eenmaalHalen(url, accept, agent) {
     const tekst = await r.text();
     return { ok: r.ok, status: r.status, type: r.headers.get("content-type") || "", tekst, url: r.url };
   } catch (e) {
-    return { ok: false, status: 0, type: "", tekst: "", url, fout: e.name === "AbortError" ? "tijd verstreken" : e.message };
+    // "fetch failed" alleen is nietszeggend. De onderliggende oorzaak maakt het
+    // verschil tussen een hostnaam die niet bestaat (ENOTFOUND — dan klopt de
+    // URL niet), een geweigerde verbinding, een TLS-probleem en een hapering.
+    const oorzaak = e.cause && (e.cause.code || e.cause.message);
+    const uitleg = {
+      ENOTFOUND: "hostnaam bestaat niet (DNS)",
+      EAI_AGAIN: "DNS tijdelijk niet bereikbaar",
+      ECONNREFUSED: "verbinding geweigerd",
+      ECONNRESET: "verbinding verbroken",
+      ETIMEDOUT: "verbinding liep vast",
+      CERT_HAS_EXPIRED: "TLS-certificaat verlopen",
+      UNABLE_TO_VERIFY_LEAF_SIGNATURE: "TLS-certificaat niet te verifiëren",
+    }[oorzaak];
+    const fout = e.name === "AbortError"
+      ? "tijd verstreken"
+      : `${e.message}${oorzaak ? ` — ${uitleg || oorzaak}` : ""}`;
+    return { ok: false, status: 0, type: "", tekst: "", url, fout };
   } finally {
     clearTimeout(klok);
   }

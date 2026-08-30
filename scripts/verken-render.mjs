@@ -106,6 +106,20 @@ async function verken(ingang) {
       `${herkomst.size} feed-kandidaten\n`
   );
 
+  // Met BRON_DUMP=1: álle verzoeken die de pagina doet, niet alleen de
+  // feed-achtige. Bouwt een pagina zijn feedlijst uit een API op, dan staat die
+  // API hier — en dat is de enige manier om hem te vinden zonder te gokken.
+  // Statisch materiaal (afbeeldingen, lettertypen, scripts, stijl) blijft weg;
+  // dat is ruis.
+  if (process.env.BRON_DUMP) {
+    const boeiend = sessie.verzoeken.filter(
+      (u) => !/\.(js|css|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|eot|mp4|webm)(\?|$)/i.test(u)
+    );
+    console.log(`Netwerkverzoeken zonder statisch materiaal (${boeiend.length} van ${sessie.verzoeken.length}):\n`);
+    for (const u of boeiend) console.log(`- ${u}`);
+    console.log("");
+  }
+
   if (!herkomst.size) {
     console.log("Geen enkel feed-achtig adres, ook niet na renderen.\n");
     return;

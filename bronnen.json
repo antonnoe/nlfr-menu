@@ -1,5 +1,5 @@
 {
-  "_uitleg": "Bronnenlijst voor de route /actueel (live Frankrijknieuws). De API-route /api/actueel haalt UITSLUITEND de feeds hieronder op, parseert ze (RSS 2.0 + Atom), normaliseert en respecteert per bron het regime. Velden per bron: naam, feed (RSS/Atom-URL), thema, regime ('overheid', 'pers', 'eigen' of 'verenigingen'), taal ('fr' of 'nl'), prioriteit (1=hoog .. 3=laag), actief (true/false). Extra veld 'verificatie': 'geverifieerd' = bevestigd via de live bronStatus (HTTP 200 én items); het veld 'verificatieDatum' houdt bij wanneer dat is vastgesteld. 'te-testen' = nog vanaf Vercel te verifiëren (werkt niet -> in de bron-status melden, niet gissen). 'geblokkeerd' = feed weigert of levert niets; bron staat op actief:false. Regime-regel: overheid = titel + samenvatting uit de feed + bronvermelding met URL; pers = UITSLUITEND titel + bron + datum + link (geen samenvatting, geen vertaling); eigen = eigen redactionele bron (Infofrankrijk), zelfde behandeling als overheid: titel + samenvatting + link; verenigingen = agenda-/nieuwsitems van Nederlandse verenigingen (JSON-aggregaat), ook titel + samenvatting + link. Alleen 'pers' doorloopt de clustering, de AI-synthese en de publicatie-gate van de reviewtool; overheid, eigen en verenigingen gaan buiten die poort om rechtstreeks naar /actueel en krijgen het ruime datumvenster. Een kapotte feed wordt overgeslagen; de rest blijft werken.",
+  "_uitleg": "Bronnenlijst voor de route /actueel (live Frankrijknieuws). De API-route /api/actueel haalt UITSLUITEND de feeds hieronder op, parseert ze (RSS 2.0 + Atom), normaliseert en respecteert per bron het regime. Velden per bron: naam, feed (RSS/Atom-URL), thema, regime ('overheid', 'pers', 'eigen' of 'verenigingen'), taal ('fr' of 'nl'), prioriteit (1=hoog .. 3=laag), actief (true/false). Extra veld 'verificatie': 'geverifieerd' = bevestigd via de live bronStatus (HTTP 200 én items); het veld 'verificatieDatum' houdt bij wanneer dat is vastgesteld. 'te-testen' = nog vanaf Vercel te verifiëren (werkt niet -> in de bron-status melden, niet gissen). 'geblokkeerd' = feed weigert of levert niets; bron staat op actief:false. Regime-regel: overheid = titel + samenvatting uit de feed + bronvermelding met URL; pers = UITSLUITEND titel + bron + datum + link (geen samenvatting, geen vertaling); eigen = eigen redactionele bron (Infofrankrijk), zelfde behandeling als overheid: titel + samenvatting + link; verenigingen = agenda-/nieuwsitems van Nederlandse verenigingen (JSON-aggregaat), ook titel + samenvatting + link. Alleen 'pers' doorloopt de clustering, de AI-synthese en de publicatie-gate van de reviewtool; overheid, eigen en verenigingen gaan buiten die poort om rechtstreeks naar /actueel en krijgen het ruime datumvenster. Optioneel veld 'licentie': het hergebruikregime zoals dat op de site van de bron is vastgesteld (bijvoorbeeld 'CC0' of 'Licence Ouverte'). Dat is GEEN sierveld: een Nederlandstalige overheidsbron met taal 'nl' gaat buiten het AI-model om — kop en samenvatting worden woordelijk uit de feed overgenomen (zie overheidUitFeed in lib/synthese.js), wat alleen mag bij een licentie die woordelijk hergebruik toestaat. Staat er geen licentie, dan hoort de bron daar niet bij. Een kapotte feed wordt overgeslagen; de rest blijft werken.",
   "bronnen": [
     {
       "naam": "Bercy — Ministère de l'Économie",
@@ -14,7 +14,9 @@
     {
       "naam": "Service-Public — particuliers",
       "feed": "https://www.service-public.fr/abonnements/rss/actu-actualites-particuliers.rss",
-      "linkDomeinen": ["service-public.gouv.fr"],
+      "linkDomeinen": [
+        "service-public.gouv.fr"
+      ],
       "_linkDomeinen": "Service-Public is verhuisd naar service-public.gouv.fr: de feed staat nog op www.service-public.fr, maar de artikel-URL's wijzen naar www.service-public.gouv.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js elke Service-Public-bronlink.",
       "thema": "praktisch",
       "regime": "overheid",
@@ -26,7 +28,9 @@
     {
       "naam": "Service-Public — professionnels",
       "feed": "https://www.service-public.fr/abonnements/rss/actu-actu-pro.rss",
-      "linkDomeinen": ["service-public.gouv.fr"],
+      "linkDomeinen": [
+        "service-public.gouv.fr"
+      ],
       "_linkDomeinen": "Service-Public is verhuisd naar service-public.gouv.fr: de feed staat nog op www.service-public.fr, maar de artikel-URL's wijzen naar www.service-public.gouv.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js elke Service-Public-bronlink.",
       "thema": "ondernemen",
       "regime": "overheid",
@@ -125,7 +129,9 @@
     {
       "naam": "Franceinfo — Titres",
       "feed": "https://www.francetvinfo.fr/titres.rss",
-      "linkDomeinen": ["franceinfo.fr"],
+      "linkDomeinen": [
+        "franceinfo.fr"
+      ],
       "_linkDomeinen": "Franceinfo publiceert onder twee merkdomeinen: de feed staat op francetvinfo.fr, maar de artikelen staan op www.franceinfo.fr en op regiosubdomeinen als france3-regions.franceinfo.fr. Zonder deze regel weigert de herkomsttoets in lib/bronurl.js die links terecht-maar-onterecht en verliest een deel van de perssyntheses zijn bronlink.",
       "thema": "landelijk-fr",
       "regime": "pers",
@@ -221,6 +227,20 @@
       "linkAggregaat": true,
       "_opmerking": "Aggregaat-JSON van antonnoe/verenigingen-kalender (GitHub Pages). Bundelt de nieuwsfeeds van NL-verenigingen in Frankrijk. Ruimer venster (30 dagen), want laagfrequent.",
       "_linkAggregaat": "De itemlinks wijzen naar de websites van de verenigingen zelf, niet naar antonnoe.github.io. De herkomsttoets 'host hoort bij de feed-host' kan hier dus niet gelden; zou hij dat wel doen, dan verdwijnt elke verenigingslink. Alle andere toetsen uit lib/bronurl.js blijven onverkort gelden: absolute http(s)-URL, niet-leeg pad, geen asset-host, geen geblokkeerd domein. De sonde (.github/workflows/sonde.yml) rapporteert welke hosts de aggregaat aanlevert, zodat deze lijst later een expliciete linkDomeinen-allowlist kan worden."
+    },
+    {
+      "naam": "Rijksoverheid — Nieuws",
+      "feed": "https://www.rijksoverheid.nl/api/rss?query=%7B%22filters%22%3A%5B%5D%2C%22resultSearchTerm%22%3A%22%22%7D",
+      "_feed": "Rijksoverheid publiceert geen vaste feed-URL: de pagina /service/rss laat je filters aanklikken en stelt het adres dan samen. Het patroon staat in hun eigen JavaScript: /api/rss?query=<JSON>. Beide velden zijn verplicht — met alleen 'filters' antwoordt de server met een 400. Deze query is de ongefilterde variant: al het rijksnieuws.",
+      "thema": "nl-overheid",
+      "regime": "overheid",
+      "taal": "nl",
+      "licentie": "CC0",
+      "_licentie": "Teksten van rijksoverheid.nl zijn CC0 en mogen woordelijk worden hergebruikt zonder naamsvermelding. Dat geldt NIET voor het logo en voor ingesloten stockfoto's; die nemen we ook niet over. Omdat de tekst al Nederlands is en woordelijk mag, gaat deze bron buiten het AI-model om.",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-08-30"
     }
   ]
 }

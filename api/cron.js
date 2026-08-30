@@ -28,12 +28,13 @@ import { haalAlleItems, faitsDiversDoorlaat, sportDoorlaat, buitenlandDoorlaatNL
 import { clusterItems, zelfdeVerhaal, outletNamen } from "../lib/cluster.js";
 import { structureelGeldig } from "../lib/poort.js";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
-import { synthetiseer, samenvatOverheid } from "../lib/synthese.js";
+import { synthetiseer, samenvatOverheid, overheidUitFeed } from "../lib/synthese.js";
 import {
   CONCEPT_TTL_S,
   OVERHEID_TTL_S,
   MAX_SYNTHESE_PER_RONDE,
   MAX_OVERHEID_PER_RONDE,
+  MAX_OVERHEID_NL_PER_RONDE,
   MAX_OPENSTAANDE_CONCEPTEN,
   SYNTHESE_MIN_BRONNEN,
   OVERHEID_THEMAS,
@@ -108,10 +109,16 @@ export default async function handler(req, res) {
   const overheidItems = items.filter((i) => OVERHEID_THEMAS.includes(i.thema));
   const overheidVerwerkt = [];
   let nieuwOverheid = 0;
+  let nieuwOverheidNL = 0;
   let overheidDubbelOvergeslagen = 0;
   let ketenVragen = 0;
   for (const item of overheidItems) {
-    if (nieuwOverheid >= MAX_OVERHEID_PER_RONDE) break;
+    // Twee tellers, want twee heel verschillende kosten. Een Nederlandstalige
+    // bron wordt woordelijk overgenomen (CC0) en kost alleen een KV-schrijf;
+    // een Franse bron kost een modelaanroep. Ze mogen elkaars ruimte niet
+    // opeten — zie MAX_OVERHEID_NL_PER_RONDE in lib/config.js.
+    const alNederlands = item.taal === "nl";
+    if (alNederlands ? nieuwOverheidNL >= MAX_OVERHEID_NL_PER_RONDE : nieuwOverheid >= MAX_OVERHEID_PER_RONDE) continue;
     const id = hashId(item.url);
     if (await getJSON(KEY_OVERHEID(id))) {
       overheidVerwerkt.push({ id, status: "overgeslagen" });
@@ -126,7 +133,9 @@ export default async function handler(req, res) {
       continue;
     }
     try {
-      const { kop, samenvatting, model } = await samenvatOverheid(item);
+      const { kop, samenvatting, model } = alNederlands
+        ? overheidUitFeed(item)
+        : await samenvatOverheid(item);
       const doc = {
         id,
         // Actualité-nummer (A18905) als dat in de URL zit: de identiteit die
@@ -157,8 +166,9 @@ export default async function handler(req, res) {
       }
       await setJSON(KEY_OVERHEID(id), doc, OVERHEID_TTL_S);
       overheidBehouden.push(doc); // volgende items in deze ronde hiertegen dedupen
-      nieuwOverheid += 1;
-      overheidVerwerkt.push({ id, status: "live", bron: item.bron });
+      if (alNederlands) nieuwOverheidNL += 1;
+      else nieuwOverheid += 1;
+      overheidVerwerkt.push({ id, status: "live", bron: item.bron, model: model || "geen (feedtekst)" });
     } catch (e) {
       overheidVerwerkt.push({
         id,

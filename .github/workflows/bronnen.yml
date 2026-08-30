@@ -11,7 +11,12 @@
 # blijft mensenwerk.
 #
 # Net als de sonde en de meting: bewust ZONDER npm ci, het script is
-# dependency-vrij.
+# dependency-vrij. De invoer "browser" is de uitzondering: die installeert een
+# Chromium en laat de pagina echt uitvoeren. Nodig voor sites die hun inhoud
+# pas in de browser opbouwen — rijksoverheid.nl levert 223 kB HTML met 25
+# links, want de feedlijst wordt daar door JavaScript neergezet. Duurder
+# (~1 minuut installatie), dus alleen aanzetten als de gewone stand niets
+# vindt op een site waarvan je weet dat er wél iets is.
 
 name: Bronnen verkennen
 
@@ -27,6 +32,11 @@ on:
         type: boolean
         required: false
         default: false
+      browser:
+        description: 'Laat een browser de pagina uitvoeren (voor sites die hun inhoud met JavaScript opbouwen)'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -39,7 +49,7 @@ jobs:
   verkennen:
     name: Feeds en licentiesporen van kandidaat-bronnen
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -47,8 +57,20 @@ jobs:
         with:
           node-version: '22'
 
+      # Alleen voor de browserstand: de gewone verkenner is dependency-vrij en
+      # heeft hier niets aan. --no-save omdat playwright-core niet in
+      # package.json hoort — de productie-app op Vercel heeft geen browser nodig.
+      - name: Chromium installeren
+        if: ${{ inputs.browser }}
+        run: |
+          npm install --no-save playwright-core@1.49.1
+          npx --yes playwright@1.49.1 install --with-deps chromium
+
       - name: Verkennen
         env:
           BRONNEN: ${{ inputs.urls }}
           BRON_DUMP: ${{ inputs.dump && '1' || '' }}
-        run: node scripts/verken-bronnen.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          script=scripts/verken-bronnen.mjs
+          [ "${{ inputs.browser }}" = "true" ] && script=scripts/verken-render.mjs
+          node "$script" | tee -a "$GITHUB_STEP_SUMMARY"

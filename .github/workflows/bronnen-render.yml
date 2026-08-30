@@ -1,0 +1,55 @@
+# Kandidaat-bronnen verkennen MET een browser.
+# ---------------------------------------------------------------------------
+# De gewone verkenner (workflow "Bronnen verkennen") haalt de kale HTML op. Dat
+# is genoeg voor een klassieke site en nutteloos bij een moderne overheidssite:
+# rijksoverheid.nl bouwt zijn pagina pas in de browser op, dus een abonneerknop
+# die zijn feed-URL ter plekke samenstelt staat niet in de opgehaalde HTML.
+#
+# Deze workflow laat Chromium de pagina echt uitvoeren en leest daarna wat er
+# staat — inclusief de netwerkverzoeken die de pagina zelf doet. Dat laatste is
+# de eerlijkste vondst die er is: adressen die de site zelf aanroept.
+#
+# Duurder dan de gewone verkenner (browserinstallatie ~1 minuut), dus alleen
+# handmatig, en alleen als de gewone verkenner niets vindt op een site waarvan
+# je weet dat er wél iets is.
+
+name: Bronnen verkennen (browser)
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs, gescheiden door spaties of komma’s'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bronnen-verkennen-browser
+  cancel-in-progress: false
+
+jobs:
+  verkennen:
+    name: Feeds vinden op pagina's die JavaScript nodig hebben
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Bewust --no-save: playwright-core hoort niet in package.json thuis, want
+      # de productie-app (Vercel) heeft geen browser nodig. Dit is gereedschap.
+      - name: Chromium installeren
+        run: |
+          npm install --no-save playwright-core@1.49.1
+          npx --yes playwright@1.49.1 install --with-deps chromium
+
+      - name: Verkennen
+        env:
+          BRONNEN: ${{ inputs.urls }}
+        run: node scripts/verken-render.mjs | tee -a "$GITHUB_STEP_SUMMARY"

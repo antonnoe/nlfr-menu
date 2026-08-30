@@ -73,6 +73,44 @@ async function rendersessie(url) {
   }
 }
 
+// Laatste redmiddel, en alleen in diagnosestand. rijksoverheid.nl/service/rss
+// doet MAAR DRIE niet-statische verzoeken: zichzelf, een enquêteconfig en de
+// statistiekteller. Er is dus geen API die de feedlijst levert — de pagina
+// stelt de adressen volledig in JavaScript samen, uit wat je aanklikt. Dan
+// staat het patroon in hun eigen scriptbestanden, en die zijn openbaar.
+//
+// Dit leest dus geen verborgen dingen: het is dezelfde code die elke bezoeker
+// binnenkrijgt. We tonen alleen de tekstfragmenten waarin "rss" voorkomt, met
+// wat context eromheen, zodat het opbouwpatroon zichtbaar wordt.
+async function toonRssInScripts(sessie, basis) {
+  const zelfdeHerkomst = (u) => {
+    try { return new URL(u).origin === new URL(basis).origin; } catch { return false; }
+  };
+  const scripts = sessie.verzoeken.filter((u) => /\.js(\?|$)/i.test(u) && zelfdeHerkomst(u));
+  if (!scripts.length) {
+    console.log("Geen eigen scriptbestanden om in te kijken.\n");
+    return;
+  }
+  const gezien = new Set();
+  for (const src of scripts.slice(0, 25)) {
+    const r = await haal(src, "*/*");
+    if (!r.ok) continue;
+    for (const m of r.tekst.matchAll(/.{0,70}rss.{0,70}/gi)) {
+      const fragment = m[0].replace(/\s+/g, " ").trim();
+      if (fragment.length < 8 || gezien.has(fragment)) continue;
+      gezien.add(fragment);
+    }
+  }
+  if (!gezien.size) {
+    console.log(`${scripts.length} eigen scriptbestanden doorzocht, geen enkel fragment met "rss".\n`);
+    return;
+  }
+  console.log(`Fragmenten met "rss" uit ${scripts.length} eigen scriptbestanden (${gezien.size} uniek, hooguit 40 getoond):\n`);
+  console.log("```");
+  for (const f of [...gezien].slice(0, 40)) console.log(f);
+  console.log("```\n");
+}
+
 const lijktFeed = (u) =>
   /\.rss(\?|$)|\.atom(\?|$)|(^|[/.?=&-])rss([/.?&=-]|$)|(^|[/?=&-])feed([/.?&=-]|$)/i.test(u) &&
   !/sitemap/i.test(u);
@@ -118,6 +156,7 @@ async function verken(ingang) {
     console.log(`Netwerkverzoeken zonder statisch materiaal (${boeiend.length} van ${sessie.verzoeken.length}):\n`);
     for (const u of boeiend) console.log(`- ${u}`);
     console.log("");
+    await toonRssInScripts(sessie, ingang);
   }
 
   if (!herkomst.size) {

@@ -163,6 +163,7 @@
       <p class="oog">Het geheel</p>
       <h2>Drie stromen, twee daarvan wachten op een mens</h2>
       <p>De cron draait elk kwartier. Overheidsberichten gaan zelfstandig live; perssyntheses blijven staan tot iemand ze goedkeurt, en een verwijzing naar Infofrankrijk komt er alleen als iemand hem aanklikt.</p>
+      <p>Twee soorten overheidsbron, met een verschil dat je op de pagina niet ziet maar dat wel uitmaakt. Een <b>Franse</b> bron wordt door het AI-model in het Nederlands samengevat. Een <b>Nederlandstalige</b> bron — Rijksoverheid — wordt woordelijk overgenomen: er valt niets te vertalen, dus komt er geen model aan te pas. Dat scheelt geld en het haalt de enige stap weg waar iets verzonnen zou kunnen worden. Het mag omdat die teksten onder CC0 vallen; staat er geen licentie bij een Nederlandstalige bron, dan weigert de testsuite hem.</p>
     </div>
 
     <figure class="fig">
@@ -181,7 +182,7 @@
 
           <!-- lane A: pers -->
           <rect x="14" y="62" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
-          <text x="89" y="86" text-anchor="middle" font-size="12.5" fill="currentColor">16 persfeeds</text>
+          <text x="89" y="86" text-anchor="middle" font-size="12.5" fill="currentColor">7 persfeeds</text>
           <text x="89" y="104" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">FR + NL, alleen koppen</text>
 
           <line x1="164" y1="91" x2="216" y2="91" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
@@ -208,17 +209,17 @@
 
           <!-- lane B: overheid -->
           <rect x="14" y="212" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
-          <text x="89" y="236" text-anchor="middle" font-size="12.5" fill="currentColor">5 overheidsfeeds</text>
-          <text x="89" y="254" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">Bercy, Service-Public…</text>
+          <text x="89" y="236" text-anchor="middle" font-size="12.5" fill="currentColor">8 overheidsfeeds</text>
+          <text x="89" y="254" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">Bercy, Service-Public, Rijksoverheid…</text>
 
           <line x1="164" y1="241" x2="216" y2="241" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
 
           <rect x="218" y="212" width="160" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
           <text x="298" y="236" text-anchor="middle" font-size="12.5" fill="currentColor">cron vat samen</text>
-          <text x="298" y="254" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">2–4 zinnen Nederlands</text>
+          <text x="298" y="254" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".7">Frans: 2–4 zinnen NL · NL: onbewerkt</text>
 
           <line x1="378" y1="241" x2="676" y2="241" stroke="currentColor" stroke-width="1.4" marker-end="url(#pijl)"></line>
-          <text x="500" y="230" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">Licence Ouverte — geen review</text>
+          <text x="500" y="230" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">Licence Ouverte / CC0 — geen review</text>
 
           <rect x="678" y="212" width="208" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".75"></rect>
           <text x="782" y="236" text-anchor="middle" font-size="12.5" fill="currentColor">meteen live</text>
@@ -292,6 +293,12 @@
       </li>
     </ol>
 
+    <div class="kaart kolom">
+      <h3>Kijk je naar de nieuwe tool?</h3>
+      <p>Onder de kop staat een grijze regel: <i>versie 2.1 · 30 augustus 2026 · commit 07068ce</i>. Versie en datum zetten wij er met de hand bij als er iets verandert dat jij merkt. De commit ernaast komt uit de server en is niet met de hand te zetten — die is dus de harde waarheid over wat er draait.</p>
+      <p>Zie je die regel helemaal niet, dan kijk je naar een oude pagina uit de cache van je browser. Ververs met een harde herlaad (op de telefoon: de pagina sluiten en opnieuw openen). De juiste plek is <code>/review?token=…</code> op dit adres; een andere curator-URL uit het verleden hoort niet meer gebruikt te worden.</p>
+    </div>
+
     <div class="strip">
       <figure class="telefoon">
         <div class="frame"><img src="/schermen/01-review-boven.webp" width="780" height="1688" loading="lazy" decoding="async" alt="Bovenkant van de reviewtool op een telefoon: de kop Redactie — Actueel en daaronder de conceptenwachtrij."></div>
@@ -308,9 +315,10 @@
 
   <section class="sectie">
     <div class="kolom">
-      <p class="oog">Nieuw sinds gisteren</p>
+      <p class="oog">Koppelen aan je eigen site</p>
       <h2>Verwijzen naar Infofrankrijk</h2>
       <p>Onder elk gepubliceerd bericht kun je een link zetten naar een achtergrondartikel op infofrankrijk.com. Andersom werkt het ook: een nieuwe aankondiging van Bercy kan betekenen dat een fiscaal artikel op Infofrankrijk nagekeken moet worden — dat is de knop <b>Nakijken</b>, en die ziet de lezer niet.</p>
+      <p><b>Waar je het vindt.</b> Op élke kaart in de reviewtool, dus ook bij de overheidsberichten. Scroll naar <b>Overheid — automatisch live</b>; onder elk bericht staat een groen blok <b>Infofrankrijk</b> met de knop <i>Infofrankrijk erbij zoeken</i>. Het blok begint dicht, zodat de wachtrij overzichtelijk blijft.</p>
     </div>
 
     <div class="rooster">
@@ -393,7 +401,8 @@
       <div class="kaart groenrand">
         <h3>Loopt door zonder jou</h3>
         <ul class="plat groen">
-          <li>Overheidsberichten gaan elk kwartier automatisch live.</li>
+          <li>Overheidsberichten gaan elk kwartier automatisch live — Frans én Nederlands, in de tegel <b>Nederlandse overheid</b>.</li>
+          <li>NOS en NU.nl vullen de tegel <b>Nederlands nieuws</b>; die staat los van het Franse landelijke nieuws.</li>
           <li>Gepubliceerde syntheses schuiven na 36 uur naar het archief en verdwijnen na veertien dagen.</li>
           <li>De schoolvakantiezin en de verenigingsagenda werken zelfstandig.</li>
         </ul>

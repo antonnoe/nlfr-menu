@@ -66,3 +66,32 @@ test("de getallen in de uitleg kloppen met de configuratie", async () => {
   assert.ok(uitleg.includes("twaalf maanden"));
   assert.equal(IF_VERWIJZING_MAX, 3);
 });
+
+// ---- De getallen in het schema ---------------------------------------------
+// Deze waren meegedreven: er stond "16 persfeeds" en "5 overheidsfeeds" terwijl
+// het er 7 en 8 waren. Een uitlegpagina die niet klopt is erger dan geen
+// uitlegpagina — wie de curatie overneemt gelooft wat er staat. Vandaar deze
+// toets: de getallen komen uit bronnen.json, niet uit een herinnering.
+test("het schema noemt het werkelijke aantal actieve feeds per regime", () => {
+  const bronnen = JSON.parse(
+    readFileSync(new URL("../bronnen.json", import.meta.url), "utf8")
+  ).bronnen.filter((b) => b.actief);
+  const pers = bronnen.filter((b) => b.regime === "pers").length;
+  const overheid = bronnen.filter((b) => b.regime === "overheid").length;
+
+  assert.ok(uitleg.includes(`${pers} persfeeds`),
+    `het schema noemt niet "${pers} persfeeds" — bronnen.json telt er ${pers}`);
+  assert.ok(uitleg.includes(`${overheid} overheidsfeeds`),
+    `het schema noemt niet "${overheid} overheidsfeeds" — bronnen.json telt er ${overheid}`);
+});
+
+test("de uitleg noemt de versiestempel en de twee nieuwe tegels", () => {
+  assert.match(uitleg, /versie 2\.1/, "de stempel hoort uitgelegd te worden");
+  assert.match(uitleg, /Nederlandse overheid/);
+  assert.match(uitleg, /Nederlands nieuws/);
+});
+
+test("de uitleg zegt waar het Infofrankrijk-blok bij overheidsberichten staat", () => {
+  assert.match(uitleg, /Overheid — automatisch live/,
+    "wie het blok zoekt, moet lezen onder welke kop het staat");
+});

@@ -56,6 +56,8 @@ import {
   IF_VERWIJZING_MAX,
   IF_KANDIDATEN_STANDAARD,
   IF_MAX_LEEFTIJD_MAANDEN,
+  APP_VERSIE,
+  APP_VERSIE_DATUM,
 } from "../lib/config.js";
 
 // Leest het token robuust, ongeacht runtime-eigenaardigheden:
@@ -199,6 +201,18 @@ function leesQuery(req, naam) {
 // bepaalt via de koppeltabel welke IF-categorieën meedoen. Bewust SERVERSIDE:
 // de reviewtool stuurt alleen een id, nooit een thema — anders zou de
 // categoriekeuze vanuit de browser te sturen zijn.
+// Wat er op dit moment werkelijk draait. De hash komt uit de omgeving van
+// Vercel en is dus niet te vervalsen; lokaal ontbreekt hij en zeggen we dat.
+function versieStempel() {
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA || "";
+  return {
+    versie: APP_VERSIE,
+    datum: APP_VERSIE_DATUM,
+    commit: sha ? sha.slice(0, 7) : null,
+    omgeving: process.env.VERCEL_ENV || null,
+  };
+}
+
 async function zoekBericht(id) {
   const overheid = await getJSON(KEY_OVERHEID(id));
   if (overheid) {
@@ -419,6 +433,7 @@ export default async function handler(req, res) {
     // overheid staat automatisch live; hier alleen als kill-switch (verwijderen).
     return res.status(200).json({
       ok: true,
+      versie: versieStempel(),
       verwijzingen,
       nakijken,
       bijnaVerlopen,

@@ -14,6 +14,11 @@
   body { font-family:'Mulish',system-ui,sans-serif; line-height:1.7; color:#3a3330; background:#fdf9f8; margin:0; padding:12px; max-width:760px; margin:0 auto; }
   h1 { font-family:'Poppins',sans-serif; font-size:20px; color:var(--brand); margin:6px 0 2px; }
   .sub { color:#8a7f7c; font-size:13px; margin-bottom:14px; }
+  /* Versiestempel. Klein en grijs: het is naslag, geen boodschap. Maar wel
+     altijd zichtbaar, want de vraag "kijk ik naar de nieuwe tool of naar een
+     oude pagina uit mijn cache?" moet zonder hulp te beantwoorden zijn. */
+  .stempel { color:#8a7f7c; font-size:12px; margin:-8px 0 14px; font-variant-numeric:tabular-nums; }
+  .stempel code { font-size:11px; background:rgba(0,0,0,.05); padding:1px 5px; border-radius:4px; }
   h2 { font-family:'Poppins',sans-serif; font-size:15px; color:var(--brand); border-bottom:1px solid rgba(128,0,0,.12); padding-bottom:6px; margin:22px 0 12px; }
 
   .balk { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
@@ -141,6 +146,7 @@
     <div>
       <h1>Redactie — Actueel</h1>
       <div class="sub">Concepten worden nooit vanzelf gepubliceerd en verlopen na 36 uur. Beoordeel ze één voor één; bewerk de tekst gerust vóór publicatie.</div>
+      <div class="stempel" id="stempel"></div>
     </div>
     <div class="kopknoppen">
       <a class="hulp-link" href="/uitleg" target="_blank" rel="noopener" title="Hoe werkt dit? Uitleg met schermen" aria-label="Uitleg over deze tool">?</a>
@@ -407,6 +413,27 @@
       uit += '<div style="margin-top:8px"><button type="button" class="ifknop klein" data-if-alles="1">Toon alle '+lijst.length+'</button></div>';
     }
     return uit;
+  }
+
+  // De versie van de tool die NU draait. versie en datum komen uit
+  // lib/config.js; de commit-hash komt uit de omgeving van Vercel en is dus
+  // niet met de hand te zetten. Staat er geen hash, dan draait dit niet op
+  // Vercel en zeggen we dat in plaats van iets te verzinnen.
+  function toonStempel(v){
+    var el = document.getElementById("stempel");
+    if (!el) return;
+    if (!v) { el.textContent = ""; return; }
+    var stuk = ["versie " + v.versie, datumKort(v.datum)];
+    stuk.push(v.commit ? "commit " + v.commit : "buiten Vercel");
+    if (v.omgeving && v.omgeving !== "production") stuk.push(v.omgeving);
+    el.innerHTML = esc(stuk.join(" · ")).replace(
+      /commit ([0-9a-f]{7})/, 'commit <code>$1</code>');
+  }
+
+  function datumKort(iso){
+    var d = new Date(String(iso || "") + "T12:00:00Z");
+    if (isNaN(d.getTime())) return String(iso || "");
+    return d.toLocaleDateString("nl-NL", { day:"numeric", month:"long", year:"numeric", timeZone:"Europe/Paris" });
   }
 
   function ifBlokHtml(id){
@@ -789,6 +816,7 @@
         state.totaal = res.data.totaalConcepten || state.concepten.length;
         state.publicaties = res.data.publicaties || [];
         state.overheid = res.data.overheid || [];
+        toonStempel(res.data.versie);
         state.bronUrlWeigeringen = res.data.bronUrlWeigeringen || [];
         state.verwijzingen = res.data.verwijzingen || {};
         state.nakijken = res.data.nakijken || [];

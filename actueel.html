@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
+<meta name="color-scheme" content="only light">
 <title>Actueel — Frankrijknieuws</title>
 <!--
   NLFR ACTUEEL — Nederlandstalige nieuwspagina, embed via iframe op
@@ -20,7 +21,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Mulish:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  /* Auto-dark blokkeren (zelfde aanpak als index.html, 01-08): Chrome/Android
+     zou de pagina anders zelf inverteren en bordeaux #800000 onleesbaar maken.
+     color-scheme:only light + expliciete achtergronden = niets om te keren. */
   :root{
+    color-scheme:only light;
     --bg:#fdf9f8; --kaart:#fff; --kaart-archief:#fdfdfc;
     --ink:#241c1c; --ink-body:#3d3735; --ink-body2:#4d4441; --ink-meta:#6f6663; --ink-zwak:#8a7d79;
     --hair:#f0e8e5; --hair2:#ece4e1; --hair3:#e6dcd9;
@@ -37,7 +42,7 @@
   .cat-archief{ --c-main:#5c5f5c; --c-dark:#4a4d4a; --c-tint:#f3f2f0; --c-rand:#e2e0dc; --c-meta:#6f6663; --c-chip:#f8f8f6; }
 
   *{ box-sizing:border-box; }
-  html,body{ height:100%; margin:0; padding:0; background:transparent; -webkit-text-size-adjust:100%; }
+  html,body{ height:100%; margin:0; padding:0; background:var(--bg); -webkit-text-size-adjust:100%; }
   body{ font-family:var(--body); color:var(--ink-body); }
   .ic{ width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
 
@@ -64,7 +69,7 @@
   .tabgroep{ display:inline-flex; gap:4px; flex:none; background:#fff; border:1px solid var(--hair2); border-radius:999px; padding:4px; }
   .tabgroep.archiefgroep{ border-color:var(--hair3); }
   .tabsplit{ flex:none; width:1px; height:24px; background:var(--hair3); }
-  .tab{ display:inline-flex; align-items:center; gap:6px; flex:none; min-height:40px; padding:0 14px; border:0; border-radius:999px; background:transparent; cursor:pointer; white-space:nowrap;
+  .tab{ display:inline-flex; align-items:center; gap:6px; flex:none; min-height:40px; padding:0 14px; border:0; border-radius:999px; background:#fff; cursor:pointer; white-space:nowrap;
         font-family:var(--disp); font-weight:500; font-size:13px; color:var(--ink-body2); scroll-snap-align:center;
         transition:background 180ms cubic-bezier(.2,.6,.3,1), color 180ms; }
   .tab .ic{ width:15px; height:15px; color:var(--c-main); }
@@ -76,8 +81,8 @@
   /* Scroller (enige scrollcontainer) + de vervaag-rand eronder.
      De wrap vult de 1fr-rij van het paneel; min-height:0 houdt de scroller
      binnen die rij in plaats van hem te laten uitdijen. */
-  .scrollwrap{ position:relative; min-height:0; display:grid; }
-  .scroller{ overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:10px; padding:12px; animation:paneelin 120ms ease; }
+  .scrollwrap{ position:relative; min-height:0; display:grid; background:var(--bg); }
+  .scroller{ background:var(--bg); overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:10px; padding:12px; animation:paneelin 120ms ease; }
   .scroller > *{ flex:none; }
   @media (min-width:600px){ .scroller{ padding:20px; gap:12px; } }
   @keyframes paneelin{ from{opacity:0;} to{opacity:1;} }
@@ -116,7 +121,7 @@
   @keyframes hotpuls{ 0%{box-shadow:0 0 0 0 rgba(128,0,0,.30);} 70%{box-shadow:0 0 0 7px rgba(128,0,0,0);} 100%{box-shadow:0 0 0 0 rgba(128,0,0,0);} }
 
   /* Body van de tegel */
-  .body{ display:none; padding:14px 16px; }
+  .body{ display:none; padding:14px 16px; background:inherit; }
   .tegel.open > .body{ display:grid; gap:12px; }
   ul.bullets{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
   ul.bullets li{ position:relative; padding-left:18px; font-size:15px; line-height:24px; color:var(--ink-body2); }
@@ -134,9 +139,9 @@
   .agrij .wat .sub{ color:var(--ink-zwak); font-size:11.5px; }
 
   /* ---- Artikel (niveau 2) ---- */
-  .artikelen{ display:grid; gap:10px; }
+  .artikelen{ display:grid; gap:10px; background:inherit; }
   .artikel{ border:1px solid var(--hair2); border-radius:8px; background:#fff; overflow:hidden; }
-  .artkop{ display:flex; gap:10px; align-items:flex-start; width:100%; min-height:56px; padding:12px 14px; background:none; border:0; text-align:left; cursor:pointer; font:inherit; color:inherit; -webkit-tap-highlight-color:transparent; }
+  .artkop{ display:flex; gap:10px; align-items:flex-start; width:100%; min-height:56px; padding:12px 14px; background:inherit; border:0; text-align:left; cursor:pointer; font:inherit; color:inherit; -webkit-tap-highlight-color:transparent; }
   .artkop:focus-visible{ outline:2px solid var(--brand); outline-offset:-2px; }
   .artkop .tk{ flex:1; min-width:0; display:grid; gap:3px; }
   .artkop .att{ font-family:var(--disp); font-weight:600; font-size:14.5px; line-height:20px; color:var(--ink); }
@@ -147,7 +152,7 @@
   .artkop .chevbox .ic{ color:var(--ink-zwak); }
 
   /* ---- Niveau 3: volledige NL-tekst ---- */
-  .uitleg{ display:none; padding:0 14px 14px; }
+  .uitleg{ display:none; padding:0 14px 14px; background:inherit; }
   .artikel.open .uitleg{ display:block; }
   .artikel.open .asum{ display:none; } /* teaser is voor de dichte staat; open toont de volledige tekst — geen dubbeling */
   .uitleg .tekst{ border-left:1px solid var(--hair); padding-left:12px; display:grid; gap:10px; }
@@ -189,7 +194,7 @@
   .verwijs a::after{ content:" \2192"; color:var(--groen); }
 
   /* Sluitknop onder de tegel */
-  .sluitrij{ padding:2px 16px 14px; }
+  .sluitrij{ padding:2px 16px 14px; background:inherit; }
   .sluit{ display:inline-flex; align-items:center; gap:6px; background:none; border:0; cursor:pointer; font-family:var(--disp); font-weight:600; font-size:11.5px; color:var(--ink-zwak); padding:6px 2px; }
   .sluit:hover{ color:var(--c-main); }
   .sluit .ic{ width:14px; height:14px; }
@@ -245,7 +250,7 @@
   <div class="bar">
     <button type="button" class="knop" id="allesBtn"><svg class="ic" aria-hidden="true"><use href="#ic-uitklap"/></svg><span id="allesLabel">Alles uitklappen</span></button>
     <span class="barrechts">
-      <a class="reglink" href="/archief" target="_top">Regelgevingsarchief →</a>
+      <a class="reglink" href="/archief" target="_self">Regelgevingsarchief →</a>
       <span class="bijwerk"><svg class="ic" aria-hidden="true"><use href="#ic-klok"/></svg><span id="bijwerk">wordt geladen…</span></span>
     </span>
   </div>
@@ -482,7 +487,7 @@
       // gaat naar het duurzame register op /archief.
       var intro = t.soort==="archief"
         ? '<div class="archief-intro">Verlopen nieuwsberichten, blijven hier maximaal 14 dagen staan. '+
-          'Wet- en regelgeving verhuist naar het <a href="/archief" target="_top">Regelgevingsarchief</a>.</div>'
+          'Wet- en regelgeving verhuist naar het <a href="/archief" target="_self">Regelgevingsarchief</a>.</div>'
         : "";
       if (t.artikelenApart && !archiefArtikelen){
         // Nog onderweg, of mislukt. Zelfde soort laadstaat en terugval als bij

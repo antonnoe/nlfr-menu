@@ -48,7 +48,10 @@ Vervang `https://nlfr-menu.vercel.app` alleen als de Vercel-URL anders is.
   hij intern terwijl de knoppenbalk vastgepind blijft. Alleen berichten van de
   eigen Vercel-origin worden geaccepteerd.
 - Links in de feed openen met `target="_top"`, zodat ze de hele pagina openen en
-  niet binnen het iframe blijven hangen.
+  niet binnen het iframe blijven hangen. Dat geldt alleen voor externe adressen
+  en nederlanders.fr; de eigen routes `/actueel` en `/archief` verwijzen naar
+  elkaar met `target="_self"` en blijven dus binnen dit iframe. Met `_top` zou
+  de bezoeker op de kale Vercel-pagina belanden, zonder sitekop of menu.
 
 ## Beheer (reviewtool)
 

@@ -188,8 +188,8 @@ test("de archief-tegel verwijst naar het Regelgevingsarchief", async () => {
     "de nieuwe uitlegtekst hoort erin te staan"
   );
   assert.ok(
-    html.includes('<a href="/archief" target="_top">Regelgevingsarchief</a>'),
-    "Regelgevingsarchief hoort een link naar /archief te zijn"
+    html.includes(`<a href="/archief" target="_self">Regelgevingsarchief</a>`),
+    "Regelgevingsarchief hoort een link naar /archief te zijn, in hetzelfde iframe (_self, nooit _top)"
   );
   assert.ok(!html.includes("Dit zijn de ‘oude’ artikelen"), "de oude tekst hoort weg te zijn");
 });

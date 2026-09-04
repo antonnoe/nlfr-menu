@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
+<meta name="color-scheme" content="only light">
 <title>Regelgevingsarchief — Nederlanders.fr</title>
 <!--
   NLFR REGELGEVINGSARCHIEF — publieke inhoudsopgave van het duurzame register
@@ -18,7 +19,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Mulish:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  /* Auto-dark blokkeren (zelfde aanpak als index.html, 01-08): Chrome/Android
+     zou de pagina anders zelf inverteren en bordeaux #800000 onleesbaar maken.
+     color-scheme:only light + expliciete achtergronden = niets om te keren. */
   :root{
+    color-scheme:only light;
     --bg:#fdf9f8; --kaart:#fff;
     --ink:#241c1c; --ink-body:#3d3735; --ink-body2:#4d4441; --ink-meta:#6f6663; --ink-zwak:#8a7d79;
     --hair:#f0e8e5; --hair2:#ece4e1; --hair3:#e6dcd9;
@@ -29,7 +34,7 @@
     --body:'Mulish',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   }
   *{ box-sizing:border-box; }
-  html,body{ height:100%; margin:0; padding:0; background:transparent; -webkit-text-size-adjust:100%; }
+  html,body{ height:100%; margin:0; padding:0; background:var(--bg); -webkit-text-size-adjust:100%; }
   body{ font-family:var(--body); color:var(--ink-body); }
   .ic{ width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
 
@@ -42,8 +47,8 @@
           border:1px solid var(--hair3); border-radius:8px; padding:8px 12px; min-height:40px; display:inline-flex; align-items:center; }
   @media (hover:hover) and (pointer:fine){ .terug:hover{ background:#fbf0ee; } }
 
-  .scrollwrap{ position:relative; min-height:0; display:grid; }
-  .scroller{ overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:10px; padding:12px; }
+  .scrollwrap{ position:relative; min-height:0; display:grid; background:var(--bg); }
+  .scroller{ background:var(--bg); overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:10px; padding:12px; }
   .scroller > *{ flex:none; }
   @media (min-width:600px){ .scroller{ padding:20px; gap:12px; } }
   .vervaag{ position:absolute; left:1px; right:1px; bottom:0; height:44px; pointer-events:none; z-index:1;
@@ -60,11 +65,11 @@
   .rkop .chev{ transition:transform 180ms cubic-bezier(.2,.6,.3,1); }
   .rubriek.open .rkop{ border-bottom:1px solid #ecd9d5; }
   .rubriek.open .rkop .chev{ transform:rotate(90deg); }
-  .rlijst{ display:none; }
+  .rlijst{ display:none; background:inherit; }
   .rubriek.open .rlijst{ display:block; padding:6px 0 8px; }
 
   /* Het triplet: datumtag · bron · titel. Eén regel per item, meer niet. */
-  .rij{ display:block; width:100%; text-align:left; background:none; border:0; cursor:pointer; font:inherit;
+  .rij{ display:block; width:100%; text-align:left; background:inherit; border:0; cursor:pointer; font:inherit;
         padding:9px 16px; border-top:1px solid var(--hair); color:inherit; }
   .rlijst .rij:first-child{ border-top:0; }
   @media (hover:hover) and (pointer:fine){ .rij:hover{ background:#fdf6f5; } }
@@ -112,7 +117,7 @@
       <h1>Regelgevingsarchief</h1>
       <div class="sub" id="sub">wordt geladen…</div>
     </div>
-    <a class="terug" href="/actueel" target="_top">← Actueel</a>
+    <a class="terug" href="/actueel" target="_self">← Terug naar actueel</a>
   </div>
   <div class="scrollwrap">
     <div class="scroller" id="scroller"></div>

@@ -203,8 +203,23 @@ test("/m houdt zijn korte lijst en krijgt NLFR Mobiel bovenaan", () => {
   assert.ok(HTML.includes('"NLFR Mobiel"'), "met het label NLFR Mobiel");
 });
 
-test("de kaartkop, de strip en de hoogte-sync staan er zoals afgesproken", () => {
-  assert.ok(HTML.includes("Hèt netwerk van, voor en door Nederlandstaligen in Frankrijk - zegt het voort!"), "slogan");
+// De kaartkop met "Nederlanders.fr" en de slogan is weg: op nederlanders.fr
+// staat NING's eigen sitekop met dezelfde naam en slogan direct boven dit
+// iframe, dus hij stond dubbel.
+test("er staat geen kaartkop meer boven de strip", () => {
+  assert.ok(!HTML.includes("Hèt netwerk van, voor en door Nederlandstaligen in Frankrijk"),
+    "de slogan hoort weg te zijn");
+  assert.ok(!/<div class="kop">/.test(HTML), "het kop-blok hoort weg te zijn");
+  assert.ok(!/^\s*\.kop\s*\{/m.test(HTML) && !/\.kop \.naam|\.kop \.slogan/.test(HTML),
+    "en de bijbehorende CSS ook");
+  // De strip is nu het eerste element in de kaart; de afronding komt van de
+  // kaart, die overflow:hidden heeft.
+  assert.match(HTML, /<div class="card">\s*<div class="strip">/, "de strip volgt meteen op de kaart");
+  assert.match(HTML, /\.card \{[^}]*border-radius: 16px/, "de kaart houdt zijn afronding");
+  assert.match(HTML, /\.card \{[^}]*overflow: hidden/, "en knipt de strip mee af");
+});
+
+test("de strip en de hoogte-sync staan er zoals afgesproken", () => {
   assert.ok(HTML.includes("AI-zoek in forum &amp; Infofrankrijk…"), "zoekplaceholder");
   assert.ok(HTML.includes("nlfrMenuHeight"), "hoogte-sync");
   assert.ok(HTML.includes("noresize"), "noresize-terugval");

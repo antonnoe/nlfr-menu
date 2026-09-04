@@ -19,14 +19,20 @@
   OPBOUW, VAN BOVEN NAAR BENEDEN
     1. Banner (Café Jeudi), volle breedte, alleen als hij aanstaat — komt uit
        /api/banner, opmaak uit lib/banner.js. Beheer op /banner-beheer.
-    2. Kaartkop: "Nederlanders.fr" + slogan.
-    3. Strip: één bordeaux balk met home, Menu, zoeken, Plaats bericht,
-       Nu actueel en (alleen voor de beheerder) het tandwiel.
-    4. Lade: de uitklappers van "Plaats bericht", "Nu actueel", het tandwiel en
+    2. Strip: één bordeaux balk met home, Menu, zoeken, Plaats bericht,
+       Nu actueel en (alleen voor de beheerder) het tandwiel. Dit is het eerste
+       element in de kaart; de afronding komt van de kaart zelf.
+    3. Lade: de uitklappers van "Plaats bericht", "Nu actueel", het tandwiel en
        /m. IN-FLOW, niet position:absolute — een overlay wordt in een iframe
        met hoogte-sync afgeknipt.
-    5. Paneel: vijf kolommen (Lezen, Meedoen, Vinden, Mijn NLFR, Nieuws), op
+    4. Paneel: vijf kolommen (Lezen, Meedoen, Vinden, Mijn NLFR, Nieuws), op
        desktop standaard dicht, open via "Menu"; op mobiel accordeons.
+
+  GEEN KAARTKOP MEER (04-09-2026). Er stond een blok met "Nederlanders.fr" en
+  de slogan boven de strip. Op nederlanders.fr staat NING's eigen sitekop met
+  dezelfde naam en dezelfde slogan direct boven dit iframe, dus dat stond
+  dubbel. Weggehaald in alle modi; de banner is nu het eerste element en
+  daaronder komt meteen de strip.
 
   WAT ER T.O.V. DE VORIGE VERSIE IS VERVALLEN
     Het "Onderwerpen"-uitklapmenu met TOPICS en CTAS, de vijf losse deurknoppen
@@ -69,13 +75,9 @@
   .card { background: #fff; border: 1px solid rgba(128,0,0,.12); border-radius: 16px;
           box-shadow: 0 12px 40px -26px rgba(90,0,0,.55); overflow: hidden; }
 
-  /* ---- Kaartkop ---- */
-  .kop { background: #fff; padding: 14px 18px 12px; }
-  .kop .naam { display: inline-block; font-family: 'Poppins', sans-serif; font-weight: 700;
-               font-size: 24px; line-height: 1.15; color: var(--brand); }
-  .kop .slogan { font-family: 'Mulish', sans-serif; font-size: 13px; color: var(--brand); margin-top: 2px; }
-
-  /* ---- Strip: één bordeaux balk ---- */
+  /* ---- Strip: één bordeaux balk ----
+     Dit is het eerste element in de kaart. De kaart heeft overflow:hidden, dus
+     de strip krijgt de bovenste afronding vanzelf mee. */
   .strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
            min-height: 56px; padding: 10px 14px; background: var(--brand); }
   .sknop { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -187,8 +189,6 @@
   /* ---- Mobiel (<=700px en html.compact) ---- */
   @media (max-width: 700px) {
     .card { border-radius: 14px; }
-    .kop { padding: 12px 14px 10px; }
-    .kop .naam { font-size: 21px; }
   }
   html.compact .shome { display: none; }
   html.compact .sforum { display: inline-flex; order: 2; flex: 1 1 auto; min-height: 44px; padding: 0 12px;
@@ -229,10 +229,8 @@
   html.compact .zusters { text-align: center; }
   /* Raakvlakken van minstens 44px: op een telefoon mik je anders mis. De
      zusterlinks staan in een lopende zin, dus ze blijven inline — alleen hun
-     tikhoogte gaat omhoog. De sitenaam is op mobiel de enige weg naar home
-     (het huisje staat er niet), dus die moet ook raakbaar zijn. */
+     tikhoogte gaat omhoog. */
   html.compact .zusters a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; }
-  html.compact .kop .naam { display: inline-flex; align-items: center; min-height: 44px; }
 
   /* ---- /m (html.msite): bewust beperkt, zoals /m altijd al was ---- */
   html.msite .paneel { display: none !important; }
@@ -265,11 +263,6 @@
 <div id="alles">
   <div id="bannerhost"></div>
   <div class="card">
-    <div class="kop">
-      <a class="naam" href="https://www.nederlanders.fr/" target="_parent">Nederlanders.fr</a>
-      <div class="slogan">Hèt netwerk van, voor en door Nederlandstaligen in Frankrijk - zegt het voort!</div>
-    </div>
-
     <div class="strip">
       <a class="sknop shome" href="https://www.nederlanders.fr/" target="_parent" title="Home" aria-label="Home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.75 20v-5.5h4.5V20"/></svg></a>
 

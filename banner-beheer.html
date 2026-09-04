@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="only light">
+<title>NLFR — Banner beheren</title>
+<!--
+  Beheerpagina voor de banner die bovenaan het hoofdmenu staat (index.html).
+  Leest en schrijft /api/banner; het token gaat als Authorization-header mee,
+  nooit in de URL — een URL komt in serverlogs en in de browsergeschiedenis
+  terecht. Het wordt één keer gevraagd en daarna in localStorage bewaard.
+
+  Het voorbeeld rechts rendert met dezelfde functie (lib/banner.js) als het
+  menu, inclusief dezelfde CSS. Er is dus geen tweede opmaak die kan gaan
+  afwijken van wat de bezoeker ziet.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: only light; --brand:#800000; --actueel:#2f6b3a; }
+  * { box-sizing:border-box; }
+  html, body { background:#fdf9f8; }
+  body { font-family:'Mulish',system-ui,sans-serif; line-height:1.7; color:#3a3330; margin:0 auto;
+         padding:12px; max-width:1040px; }
+  h1 { font-family:'Poppins',sans-serif; font-size:20px; color:var(--brand); margin:6px 0 2px; }
+  .sub { color:#8a7f7c; font-size:13px; margin-bottom:14px; }
+  h2 { font-family:'Poppins',sans-serif; font-size:15px; color:var(--brand);
+       border-bottom:1px solid rgba(128,0,0,.12); padding-bottom:6px; margin:22px 0 12px; }
+
+  .indeling { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,420px); gap:22px; align-items:start; }
+  @media (max-width:860px) { .indeling { grid-template-columns:1fr; } }
+
+  .vak { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:12px; padding:16px; margin-bottom:14px; }
+  .vak > h2:first-child { margin-top:0; }
+
+  label { display:block; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px;
+          color:#6d6360; margin:12px 0 3px; }
+  label:first-of-type { margin-top:0; }
+  .hint { font-size:12px; color:#8a7f7c; line-height:1.45; margin:2px 0 0; }
+  input[type=text], input[type=url], input[type=time], input[type=date], select, textarea {
+    width:100%; min-height:44px; padding:9px 11px; border:1px solid rgba(128,0,0,.22); border-radius:9px;
+    background:#fff; color:#3a3330; font-family:'Mulish',sans-serif; font-size:14px; }
+  textarea { min-height:96px; line-height:1.55; resize:vertical; }
+  input:focus, select:focus, textarea:focus { outline:2px solid rgba(128,0,0,.35); outline-offset:1px; }
+  .rij { display:flex; gap:10px; flex-wrap:wrap; }
+  .rij > * { flex:1 1 140px; min-width:0; }
+
+  /* Schakelaar aan/uit */
+  .schakel { display:flex; align-items:center; gap:12px; min-height:44px; }
+  .schakel input { position:absolute; opacity:0; width:0; height:0; }
+  .spoor { flex:none; width:52px; height:30px; border-radius:999px; background:#d9cfcc; position:relative;
+           transition:background 160ms; cursor:pointer; }
+  .spoor::after { content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:999px;
+                  background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform 160ms; }
+  .schakel input:checked + .spoor { background:var(--actueel); }
+  .schakel input:checked + .spoor::after { transform:translateX(22px); }
+  .schakel input:focus-visible + .spoor { outline:2px solid var(--brand); outline-offset:2px; }
+  .schakel .st { font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; color:#3a3330; }
+
+  /* Kleurkeuze */
+  .kleuren { display:flex; gap:10px; flex-wrap:wrap; }
+  .kleuren button { width:44px; height:44px; border-radius:9px; border:2px solid transparent; cursor:pointer; }
+  .kleuren button[aria-pressed="true"] { border-color:#3a3330; box-shadow:0 0 0 2px #fff inset; }
+
+  /* Overslaan-lijst */
+  .overslaan { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .odatum { display:flex; align-items:center; gap:10px; min-height:44px; padding:6px 12px;
+            border:1px solid rgba(128,0,0,.14); border-radius:9px; background:#fdf9f8; font-size:14px; }
+  .odatum span { flex:1; }
+  .odatum button { border:0; background:none; color:var(--brand); font-size:13px;
+                   font-family:'Poppins',sans-serif; font-weight:600; min-height:36px; padding:0 8px; cursor:pointer; }
+  .leegtekst { font-size:13px; color:#8a7f7c; }
+
+  button.knop { min-height:44px; padding:9px 16px; border-radius:999px; cursor:pointer;
+                font-family:'Poppins',sans-serif; font-weight:600; font-size:13px;
+                border:1px solid rgba(128,0,0,.2); background:rgba(128,0,0,.06); color:var(--brand); }
+  button.knop:hover { background:rgba(128,0,0,.12); }
+  button.knop.vol { background:var(--brand); color:#fff; border-color:var(--brand); }
+  button.knop.vol:hover { filter:brightness(1.1); }
+
+  .balk { position:sticky; bottom:0; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+          padding:12px 0; background:#fdf9f8; border-top:1px solid rgba(128,0,0,.12); margin-top:8px; }
+  .melding { flex:1 1 auto; font-size:13px; min-height:20px; }
+  .melding.goed { color:var(--actueel); }
+  .melding.fout { color:var(--brand); font-weight:600; }
+
+  .voorbeeldvak { position:sticky; top:12px; }
+  .voorbeeldvak .rand { background:#fff; border:1px dashed rgba(128,0,0,.3); border-radius:12px; padding:12px; }
+  .voorbeeldvak .bijschrift { font-size:12px; color:#8a7f7c; margin-top:8px; }
+
+  .tokenvak { display:none; }
+  .tokenvak.open { display:block; }
+  body.geenmodule .indeling { opacity:.5; pointer-events:none; }
+</style>
+</head>
+<body>
+<h1>Banner beheren</h1>
+<p class="sub">De banner die bovenaan het hoofdmenu staat. Wijzigingen zijn meteen live voor alle bezoekers.</p>
+
+<div class="vak tokenvak" id="tokenvak">
+  <h2>Beheertoken</h2>
+  <label for="token">Token</label>
+  <input type="text" id="token" autocomplete="off" placeholder="het BANNER_TOKEN uit Vercel">
+  <p class="hint">Wordt alleen in deze browser bewaard en als header meegestuurd — nooit in de URL.</p>
+  <p style="margin-top:12px"><button type="button" class="knop vol" id="tokenok">Bewaren</button>
+  <button type="button" class="knop" id="tokenweg">Token vergeten</button></p>
+</div>
+
+<div class="indeling" id="indeling">
+  <div>
+    <div class="vak">
+      <h2>Aan of uit</h2>
+      <div class="schakel">
+        <input type="checkbox" id="aan"><label for="aan" class="spoor" style="margin:0"></label>
+        <span class="st" id="aanst">Banner staat aan</span>
+      </div>
+      <p class="hint">Staat hij uit, dan toont het menu helemaal geen banner.</p>
+
+      <label for="soort">Soort</label>
+      <select id="soort">
+        <option value="cafe">Café — een bijeenkomst</option>
+        <option value="boek">Boek — met titel en auteur</option>
+        <option value="vrij">Vrij — eigen aankondiging</option>
+      </select>
+
+      <label for="titel">Titel</label>
+      <input type="text" id="titel" maxlength="120">
+
+      <div id="boekvak" hidden>
+        <div class="rij">
+          <div><label for="boektitel">Boektitel</label><input type="text" id="boektitel" maxlength="160"></div>
+          <div><label for="boekauteur">Auteur</label><input type="text" id="boekauteur" maxlength="120"></div>
+        </div>
+      </div>
+
+      <label for="afbeelding">Afbeelding (optioneel)</label>
+      <input type="url" id="afbeelding" placeholder="https://…" autocomplete="off">
+      <p class="hint">Klein icoon links van de titel. Leeg laten als je er geen wilt.</p>
+    </div>
+
+    <div class="vak">
+      <h2>Wanneer</h2>
+      <div class="schakel">
+        <input type="checkbox" id="wekelijksaan"><label for="wekelijksaan" class="spoor" style="margin:0"></label>
+        <span class="st" id="wekelijksst">Elke week op een vaste dag</span>
+      </div>
+
+      <div id="wekelijksvak">
+        <div class="rij">
+          <div>
+            <label for="weekdag">Dag</label>
+            <select id="weekdag">
+              <option value="1">Maandag</option><option value="2">Dinsdag</option>
+              <option value="3">Woensdag</option><option value="4">Donderdag</option>
+              <option value="5">Vrijdag</option><option value="6">Zaterdag</option><option value="7">Zondag</option>
+            </select>
+          </div>
+          <div><label for="begin">Van</label><input type="time" id="begin"></div>
+          <div><label for="eind">Tot ongeveer</label><input type="time" id="eind"></div>
+        </div>
+        <p class="hint">Tijden in Parijse tijd. Op de dag zelf blijft de banner tot de eindtijd "vandaag" tonen.</p>
+
+        <label>Overslaan</label>
+        <div class="rij" style="align-items:flex-end">
+          <div><input type="date" id="overslaandatum"></div>
+          <div style="flex:0 0 auto"><button type="button" class="knop" id="overslaantoevoeg">Datum toevoegen</button></div>
+          <div style="flex:0 0 auto"><button type="button" class="knop" id="dezeweek">Deze week overslaan</button></div>
+        </div>
+        <p class="hint" id="dezeweekhint"></p>
+        <div class="overslaan" id="overslaanlijst"></div>
+      </div>
+
+      <label for="datumtekst">Eigen datumtekst (optioneel)</label>
+      <input type="text" id="datumtekst" maxlength="160" placeholder="bijv. Kerstborrel — zaterdag 20 december">
+      <p class="hint">Staat hier iets, dan wint dat van de berekende datumregel. Leeg laten voor de gewone regel.</p>
+    </div>
+
+    <div class="vak">
+      <h2>Uiterlijk en knop</h2>
+      <label>Kleur</label>
+      <div class="kleuren" id="kleuren"></div>
+
+      <label for="onderschrift">Onderschrift</label>
+      <select id="onderschriftkeuze">
+        <option value="open">Iedereen is van harte welkom | Soyez les bienvenus</option>
+        <option value="leden">Alleen voor geregistreerde leden</option>
+        <option value="vrij">Eigen tekst…</option>
+      </select>
+      <input type="text" id="onderschriftvrij" maxlength="200" placeholder="eigen onderschrift" hidden style="margin-top:8px">
+
+      <div class="rij">
+        <div><label for="knoptekst">Knoptekst</label><input type="text" id="knoptekst" maxlength="40"></div>
+        <div><label for="knopurl">Knop-URL</label><input type="url" id="knopurl" placeholder="https://…"></div>
+      </div>
+
+      <label for="uitleg">Uitleg achter de [?]</label>
+      <textarea id="uitleg" maxlength="2000"></textarea>
+      <p class="hint">Zonder uitleg verdwijnt de [?]-knop uit de banner.</p>
+    </div>
+  </div>
+
+  <div class="voorbeeldvak">
+    <div class="vak">
+      <h2>Voorbeeld</h2>
+      <div class="rand" id="voorbeeld"></div>
+      <p class="bijschrift">Precies wat het menu toont — zelfde functie, zelfde opmaak (lib/banner.js).</p>
+    </div>
+  </div>
+</div>
+
+<div class="balk">
+  <button type="button" class="knop vol" id="opslaan">Opslaan</button>
+  <button type="button" class="knop" id="opnieuw">Opnieuw laden</button>
+  <span class="melding" id="melding"></span>
+</div>
+
+<script type="module">
+import {
+  KLEUREN, ONDERSCHRIFTEN, STANDAARD, BANNER_CSS,
+  bannerHTML, normaliseer, datumRegel, eerstvolgende,
+} from "/lib/banner.js";
+
+const $ = (id) => document.getElementById(id);
+const TOKENSLEUTEL = "nlfr_banner_token";
+
+// De opmaak van de banner komt uit hetzelfde bestand als in het menu.
+const stijl = document.createElement("style");
+stijl.textContent = BANNER_CSS;
+document.head.appendChild(stijl);
+
+let record = normaliseer(STANDAARD);
+
+// --- token --------------------------------------------------------------
+function token(){ try { return localStorage.getItem(TOKENSLEUTEL) || ""; } catch { return ""; } }
+function zetToken(t){ try { t ? localStorage.setItem(TOKENSLEUTEL, t) : localStorage.removeItem(TOKENSLEUTEL); } catch {} }
+function toonTokenvak(open){ $("tokenvak").classList.toggle("open", open); if (open) $("token").focus(); }
+
+$("tokenok").addEventListener("click", () => {
+  const t = $("token").value.trim();
+  if (!t) return melden("Vul eerst het token in.", "fout");
+  zetToken(t); $("token").value = ""; toonTokenvak(false);
+  melden("Token bewaard in deze browser.", "goed");
+});
+$("tokenweg").addEventListener("click", () => {
+  zetToken(""); melden("Token vergeten.", "goed"); toonTokenvak(true);
+});
+
+function melden(tekst, soort){
+  const m = $("melding");
+  m.textContent = tekst;
+  m.className = "melding" + (soort ? " " + soort : "");
+}
+
+// --- formulier <-> record ------------------------------------------------
+function naarFormulier(r){
+  $("aan").checked = !!r.aan;
+  $("aanst").textContent = r.aan ? "Banner staat aan" : "Banner staat uit";
+  $("soort").value = r.soort;
+  $("titel").value = r.titel;
+  $("boektitel").value = r.boek.titel;
+  $("boekauteur").value = r.boek.auteur;
+  $("afbeelding").value = r.afbeelding || "";
+  $("boekvak").hidden = r.soort !== "boek";
+
+  const w = r.wekelijks;
+  $("wekelijksaan").checked = !!w;
+  $("wekelijksst").textContent = w ? "Elke week op een vaste dag" : "Geen vast weekschema";
+  $("wekelijksvak").hidden = !w;
+  $("weekdag").value = String(w ? w.weekdag : 4);
+  $("begin").value = w ? w.begin : "18:00";
+  $("eind").value = w ? w.eind : "19:30";
+  $("datumtekst").value = r.datumtekst || "";
+
+  const vast = Object.prototype.hasOwnProperty.call(ONDERSCHRIFTEN, r.onderschrift);
+  $("onderschriftkeuze").value = vast ? r.onderschrift : "vrij";
+  $("onderschriftvrij").hidden = vast;
+  $("onderschriftvrij").value = vast ? "" : r.onderschrift;
+
+  $("knoptekst").value = r.knop.tekst;
+  $("knopurl").value = r.knop.url;
+  $("uitleg").value = r.uitleg;
+
+  tekenKleuren(r.kleur);
+  tekenOverslaan(r.overslaan);
+  tekenVoorbeeld();
+}
+
+function uitFormulier(){
+  const wekelijks = $("wekelijksaan").checked
+    ? { weekdag: Number($("weekdag").value), begin: $("begin").value || "18:00", eind: $("eind").value || "19:30" }
+    : null;
+  const keuze = $("onderschriftkeuze").value;
+  return {
+    aan: $("aan").checked,
+    soort: $("soort").value,
+    titel: $("titel").value.trim() || STANDAARD.titel,
+    wekelijks,
+    overslaan: record.overslaan.slice(),
+    datumtekst: $("datumtekst").value.trim() || null,
+    kleur: record.kleur,
+    onderschrift: keuze === "vrij" ? $("onderschriftvrij").value : keuze,
+    knop: { tekst: $("knoptekst").value.trim() || STANDAARD.knop.tekst, url: $("knopurl").value.trim() },
+    uitleg: $("uitleg").value,
+    boek: { titel: $("boektitel").value.trim(), auteur: $("boekauteur").value.trim() },
+    afbeelding: $("afbeelding").value.trim() || null,
+  };
+}
+
+// --- kleuren, overslaan, voorbeeld ---------------------------------------
+function tekenKleuren(actief){
+  const vak = $("kleuren");
+  vak.innerHTML = "";
+  for (const k of KLEUREN) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.style.background = k;
+    b.title = k;
+    b.setAttribute("aria-label", "Kleur " + k);
+    b.setAttribute("aria-pressed", k === actief ? "true" : "false");
+    b.addEventListener("click", () => { record.kleur = k; tekenKleuren(k); tekenVoorbeeld(); });
+    vak.appendChild(b);
+  }
+}
+
+function tekenOverslaan(lijst){
+  const vak = $("overslaanlijst");
+  vak.innerHTML = "";
+  if (!lijst.length) {
+    vak.innerHTML = '<p class="leegtekst">Geen datums overgeslagen.</p>';
+  } else {
+    for (const d of lijst) {
+      const rij = document.createElement("div");
+      rij.className = "odatum";
+      const span = document.createElement("span");
+      span.textContent = d;
+      const weg = document.createElement("button");
+      weg.type = "button";
+      weg.textContent = "Verwijderen";
+      weg.addEventListener("click", () => {
+        record.overslaan = record.overslaan.filter((x) => x !== d);
+        tekenOverslaan(record.overslaan);
+        tekenVoorbeeld();
+      });
+      rij.append(span, weg);
+      vak.appendChild(rij);
+    }
+  }
+  // De knop "Deze week overslaan" zegt welke datum hij toevoegt: dat is
+  // dezelfde datum die de banner nu toont.
+  const nu = eerstvolgende(uitFormulier());
+  $("dezeweekhint").textContent = nu
+    ? 'De knop "Deze week overslaan" voegt ' + nu + " toe."
+    : "Zonder weekschema is er geen datum om over te slaan.";
+}
+
+function tekenVoorbeeld(){
+  const r = normaliseer(uitFormulier());
+  $("voorbeeld").innerHTML = r.aan
+    ? bannerHTML(r)
+    : '<p class="leegtekst">De banner staat uit; het menu toont er dan geen.</p>';
+  // In het voorbeeld mag de [?] gewoon werken, net als in het menu.
+  const vraag = $("voorbeeld").querySelector("#bnrvraag");
+  const uitleg = $("voorbeeld").querySelector("#bnruitleg");
+  if (vraag && uitleg) vraag.addEventListener("click", () => { uitleg.hidden = !uitleg.hidden; });
+  const knop = $("voorbeeld").querySelector("#bnrknop");
+  if (knop && uitleg) knop.addEventListener("click", () => { uitleg.hidden = !uitleg.hidden; });
+}
+
+// --- reageren op invoer ---------------------------------------------------
+for (const id of ["aan","soort","titel","boektitel","boekauteur","afbeelding","wekelijksaan",
+                  "weekdag","begin","eind","datumtekst","onderschriftkeuze","onderschriftvrij",
+                  "knoptekst","knopurl","uitleg"]) {
+  const el = $(id);
+  el.addEventListener("input", bijInvoer);
+  el.addEventListener("change", bijInvoer);
+}
+function bijInvoer(){
+  $("aanst").textContent = $("aan").checked ? "Banner staat aan" : "Banner staat uit";
+  $("wekelijksst").textContent = $("wekelijksaan").checked ? "Elke week op een vaste dag" : "Geen vast weekschema";
+  $("wekelijksvak").hidden = !$("wekelijksaan").checked;
+  $("boekvak").hidden = $("soort").value !== "boek";
+  $("onderschriftvrij").hidden = $("onderschriftkeuze").value !== "vrij";
+  tekenOverslaan(record.overslaan);
+  tekenVoorbeeld();
+}
+
+$("overslaantoevoeg").addEventListener("click", () => {
+  const d = $("overslaandatum").value;
+  if (!d) return melden("Kies eerst een datum.", "fout");
+  if (record.overslaan.indexOf(d) === -1) record.overslaan = record.overslaan.concat([d]).sort();
+  $("overslaandatum").value = "";
+  tekenOverslaan(record.overslaan);
+  tekenVoorbeeld();
+  melden(d + " wordt overgeslagen.", "goed");
+});
+
+$("dezeweek").addEventListener("click", () => {
+  const d = eerstvolgende(uitFormulier());
+  if (!d) return melden("Zonder weekschema is er geen datum om over te slaan.", "fout");
+  if (record.overslaan.indexOf(d) === -1) record.overslaan = record.overslaan.concat([d]).sort();
+  tekenOverslaan(record.overslaan);
+  tekenVoorbeeld();
+  melden(d + " wordt overgeslagen; de banner toont nu " + (eerstvolgende(uitFormulier()) || "niets") + ".", "goed");
+});
+
+// --- laden en opslaan -----------------------------------------------------
+async function laad(){
+  melden("Bezig met laden…");
+  try {
+    const r = await fetch("/api/banner", { cache: "no-store" });
+    if (!r.ok) throw new Error("status " + r.status);
+    record = normaliseer(await r.json());
+    naarFormulier(record);
+    melden("Geladen.", "goed");
+  } catch (e) {
+    record = normaliseer(STANDAARD);
+    naarFormulier(record);
+    melden("Laden mislukt (" + e.message + "); de standaardwaarden staan nu in het formulier.", "fout");
+  }
+}
+
+async function bewaar(){
+  const t = token();
+  if (!t) { toonTokenvak(true); return melden("Vul eerst het beheertoken in.", "fout"); }
+  const nieuw = uitFormulier();
+  melden("Bezig met opslaan…");
+  try {
+    const r = await fetch("/api/banner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + t },
+      body: JSON.stringify(nieuw),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401) { toonTokenvak(true); return melden("Het token wordt niet geaccepteerd.", "fout"); }
+    if (!r.ok || !j.ok) return melden("Niet opgeslagen: " + (j.fout || "status " + r.status), "fout");
+    record = normaliseer(j.record);
+    naarFormulier(record);
+    melden("Opgeslagen — de banner is nu live.", "goed");
+  } catch (e) {
+    melden("Opslaan mislukt: " + e.message, "fout");
+  }
+}
+
+$("opslaan").addEventListener("click", bewaar);
+$("opnieuw").addEventListener("click", laad);
+
+if (!token()) toonTokenvak(true);
+laad();
+</script>
+</body>
+</html>

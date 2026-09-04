@@ -9,31 +9,90 @@ Ning-editor code beschadigt bij opslaan.
 
 - `index.html` — het complete menu (HTML + CSS + JS in één bestand). Vercel
   publiceert dit als statische site.
-- `actueel.json` — de inhoud van de knop **"Nu actueel"** in de onderbalk (één
+- `lib/banner.js` — de Café Jeudi-banner: standaardwaarden, validatie, de
+  datumlogica en de opmaak. Gedeeld door `index.html`, `/banner-beheer` en
+  `/api/banner`, zodat het voorbeeld in de beheerpagina niet kan gaan
+  afwijken van wat de bezoeker ziet.
+- `banner.json` — de startwaarde van de banner. Wordt gebruikt zolang er niets
+  in KV staat.
+- `banner-beheer.html` — de beheerpagina van de banner (`/banner-beheer`).
+- `api/banner.js` — `GET` (publiek) en `POST` (met `BANNER_TOKEN`).
+- `actueel.json` — de inhoud van de knop **"Nu actueel"** in de strip (één
   compacte rij linkjes). Het menu haalt dit bestand live op; je past het los
   aan, zonder `index.html` aan te raken. Zie "'Nu actueel' bijwerken" hieronder.
 - `embedcode-ning.html` — de code die op nederlanders.fr in de tekst/codemodule
   staat. Staat hier alleen ter referentie/backup; wijzigingen hieraan moeten
-  handmatig op Ning worden overgenomen.
+  handmatig op Ning worden overgenomen. **De embedcode is bij de herbouw van
+  04-09-2026 niet gewijzigd.**
 
 ## Menu aanpassen (dagelijks beheer)
 
+Het menu is op 04-09-2026 herbouwd naar het goedgekeurde ontwerp. Van boven naar
+beneden: de banner, de kaartkop met de slogan, één bordeaux strip (home, Menu,
+zoeken, Plaats bericht, Nu actueel, en voor de beheerder het tandwiel), daaronder
+de laden, en daaronder het paneel met vijf kolommen.
+
 1. Open `index.html` op github.com en klik op het potlood (Edit).
 2. Alle menu-inhoud staat in het `<script>`-blok, duidelijk gelabeld:
-   - `DOORS` — de uitklapmenu's Lezen / Meedoen / Vinden / Nieuws
-   - `TOPICS` — het "Onderwerpen"-uitklapmenu
-   - `CTAS` — de drie actiekaarten bovenin "Onderwerpen"
-   - `memberGroups` — het ledenmenu (Mijn NLFR)
-   - `ADMIN_LINKS` — beheerlinks
-   - `bandleft` (onder "Build band") — de knoppenbalk onderin
+   - `DOORS` — de kolommen Lezen / Meedoen / Vinden / Nieuws
+   - `memberGroups` — de kolom Mijn NLFR (ledenmenu)
+   - `ADMIN_LINKS` — de beheerlade achter het tandwiel
+   - `PERKS` — de teaser voor wie niet is ingelogd
+   - `ZUSTERS` — de rij zusterplatforms onderin het paneel
+   - `PANEELKNOPPEN` — de knoppen links onderin het paneel
 3. Een regel heeft de vorm `["Label", U("/pad-op-nlfr")]` voor interne links of
-   `["Label", "https://externe.site/"]` voor externe. Een derde element `1`
-   geeft het item een accentopmaak.
+   `["Label", "https://externe.site/"]` voor externe. Een derde element is het
+   `target` (alleen nodig voor het abonnement: `"_top"`). **Er is geen
+   accentopmaak meer: alle links hebben hetzelfde gewicht.**
 4. Commit ("Commit changes"). Vercel publiceert automatisch; na ± 1 minuut
    staat het live op de site. Ning hoef je niet aan te raken.
 
 Fout gemaakt? Op GitHub: History → vorige versie openen → Revert, of in Vercel:
 Deployments → vorige deployment → "Promote to Production".
+
+> **Let op bij het weghalen van een link.** Op desktop is dit iframe de enige
+> navigatie: de tabbalk van Ning is alleen voor beheerders zichtbaar. Een link
+> die je hier schrapt, is voor bezoekers geen bereikbare pagina meer. De test
+> `test/menu.test.mjs` bewaakt daarom de volledige URL-inventaris
+> (`test/fixtures/menu-urls-oud.json`); haal je bewust iets weg, pas dan ook
+> die lijst aan.
+
+### Wat er bij de herbouw is vervallen
+
+Het "Onderwerpen"-uitklapmenu (`TOPICS`), de drie actiekaarten (`CTAS`), de vijf
+losse deurknoppen, de onderbalk en de mobiele uitzonderingen
+(`MOBILE_QUICK` / `MOBILE_HIDE` / `TOPICS_MOBILE_MAX`). De unieke items uit
+`TOPICS` zijn verhuisd: *Huizen aangeboden* en *Kringloopwinkel* naar
+Lezen › Marktplaats, *Correspondentie* naar Lezen › Leren & taal, *Korte
+verhalen* naar Lezen › Ontmoeten & cultuur en *Communities Abroad* naar de rij
+zusterplatforms. `/page/rubrieken` is vervallen. Dubbele adressen zijn
+samengevoegd: de Vervoershub staat alleen nog op
+`/page/lift-en-transportcentrale`, de verenigingen alleen op
+`/page/nederlandse-verenigingen-in-frankrijk` en de nieuwsbrief alleen op
+laposta.nl.
+
+## De banner (Café Jeudi)
+
+Boven het menu staat een banner die je zelf beheert op
+**`https://nlfr-menu.vercel.app/banner-beheer`** — ook bereikbaar via het
+tandwiel in het menu ("Banner beheren"). Staat de banner uit, dan toont het
+menu er geen; gaat het ophalen mis, dan blijft het menu ongestoord.
+
+Wat je kunt instellen: aan/uit, de soort (café, boek of vrij), de titel, een
+wekelijks schema (dag + begin- en eindtijd) of een eigen datumtekst, datums om
+over te slaan, de kleur van de linkerrand en de knop, het onderschrift, de
+knoptekst en -URL, de uitleg achter de `[?]` en een klein icoontje.
+
+De datumregel wordt zelf berekend in Parijse tijd: de eerstvolgende weekdag,
+waarbij het op de dag zelf tot de eindtijd nog "vandaag" is. Staat die datum in
+de overslaan-lijst, dan schuift hij een week op. Dat levert bijvoorbeeld
+"Donderdag 10 september van 18:00 tot +/- 19:30". Zonder weekschema en zonder
+eigen datumtekst is er geen datumregel en wordt de knop "Lees meer…", die de
+uitleg opent.
+
+Het beheertoken (`BANNER_TOKEN`, zie Env-vars) wordt één keer gevraagd en
+daarna in je browser bewaard. Het gaat als `Authorization`-header mee en staat
+nooit in de URL of in de menu-HTML.
 
 ## "Nu actueel" bijwerken
 
@@ -412,9 +471,10 @@ in de uitleg (36 uur, 14 dagen, twaalf maanden) kloppen met `lib/config.js`.
 
 ### Env-vars (in Vercel instellen, zie `.env.example`)
 
-`ANTHROPIC_API_KEY`, `REVIEW_TOKEN`, `CRON_SECRET`, en een gekoppelde Vercel KV
+`ANTHROPIC_API_KEY`, `REVIEW_TOKEN`, `BANNER_TOKEN`, `CRON_SECRET`, en een gekoppelde Vercel KV
 (`KV_REST_API_URL` / `KV_REST_API_TOKEN`). De feedpagina werkt ook zonder deze
-vars; alleen de AI-synthese en de reviewtool hebben ze nodig.
+vars; alleen de AI-synthese, de reviewtool en het opslaan van de banner hebben
+ze nodig. Zonder KV valt `/api/banner` terug op `banner.json` uit de repo.
 
 ## Bewaking: tests en sonde (GitHub Actions)
 

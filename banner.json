@@ -1,0 +1,14 @@
+{
+  "aan": true,
+  "soort": "cafe",
+  "titel": "Café Jeudi",
+  "wekelijks": { "weekdag": 4, "begin": "18:00", "eind": "19:30" },
+  "overslaan": [],
+  "datumtekst": null,
+  "kleur": "#2f6b3a",
+  "onderschrift": "open",
+  "knop": { "tekst": "ENTREZ", "url": "https://meet.google.com/gea-tjsy-gwk" },
+  "uitleg": "Café Jeudi is een wekelijkse, ongedwongen bijeenkomst via Google Meet. Al meer dan 5 jaar delen we verhalen en tips over wonen in Frankrijk.",
+  "boek": { "titel": "", "auteur": "" },
+  "afbeelding": null
+}

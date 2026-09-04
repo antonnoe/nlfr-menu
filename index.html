@@ -51,9 +51,6 @@
     De knop "Nu actueel" toont linkjes die LIVE uit actueel.json komen; de
     banner komt live uit /api/banner. Beheer-ID: ADMIN_ID. Zoek: ZOEK_APP.
 -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* --- Auto-dark blokkeren: het menu is een lichte kaart, altijd. ---
      Chrome/Android draait de pagina anders zelf om ("auto dark theme") en dan
@@ -63,7 +60,7 @@
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   html, body { margin: 0; padding: 0; background: transparent; }
-  body { font-family: 'Mulish', system-ui, sans-serif; line-height: 1.6; color: #3a3330; padding: 6px; }
+  body { font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #3a3330; padding: 6px; }
   a { color: var(--brand); text-decoration: none; }
   button { font-family: inherit; cursor: pointer; }
 
@@ -83,7 +80,7 @@
   .sknop { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
            min-height: 44px; padding: 0 14px; border-radius: 9px;
            border: 1px solid rgba(255,255,255,.4); background: rgba(255,255,255,.12);
-           color: #fff; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 16px; }
+           color: #fff; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 16px; }
   .sknop:hover { background: rgba(255,255,255,.2); }
   .sknop:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .shome { flex: none; width: 44px; height: 44px; padding: 0; }
@@ -111,14 +108,14 @@
              padding: 0 6px 0 12px; border-radius: 9px; background: rgba(255,255,255,.78); }
   .zoekbox:focus-within { background: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.55); }
   .zoekbox input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
-                   font-family: 'Mulish', sans-serif; font-size: 14px; color: #3a3330; }
+                   font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; color: #3a3330; }
   .zoekbox input::placeholder { color: #8a7f7c; }
   .zoekbox .wis { display: none; flex: none; width: 28px; height: 28px; border: 0; border-radius: 999px;
                   background: transparent; color: #8a7f7c; align-items: center; justify-content: center; }
   .zoekbox .wis.show { display: inline-flex; }
   .zoekbox .ga { flex: none; display: inline-flex; align-items: center; gap: 5px; min-height: 34px;
                  padding: 0 12px; border: 0; border-radius: 7px; background: var(--brand); color: #fff;
-                 font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 13px; }
+                 font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
 
   /* Alleen mobiel */
   .sforum, .sloep { display: none; }
@@ -141,7 +138,7 @@
   .ladekaart.plaats { width: 560px; }
   .ladekaart.actueel { width: 340px; }
   .ladekaart.admin { width: 300px; }
-  .lade .h { display: block; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 11.5px;
+  .lade .h { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 11.5px;
              letter-spacing: .06em; text-transform: uppercase; color: #a99e9a; margin-bottom: 6px; }
   .lade .ladekaart > a { display: flex; align-items: center; min-height: 44px;
                          font-size: 14px; color: #5b524f; padding: 5px 0; background: #fff; }
@@ -151,18 +148,18 @@
   /* De twee kolommen achter "Plaats bericht" */
   .plaatskolommen { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .plaatskolom { min-width: 0; }
-  .plaatskolom h4 { margin: 0; font-family: 'Poppins', sans-serif; font-weight: 700;
+  .plaatskolom h4 { margin: 0; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700;
                     font-size: 14.5px; color: var(--brand-dark); }
   .pil { display: inline-block; margin-top: 5px; padding: 2px 9px; border-radius: 999px;
-         font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 10.5px;
+         font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 10.5px;
          letter-spacing: .06em; color: #fff; }
   .pil.gratis { background: var(--actueel); }
   .pil.betaald { background: var(--brand); }
-  .plaatskolom p { margin: 7px 0 11px; font-family: 'Mulish', sans-serif; font-size: 13px;
+  .plaatskolom p { margin: 7px 0 11px; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px;
                    line-height: 1.5; color: #5b524f; }
   .plaatsknop { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
                 padding: 0 16px; border-radius: 9px; background: var(--brand); color: #fff;
-                font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 13px; }
+                font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
   .plaatsknop:hover { filter: brightness(1.12); }
 
   /* ---- Paneel ---- */
@@ -180,32 +177,32 @@
   .deurbody.tweekolommen > .kolom { min-width: 0; }
   .deurkop { display: block; background: #fdfbfa; border-bottom: 1px solid rgba(128,0,0,.10);
              padding-bottom: 7px; margin-bottom: 10px; }
-  .deurkop .dn { display: block; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 15px; color: var(--brand-dark); }
-  .deurkop .ds { display: block; font-family: 'Mulish', sans-serif; font-size: 11.5px; color: #a99e9a; }
+  .deurkop .dn { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; color: var(--brand-dark); }
+  .deurkop .ds { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 11.5px; color: #a99e9a; }
   .deurkop .dc, .deurkop .dcaret { display: none; }
   .deurbody { display: block; background: #fdfbfa; }
   .grp { margin-bottom: 12px; background: #fdfbfa; }
   .grp:last-child { margin-bottom: 0; }
-  .gk { font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: .06em;
+  .gk { font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: .06em;
         text-transform: uppercase; color: #a99e9a; margin-bottom: 2px; }
   /* Op desktop staat elke groep gewoon open; teller en caret horen bij de
      accordeon die alleen op mobiel bestaat. */
   .gk .gc, .gk .gcaret { display: none; }
   .gl { display: block; }
   /* ALLE links hetzelfde gewicht: geen bold, geen bordeaux, geen emoji. */
-  .grp a { display: block; font-family: 'Mulish', sans-serif; font-size: 13.5px; line-height: 1.35;
+  .grp a { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13.5px; line-height: 1.35;
            color: #5b524f; padding: 5px 0; }
   .grp a:hover { color: var(--brand); }
 
   /* Abonneerknop onderin de Nieuws-kolom */
   .abonneer { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; margin-top: 4px;
               padding: 0 12px; border: 1px solid rgba(128,0,0,.22); border-radius: 9px; background: #fff;
-              color: var(--brand); font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 13px; }
+              color: var(--brand); font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
   .abonneer:hover { background: rgba(128,0,0,.06); }
 
   /* Teaser in de kolom Mijn NLFR (niet ingelogd) */
   .teaser { background: #fff; border: 1px solid rgba(128,0,0,.14); border-radius: 12px; padding: 12px; }
-  .teaser h3 { margin: 0 0 6px; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 13.5px; color: var(--brand); }
+  .teaser h3 { margin: 0 0 6px; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 13.5px; color: var(--brand); }
   .teaser .perk { display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: #5b524f; line-height: 1.3; margin-bottom: 5px; }
   .teaser .perk svg { flex: none; margin-top: 3px; }
   .teaser .btns { display: grid; gap: 6px; margin-top: 10px; }
@@ -213,7 +210,7 @@
      "Word lid — gratis" op één regel in plaats van halverwege af te breken. */
   .teaser .btn-p, .teaser .btn-o { display: flex; align-items: center; justify-content: center; min-height: 44px;
                                    padding: 0 8px; border-radius: 9px; text-align: center; line-height: 1.2;
-                                   font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 12px; }
+                                   font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 12px; }
   html.compact .teaser .btn-p, html.compact .teaser .btn-o { font-size: 13px; }
   .teaser .btn-p { background: var(--brand); color: #fff; }
   .teaser .btn-o { background: #fff; border: 1px solid rgba(128,0,0,.25); color: var(--brand); }
@@ -224,9 +221,9 @@
   .paneelvoet .vlinks { display: flex; flex-wrap: wrap; gap: 8px; }
   .pknop { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px;
            border: 1px solid rgba(128,0,0,.22); border-radius: 9px; background: #fff; color: var(--brand);
-           font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 13px; }
+           font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
   .pknop:hover { background: rgba(128,0,0,.06); }
-  .zusters { flex: 1 1 auto; text-align: center; font-family: 'Poppins', sans-serif; font-weight: 600;
+  .zusters { flex: 1 1 auto; text-align: center; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600;
              font-size: 12.5px; color: var(--actueel); }
   .zusters a { color: var(--actueel); }
   .zusters a:hover { text-decoration: underline; }
@@ -241,7 +238,7 @@
   html.compact .sforum { display: inline-flex; order: 2; flex: 1 1 auto; min-height: 44px; padding: 0 12px;
                          border-radius: 9px; background: #fff; border: 1px solid #fff; color: var(--brand);
                          align-items: center; justify-content: center; gap: 7px;
-                         font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 15px; }
+                         font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; }
   html.compact .sloep { display: inline-flex; order: 3; flex: 0 0 44px; width: 44px; height: 44px; padding: 0;
                         align-items: center; justify-content: center; }
   html.compact .smenu { order: 1; }
@@ -262,7 +259,7 @@
   html.compact .deur.open .deurkop { border-bottom: 1px solid rgba(128,0,0,.10); }
   html.compact .deurkop .dn { flex: 1; }
   html.compact .deurkop .ds { display: none; }
-  html.compact .deurkop .dc { display: inline-block; font-family: 'Mulish', sans-serif; font-size: 12px; color: #a99e9a; }
+  html.compact .deurkop .dc { display: inline-block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 12px; color: #a99e9a; }
   html.compact .deurkop .dcaret { display: inline-flex; color: #a99e9a; transition: transform 180ms ease; }
   html.compact .deur.open .deurkop .dcaret { transform: rotate(180deg); }
   html.compact .deurbody { display: none; padding: 10px 14px 12px; background: #fff; }
@@ -274,7 +271,7 @@
   html.compact .gk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0;
                      cursor: pointer; -webkit-tap-highlight-color: transparent; }
   html.compact .gk .gn { flex: 1; }
-  html.compact .gk .gc { display: inline-block; font-family: 'Mulish', sans-serif;
+  html.compact .gk .gc { display: inline-block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
                          font-size: 12px; letter-spacing: 0; text-transform: none; color: #a99e9a; }
   html.compact .gk .gcaret { display: inline-flex; color: #a99e9a; transition: transform 180ms ease; }
   html.compact .grp.open .gk .gcaret { transform: rotate(180deg); }
@@ -307,13 +304,13 @@
   html.msite .mlijst { display: flex; flex-direction: column; gap: 6px; }
   html.msite .mlijst a { display: flex; align-items: center; gap: 11px; min-height: 50px; padding: 10px 14px;
                          border-radius: 12px; background: #fff; border: 1px solid rgba(128,0,0,.14);
-                         color: #3a3330; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 15px; }
+                         color: #3a3330; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 15px; }
   html.msite .mlijst a:active { background: rgba(128,0,0,.08); }
   html.msite .mlijst a .ic { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px;
                              border-radius: 9px; background: rgba(128,0,0,.07); color: var(--brand); }
-  html.msite .mlijst a .sub { display: block; font-family: 'Mulish', sans-serif; font-weight: 400;
+  html.msite .mlijst a .sub { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 400;
                               font-size: 12.5px; color: #8a7f7c; line-height: 1.25; }
-  html.msite .mlijst .sep { margin: 6px 2px 2px; font-family: 'Poppins', sans-serif; font-weight: 700;
+  html.msite .mlijst .sep { margin: 6px 2px 2px; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700;
                             font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: #a99e9a; }
   html.msite .mlijst a.full { background: var(--brand); color: #fff; border-color: var(--brand); justify-content: center; }
 

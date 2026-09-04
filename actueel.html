@@ -17,9 +17,6 @@
   de moederpagina. Scrollen gebeurt uitsluitend met scrollerEl.scrollTo(), wat
   gegarandeerd binnen de eigen scrollcontainer blijft.
 -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Mulish:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* Auto-dark blokkeren (zelfde aanpak als index.html, 01-08): Chrome/Android
      zou de pagina anders zelf inverteren en bordeaux #800000 onleesbaar maken.
@@ -33,8 +30,8 @@
     --groen:#2f6b3a;
     --sh-rust:0 1px 2px rgba(38,17,17,.05);
     --sh-hover:0 2px 4px rgba(38,17,17,.06), 0 8px 18px -8px rgba(38,17,17,.16);
-    --disp:'Poppins',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-    --body:'Mulish',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --disp:'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --body:'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   /* Categorie-tokens (op tegel én tab gezet). NL'ers deelt het groen. */
   .cat-nieuws,.cat-nlers{ --c-main:#2f6b3a; --c-dark:#22522c; --c-tint:#eef4ef; --c-rand:#d5e4d9; --c-meta:#4b5c4f; --c-chip:#f6faf7; }
@@ -219,6 +216,27 @@
   .status .sd{ width:6px; height:6px; border-radius:999px; flex:none; }
   .status .ok .sd{ background:var(--groen); } .status .nok .sd{ background:var(--brand); }
 
+  /* ---- Compacte stand voor de startpagina: /actueel?stand=kort ----
+     Eén smalle kolom met de tien jongste berichten. Geen tabs, geen tegels,
+     geen uitklappen, geen bronnenvoet: dit is een verwijzing naar de
+     nieuwspagina, geen tweede nieuwspagina. Zelfde kleuren en zelfde
+     hoogte-handshake als de gewone stand. */
+  html.kort, html.kort body{ height:auto; }
+  html.kort .panel{ display:none !important; }
+  .kortpaneel{ background:var(--kaart); border:1px solid var(--hair2); border-radius:14px; padding:14px 16px; }
+  .kortkopje{ margin:0 0 10px; font-family:var(--disp); font-weight:600; font-size:17px; line-height:1.25; color:var(--brand); }
+  .kortlijst{ list-style:none; margin:0; padding:0; }
+  .kortlijst li{ border-top:1px solid var(--hair); }
+  .kortlijst li:first-child{ border-top:0; }
+  .kortlijst a{ display:block; padding:9px 0; text-decoration:none; color:inherit; }
+  .kortlijst a:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
+  /* Twee regels, daarna afgekapt met een beletselteken. */
+  .kortkop{ display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical;
+            overflow:hidden; font-family:var(--body); font-weight:600; font-size:14px; line-height:19px; color:var(--ink-body); }
+  .kortlijst a:hover .kortkop{ color:var(--brand); }
+  .kortmeta{ display:block; margin-top:2px; font-family:var(--body); font-weight:500; font-size:12px; color:var(--ink-meta); }
+  .kortleeg{ margin:0; font-family:var(--body); font-size:13px; color:var(--ink-zwak); }
+
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{ animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
     .hotdot{ animation:none; box-shadow:0 0 0 3px rgba(128,0,0,.12); }
@@ -265,6 +283,23 @@
 <script>
 (function(){
   "use strict";
+
+  // De instellingen van de compacte stand. Deze staan BOVEN de afslag
+  // hieronder: een var-declaratie schuift wel omhoog maar zijn waarde niet, dus
+  // onder de `return` zouden ze undefined zijn als korteLijst() draait.
+  var KORT_MAX = 10;
+  var KORT_DOEL = "https://www.nederlanders.fr/page/actueel-frankrijknieuws";
+  var KORT_KOP = "Nieuws uit en over Frankrijk";
+  var KORT_MAANDEN = ["januari","februari","maart","april","mei","juni",
+                      "juli","augustus","september","oktober","november","december"];
+
+  // ---- Compacte stand: /actueel?stand=kort ------------------------------
+  // Bedoeld voor de linkerkolom van de startpagina (zie EMBED.md). Alleen een
+  // kop en de tien jongste berichten; de hele tegel-, tab- en uitklapmachine
+  // hieronder blijft dan buiten werking. Vandaar deze afslag meteen aan het
+  // begin: wat erna staat wordt niet eens opgebouwd.
+  if (/[?&]stand=kort/.test(location.search)) { korteLijst(); return; }
+
   var VERENIGINGEN_PAGINA = "https://www.nederlanders.fr/page/nederlandse-verenigingen-in-frankrijk";
   // Kop boven het blok met redactionele verwijzingen naar Infofrankrijk.
   // Dezelfde tekst als IF_VERWIJZING_KOP in lib/config.js; test/verwijzing.test.mjs
@@ -303,6 +338,99 @@
 
   function load(k, def){ try{ var v=sessionStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
   function save(k, v){ try{ sessionStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  // ---- De compacte stand ------------------------------------------------
+  //
+  // Alles wat bij /actueel?stand=kort hoort, bij elkaar. Draait op dezelfde
+  // compacte levering (/api/actueel) als de gewone stand, maar toont er alleen
+  // de tien jongste berichten van. Klikken gaat naar de nieuwspagina zelf; de
+  // lijst is een etalage, geen tweede lezer.
+
+  // "29 augustus" — Nederlandse maandnaam, geen jaar. In Parijse tijd, want een
+  // bericht van 23:30 hoort bij die dag en niet bij de volgende.
+  function kortDatum(iso){
+    var d = new Date(iso);
+    if (!iso || isNaN(d.getTime())) return "";
+    try {
+      return new Intl.DateTimeFormat("nl-NL", { day:"numeric", month:"long", timeZone:"Europe/Paris" }).format(d);
+    } catch(e){
+      return d.getDate() + " " + KORT_MAANDEN[d.getMonth()];
+    }
+  }
+
+  // Alle artikelen uit de levering behalve het archief, jongste eerst. Het
+  // archief valt af omdat het per definitie oud is; dat hoort niet in een
+  // lijstje "nieuws".
+  function kortItems(data){
+    var uit = [], gezien = {};
+    ((data && data.tegels) || []).forEach(function(t){
+      if (!t || t.soort === "archief") return;
+      (t.artikelen || []).forEach(function(a){
+        if (!a || !a.titel) return;
+        if (a.id && gezien[a.id]) return;          // hetzelfde bericht in twee tegels
+        if (a.id) gezien[a.id] = 1;
+        var wanneer = (a.bronMeta && a.bronMeta.datum) || a.datum || "";
+        // Een redactionele synthese is ons eigen werk; die krijgt onze naam,
+        // niet die van de krant waar hij op steunt.
+        var redactie = /Redactie NLFR/i.test(String(a.label || ""));
+        uit.push({
+          titel: a.titel,
+          bron: redactie ? "Redactie NLFR" : (((a.bronMeta && a.bronMeta.naam) || "Redactie NLFR")),
+          wanneer: wanneer,
+          tijd: new Date(wanneer).getTime() || 0
+        });
+      });
+    });
+    uit.sort(function(x, y){ return y.tijd - x.tijd; });
+    return uit.slice(0, KORT_MAX);
+  }
+
+  function kortHTML(items){
+    if (!items.length) return '<p class="kortleeg">Op dit moment geen nieuws.</p>';
+    return '<ul class="kortlijst">' + items.map(function(i){
+      var meta = esc(i.bron);
+      var dat = kortDatum(i.wanneer);
+      if (dat) meta += " · " + esc(dat);
+      return '<li><a href="' + KORT_DOEL + '" target="_parent">' +
+             '<span class="kortkop">' + esc(i.titel) + '</span>' +
+             '<span class="kortmeta">' + meta + '</span></a></li>';
+    }).join("") + '</ul>';
+  }
+
+  function korteLijst(){
+    document.documentElement.classList.add("kort");
+    var host = document.createElement("div");
+    host.className = "kortpaneel";
+    host.id = "kortpaneel";
+    var kop = '<h2 class="kortkopje">' + KORT_KOP + '</h2>';
+    host.innerHTML = kop + '<p class="kortleeg">wordt geladen…</p>';
+    document.body.appendChild(host);
+
+    // Dezelfde handshake als de gewone stand, zodat de bestaande embedcode
+    // werkt: postMessage({nlfrActueelHeight}), alleen melden bij wijziging.
+    var laatste = 0;
+    function meld(){
+      try {
+        if (window.parent && window.parent !== window) {
+          var h = Math.ceil(host.getBoundingClientRect().height) + 4;
+          if (Math.abs(h - laatste) >= 8) { laatste = h; window.parent.postMessage({ nlfrActueelHeight: h }, "*"); }
+        }
+      } catch(e){}
+    }
+
+    fetch("/api/actueel", { cache: "no-store" })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; })
+      .then(function(j){
+        host.innerHTML = kop + kortHTML(kortItems(j));
+        meld();
+      });
+
+    window.addEventListener("load", meld);
+    window.addEventListener("resize", meld);
+    meld();
+  }
+
+
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function ico(id, cls){ return '<svg class="ic'+(cls?" "+cls:"")+'" aria-hidden="true"><use href="#'+id+'"/></svg>'; }
   function tijd(iso){ try{ var d=new Date(iso); return d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }

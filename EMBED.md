@@ -53,6 +53,49 @@ Vervang `https://nlfr-menu.vercel.app` alleen als de Vercel-URL anders is.
   elkaar met `target="_self"` en blijven dus binnen dit iframe. Met `_top` zou
   de bezoeker op de kale Vercel-pagina belanden, zonder sitekop of menu.
 
+## Startpagina, linkerkolom
+
+Een compacte nieuwslijst voor de linkerkolom van de startpagina: alleen de kop
+en de tien jongste berichten, zonder tabs, tegels of uitklappen. Klikken opent
+de nieuwspagina zelf. Hiermee kan het mikle-widget op de startpagina vervangen
+worden.
+
+Het is dezelfde route met `?stand=kort` erachter, en dezelfde hoogte-sync als
+hierboven — alleen zonder `nlfrViewport`, want deze lijst hoeft niet op de
+vensterhoogte gecapt te worden: hij is altijd kort.
+
+```html
+<iframe
+  id="nlfrKort"
+  src="https://nlfr-menu.vercel.app/actueel?stand=kort"
+  style="width:100%;height:420px;border:0;"
+  title="Nieuws uit en over Frankrijk"
+  name="nlfrKort"></iframe>
+<script>
+(function(){
+  var f = document.getElementById('nlfrKort');
+  var ORIGIN = new URL(f.src).origin;
+  window.addEventListener('message', function(e){
+    if (e.origin !== ORIGIN) return;
+    if (e.data && e.data.nlfrActueelHeight){
+      f.style.height = (e.data.nlfrActueelHeight + 4) + 'px';
+    }
+  });
+})();
+</script>
+```
+
+- De lijst leest dezelfde compacte levering (`/api/actueel`) als de volledige
+  pagina, dus er is niets extra's te beheren: wat daar bovenaan staat, staat
+  hier ook.
+- Het archief valt eruit — een lijstje "nieuws" hoort geen archiefstukken te
+  tonen.
+- Per bericht: de kop (maximaal twee regels), daaronder de bron en de datum.
+  Een redactionele synthese krijgt "Redactie NLFR" in plaats van de krant waar
+  hij op steunt.
+- De `height` van 420px in de code hierboven is alleen de starthoogte; het
+  script neemt daarna de gemelde hoogte over.
+
 ## Beheer (reviewtool)
 
 - Gepubliceerde redactiesyntheses verschijnen automatisch bovenaan de feed met

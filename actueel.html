@@ -666,9 +666,40 @@
     var s=(window.screen&&window.screen.height)||900;
     return Math.max(640, Math.min(1200, Math.round(s*0.9)));
   }
+  // De hoogte die de INHOUD van de scroller nodig heeft.
+  //
+  // Bewust niet scrollerEl.scrollHeight: de scroller vult de 1fr-rij van het
+  // paneel en dat paneel staat op height:100%. scrollHeight is daardoor nooit
+  // kleiner dan de scroller zelf al is, dus met dichte tegels meldde de pagina
+  // zo ongeveer de hele vensterhoogte en groeide het iframe door tot cap().
+  // Onder de tegels stond dan een lap lege ruimte.
+  //
+  // Daarom optellen wat er echt in staat: de hoogte van de kinderen plus de
+  // padding en de tussenruimte. Klapt een tegel of artikel open, dan groeien de
+  // kinderen mee en gaat de gemelde hoogte gewoon omhoog — tot cap(), waarboven
+  // de scroller intern scrollt zoals altijd.
+  function inhoudHoogte(){
+    var kinderen = scrollerEl.children, n = kinderen.length;
+    if(!n) return 0;
+    var cs = window.getComputedStyle ? window.getComputedStyle(scrollerEl) : null;
+    var pad = cs ? (parseFloat(cs.paddingTop)||0) + (parseFloat(cs.paddingBottom)||0) : 0;
+    var gat = cs ? (parseFloat(cs.rowGap || cs.gap) || 0) : 0;
+    var som = 0;
+    for(var i=0;i<n;i++){
+      var el = kinderen[i];
+      som += el.getBoundingClientRect ? el.getBoundingClientRect().height : (el.offsetHeight||0);
+    }
+    return som + pad + gat * (n - 1);
+  }
   function natuur(){
     var bar=document.querySelector(".bar"), st=statusEl;
-    return (bar?bar.offsetHeight:0)+(tabsEl.offsetHeight||0)+(scrollerEl.scrollHeight||0)+(st.offsetHeight||0)+4;
+    var vast = (bar?bar.offsetHeight:0)+(tabsEl.offsetHeight||0)+(st?st.offsetHeight:0)+4;
+    var h = vast + inhoudHoogte();
+    // Het paneel heeft een min-height in de CSS; korter melden zou de onderkant
+    // van dat paneel afknippen.
+    var pnl = document.querySelector(".panel");
+    var minP = (pnl && window.getComputedStyle) ? (parseFloat(window.getComputedStyle(pnl).minHeight)||0) : 0;
+    return minP ? Math.max(h, minP + 4) : h;
   }
   function meldHoogte(){
     // Elke inhoudswijziging loopt hier langs (tegel/artikel/bronnen open of

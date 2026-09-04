@@ -123,22 +123,61 @@
   /* Alleen mobiel */
   .sforum, .sloep { display: none; }
 
-  /* ---- Lade (in-flow, nooit position:absolute) ---- */
-  .lade { display: none; background: #fdfbfa; border-top: 1px solid rgba(128,0,0,.10);
-          padding: 14px 18px; }
+  /* ---- Lade: een compacte kaart die onder zijn eigen knop hangt ----
+     IN-FLOW, nooit position:absolute of fixed. Dit iframe is precies zo hoog
+     als het meldt; alles wat buiten de documentstroom valt, wordt door de
+     moederpagina afgeknipt. De kaart hangt dus niet ergens overheen maar wordt
+     met een marge onder zijn knop geschoven (zie richtLade()). De rest van de
+     strook onder de strip blijft leeg. */
+  .lade { display: none; background: #fff; padding: 8px 14px 14px; }
   .lade.open { display: block; }
+  /* Het pijltje naar de knop. position:relative houdt het IN de stroom en
+     zorgt alleen dat het over de rand van de kaart heen valt. */
+  .ladepijl { position: relative; z-index: 1; width: 14px; height: 14px; margin: 0 0 -7px 0;
+              background: #fff; border-left: 1px solid rgba(128,0,0,.14);
+              border-top: 1px solid rgba(128,0,0,.14); transform: rotate(45deg); }
+  .ladekaart { background: #fff; border: 1px solid rgba(128,0,0,.14); border-radius: 12px;
+               box-shadow: 0 12px 34px -16px rgba(90,0,0,.45); padding: 14px 16px; max-width: 100%; }
+  .ladekaart.plaats { width: 560px; }
+  .ladekaart.actueel { width: 340px; }
+  .ladekaart.admin { width: 300px; }
   .lade .h { display: block; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 11.5px;
              letter-spacing: .06em; text-transform: uppercase; color: #a99e9a; margin-bottom: 6px; }
-  .lade a { display: flex; align-items: center; min-height: 44px;
-            font-size: 14px; color: #5b524f; padding: 5px 0; background: #fdfbfa; }
-  .lade a:hover { color: var(--brand); }
+  .lade .ladekaart > a { display: flex; align-items: center; min-height: 44px;
+                         font-size: 14px; color: #5b524f; padding: 5px 0; background: #fff; }
+  .lade .ladekaart > a:hover { color: var(--brand); }
   .lade .leeg { font-size: 13px; color: #8a7f7c; }
+
+  /* De twee kolommen achter "Plaats bericht" */
+  .plaatskolommen { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .plaatskolom { min-width: 0; }
+  .plaatskolom h4 { margin: 0; font-family: 'Poppins', sans-serif; font-weight: 700;
+                    font-size: 14.5px; color: var(--brand-dark); }
+  .pil { display: inline-block; margin-top: 5px; padding: 2px 9px; border-radius: 999px;
+         font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 10.5px;
+         letter-spacing: .06em; color: #fff; }
+  .pil.gratis { background: var(--actueel); }
+  .pil.betaald { background: var(--brand); }
+  .plaatskolom p { margin: 7px 0 11px; font-family: 'Mulish', sans-serif; font-size: 13px;
+                   line-height: 1.5; color: #5b524f; }
+  .plaatsknop { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+                padding: 0 16px; border-radius: 9px; background: var(--brand); color: #fff;
+                font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 13px; }
+  .plaatsknop:hover { filter: brightness(1.12); }
 
   /* ---- Paneel ---- */
   .paneel { display: none; background: #fdfbfa; border-top: 1px solid rgba(128,0,0,.10); padding: 24px; }
   .paneel.open { display: block; }
-  .kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 22px; align-items: start; }
+  /* Zes sporen bij de iframe-breedte van 955px. Lezen heeft 43 links en zou als
+     één kolom drie keer zo hoog worden als de vier andere; hij pakt daarom twee
+     sporen en verdeelt zijn groepen daarbinnen over twee kolommen, met één
+     deurkop erboven. Het paneel is daardoor zo hoog als de langste van die
+     twee, niet als de hele lijst. */
+  .kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 18px; align-items: start; }
   .deur { background: #fdfbfa; min-width: 0; }
+  .deur[data-deur="lezen"] { grid-column: span 2; }
+  .deurbody.tweekolommen { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; align-items: start; }
+  .deurbody.tweekolommen > .kolom { min-width: 0; }
   .deurkop { display: block; background: #fdfbfa; border-bottom: 1px solid rgba(128,0,0,.10);
              padding-bottom: 7px; margin-bottom: 10px; }
   .deurkop .dn { display: block; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 15px; color: var(--brand-dark); }
@@ -149,6 +188,10 @@
   .grp:last-child { margin-bottom: 0; }
   .gk { font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: .06em;
         text-transform: uppercase; color: #a99e9a; margin-bottom: 2px; }
+  /* Op desktop staat elke groep gewoon open; teller en caret horen bij de
+     accordeon die alleen op mobiel bestaat. */
+  .gk .gc, .gk .gcaret { display: none; }
+  .gl { display: block; }
   /* ALLE links hetzelfde gewicht: geen bold, geen bordeaux, geen emoji. */
   .grp a { display: block; font-family: 'Mulish', sans-serif; font-size: 13.5px; line-height: 1.35;
            color: #5b524f; padding: 5px 0; }
@@ -166,8 +209,12 @@
   .teaser .perk { display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: #5b524f; line-height: 1.3; margin-bottom: 5px; }
   .teaser .perk svg { flex: none; margin-top: 3px; }
   .teaser .btns { display: grid; gap: 6px; margin-top: 10px; }
+  /* De kolommen zijn smaller sinds Lezen er twee pakt; 12px houdt
+     "Word lid — gratis" op één regel in plaats van halverwege af te breken. */
   .teaser .btn-p, .teaser .btn-o { display: flex; align-items: center; justify-content: center; min-height: 44px;
-                                   border-radius: 9px; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 13px; }
+                                   padding: 0 8px; border-radius: 9px; text-align: center; line-height: 1.2;
+                                   font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 12px; }
+  html.compact .teaser .btn-p, html.compact .teaser .btn-o { font-size: 13px; }
   .teaser .btn-p { background: var(--brand); color: #fff; }
   .teaser .btn-o { background: #fff; border: 1px solid rgba(128,0,0,.25); color: var(--brand); }
 
@@ -220,8 +267,30 @@
   html.compact .deur.open .deurkop .dcaret { transform: rotate(180deg); }
   html.compact .deurbody { display: none; padding: 10px 14px 12px; background: #fff; }
   html.compact .deur.open .deurbody { display: block; }
-  html.compact .grp { background: #fff; }
+  html.compact .grp { background: #fff; margin-bottom: 0; border-top: 1px solid rgba(128,0,0,.08); }
+  html.compact .grp:first-child { border-top: 0; }
+  /* Tweede accordeon, binnen de deur: de groepen zelf klappen open en dicht,
+     één tegelijk, de eerste open — zoals het oude menu deed. */
+  html.compact .gk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0;
+                     cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  html.compact .gk .gn { flex: 1; }
+  html.compact .gk .gc { display: inline-block; font-family: 'Mulish', sans-serif;
+                         font-size: 12px; letter-spacing: 0; text-transform: none; color: #a99e9a; }
+  html.compact .gk .gcaret { display: inline-flex; color: #a99e9a; transition: transform 180ms ease; }
+  html.compact .grp.open .gk .gcaret { transform: rotate(180deg); }
+  html.compact .gl { display: none; padding-bottom: 6px; }
+  html.compact .grp.open .gl { display: block; }
   html.compact .grp a { min-height: 44px; display: flex; align-items: center; }
+  /* De twee sporen van Lezen zijn een desktopmiddel; op mobiel staat alles
+     gewoon onder elkaar in de accordeon. */
+  html.compact .deur[data-deur="lezen"] { grid-column: auto; }
+  html.compact .deurbody.tweekolommen { display: block; }
+  /* De lade mag op een telefoon de volle breedte nemen; dan is er ook geen
+     knop om een pijltje naar te richten. */
+  html.compact .lade { padding: 10px 12px 12px; }
+  html.compact .ladepijl { display: none; }
+  html.compact .ladekaart { width: auto !important; margin-left: 0 !important; }
+  html.compact .plaatskolommen { grid-template-columns: 1fr; gap: 16px; }
   html.compact .paneelvoet { flex-direction: column; align-items: stretch; }
   html.compact .paneelvoet .vlinks { display: grid; grid-template-columns: 1fr 1fr; }
   html.compact .pknop { width: 100%; }
@@ -399,6 +468,18 @@
   var ZUSTERS = [["Infofrankrijk","https://infofrankrijk.com/"],["Café Claude","https://www.cafeclaude.fr/"],["Nedergids","https://nedergids.nl/"],["Communities Abroad","https://www.communitiesabroad.com"]];
   var PANEELKNOPPEN = [["Plaats bericht",U("/profiles/blog/new")],["Plaats advertentie",U("/page/betaalpagina-berichten")],["Diensten",U("/diensten")]];
 
+  // De twee kolommen achter de knop "Plaats bericht". Naast elkaar op desktop,
+  // onder elkaar op mobiel. Het verschil gratis/betaald is de hele reden dat
+  // deze lade bestaat, vandaar het pilletje boven de uitleg.
+  var PLAATS_KOLOMMEN = [
+    { kop: "Plaats een forumbijdrage", label: "GRATIS", pil: "gratis",
+      tekst: "Uw forumbijdrage wordt bijzonder op prijs gesteld. Vragen worden beantwoord in het forum, van ervaringen leren we allemaal, en korte verhalen krijgen een eigen rubriek. Ook roerende goederen te koop (auto's, campers, caravans) plaatst u hier gratis.",
+      knop: "Naar het forum", url: U("/profiles/blog/new") },
+    { kop: "Plaats een advertentie", label: "BETAALD", pil: "betaald",
+      tekst: "Vacatures, vastgoed en bedrijfsberichten worden alleen geplaatst na betaling.",
+      knop: "Naar de betaalpagina", url: U("/page/betaalpagina-berichten") }
+  ];
+
   var DEUR_VOLGORDE = ["lezen","doen","vinden","mijn","nieuws"];
 
   var ACTUEEL = null; // null = nog niet geladen; {kaarten:[...]} na fetch.
@@ -457,6 +538,39 @@
   }
 
   // ---- Paneel ------------------------------------------------------------
+
+  // Eén groep: kop met teller en caret (alleen zichtbaar op mobiel, waar de
+  // groepen accordeons zijn), daaronder de links.
+  function groepHTML(g){
+    return '<div class="grp">' +
+      '<div class="gk" role="button" tabindex="0" aria-expanded="false">' +
+        '<span class="gn">' + g[0] + '</span>' +
+        '<span class="gc">' + g[1].length + '</span>' +
+        '<span class="gcaret">' + caretSvg + '</span>' +
+      '</div>' +
+      '<div class="gl">' + g[1].map(function(l){ return link(l[1], l[0], l[2]); }).join("") + '</div>' +
+    '</div>';
+  }
+
+  // De groepen van Lezen over twee kolommen, evenwichtig op aantal links.
+  // Elke groep weegt zijn links plus zijn kop; een groep gaat naar de eerste
+  // kolom zolang zijn MIDDEN nog vóór de helft ligt. Zo blijft een groep
+  // heel — hem opsplitsen zou de kop van zijn links scheiden.
+  function verdeelGroepen(groups){
+    var gewicht = function(g){ return g[1].length + 1; };
+    var totaal = 0;
+    groups.forEach(function(g){ totaal += gewicht(g); });
+    var helft = totaal / 2, som = 0, a = [], b = [];
+    groups.forEach(function(g){
+      var w = gewicht(g);
+      if (b.length === 0 && som + w / 2 <= helft) { a.push(g); som += w; }
+      else b.push(g);
+    });
+    // Nooit een lege tweede kolom: dan is één kolom eerlijker.
+    if (!b.length) { b.push(a.pop()); }
+    return [a, b];
+  }
+
   function kolomHTML(sleutel){
     var groups, naam, sub;
     if (sleutel === "mijn") {
@@ -475,7 +589,9 @@
          '<span class="dn">'+naam+'</span><span class="ds">'+sub+'</span>' +
          '<span class="dc">'+(groups ? aantal : "")+'</span>' +
          '<span class="dcaret">'+caretSvg+'</span></div>';
-    h += '<div class="deurbody">';
+    // Lezen verdeelt zijn groepen over twee kolommen binnen dezelfde deur.
+    var tweekolommen = (sleutel === "lezen") && groups;
+    h += '<div class="deurbody' + (tweekolommen ? " tweekolommen" : "") + '">';
 
     if (!groups) {
       // Niet ingelogd: de teaser staat compact in deze kolom.
@@ -487,12 +603,12 @@
            '<a class="btn-p" href="'+U("/main/authorization/signUp")+'" target="_parent">Word lid — gratis</a>'+
            '<a class="btn-o" href="'+U("/main/authorization/signIn")+'" target="_parent">Meld je aan</a>'+
            '</div></div>';
-    } else {
-      groups.forEach(function(g){
-        h += '<div class="grp"><div class="gk">'+g[0]+'</div>';
-        g[1].forEach(function(l){ h += link(l[1], l[0], l[2]); });
-        h += '</div>';
+    } else if (tweekolommen) {
+      verdeelGroepen(groups).forEach(function(kolom){
+        h += '<div class="kolom">' + kolom.map(groepHTML).join("") + '</div>';
       });
+    } else {
+      h += groups.map(groepHTML).join("");
       if (sleutel === "nieuws") {
         h += '<a class="abonneer" href="'+U("/profiles/blog/feed?xn_auth=no")+'" target="_parent">' +
              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none"/></svg>' +
@@ -531,7 +647,11 @@
           var k = d.querySelector(".deurkop");
           if (k) k.setAttribute("aria-expanded", "false");
         });
-        if (!wasOpen) { deur.classList.add("open"); kop.setAttribute("aria-expanded", "true"); }
+        if (!wasOpen) {
+          deur.classList.add("open");
+          kop.setAttribute("aria-expanded", "true");
+          openEersteGroep(deur);
+        }
         report();
       }
       kop.addEventListener("click", toggle);
@@ -539,6 +659,41 @@
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
       });
     });
+    bindGroepen();
+  }
+
+  // Tweede accordeon, binnen de deur: op mobiel klappen de groepen zelf ook
+  // open en dicht, één tegelijk binnen dezelfde deur. Op desktop staan ze
+  // allemaal open en doet de klasse niets (zie CSS).
+  function bindGroepen(){
+    Array.prototype.forEach.call(paneel.querySelectorAll(".grp > .gk"), function(kop){
+      function toggle(){
+        var grp = kop.parentNode, wasOpen = grp.classList.contains("open");
+        var deur = grp.closest ? grp.closest(".deur") : null;
+        var buren = (deur || paneel).querySelectorAll(".grp");
+        Array.prototype.forEach.call(buren, function(g){
+          g.classList.remove("open");
+          var k = g.querySelector(".gk");
+          if (k) k.setAttribute("aria-expanded", "false");
+        });
+        if (!wasOpen) { grp.classList.add("open"); kop.setAttribute("aria-expanded", "true"); }
+        report();
+      }
+      kop.addEventListener("click", toggle);
+      kop.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+      });
+    });
+  }
+
+  function openEersteGroep(deur){
+    if (!isNarrow() || !deur) return;
+    if (deur.querySelector(".grp.open")) return;
+    var eerste = deur.querySelector(".grp");
+    if (!eerste) return;
+    eerste.classList.add("open");
+    var k = eerste.querySelector(".gk");
+    if (k) k.setAttribute("aria-expanded", "true");
   }
 
   function zetPaneel(open){
@@ -553,6 +708,7 @@
       if (eerste && !paneel.querySelector(".deur.open")) {
         eerste.classList.add("open");
         eerste.querySelector(".deurkop").setAttribute("aria-expanded", "true");
+        openEersteGroep(eerste);
       }
     }
     report();
@@ -571,23 +727,79 @@
     });
   }
 
+  // Welke kant de kaart onder zijn knop uitlijnt. "Nu actueel" en het tandwiel
+  // staan rechts in de strip; hun kaart hangt daar met de rechterrand onder.
+  var LADE_RECHTS = { actueel: 1, admin: 1 };
+  var ladeKnop = null;
+
+  // De kaart onder zijn eigen knop schuiven. Dit gebeurt met een MARGE, niet
+  // met position:absolute: het iframe is precies zo hoog als het meldt en zou
+  // alles buiten de documentstroom afknippen.
+  function richtLade(){
+    var kaart = lade.querySelector(".ladekaart");
+    var pijl = lade.querySelector(".ladepijl");
+    if (!kaart) return;
+    kaart.style.marginLeft = "";
+    if (pijl) pijl.style.marginLeft = "";
+    if (isNarrow() || !ladeKnop || !ladeNu) return;   // mobiel: volle breedte
+
+    var lr = lade.getBoundingClientRect();
+    var cs = window.getComputedStyle ? window.getComputedStyle(lade) : null;
+    var padL = cs ? (parseFloat(cs.paddingLeft) || 0) : 0;
+    var padR = cs ? (parseFloat(cs.paddingRight) || 0) : 0;
+    var links = lr.left + padL;
+    var ruimte = lr.width - padL - padR;
+    var kb = ladeKnop.getBoundingClientRect();
+    var kw = kaart.getBoundingClientRect().width;
+
+    var x = LADE_RECHTS[ladeNu] ? (kb.right - links - kw) : (kb.left - links);
+    x = Math.max(0, Math.min(x, Math.max(0, ruimte - kw)));
+    kaart.style.marginLeft = Math.round(x) + "px";
+
+    if (pijl) {
+      // Het pijltje wijst naar het midden van de knop, maar blijft binnen de
+      // kaart (anders zweeft het los in de strook).
+      var px = kb.left + kb.width / 2 - links - 7;
+      px = Math.max(x + 12, Math.min(px, x + kw - 26));
+      pijl.style.marginLeft = Math.round(px) + "px";
+    }
+  }
+
   function openLade(naam, knop){
     if (!naam || ladeNu === naam) { sluitLade(); report(); return; }
     sluitLade();
     if (naam !== "msite") zetPaneel(false);
     ladeNu = naam;
+    ladeKnop = knop || null;
     lade.innerHTML = ladeHTML(naam);
     lade.classList.add("open");
     if (knop) { knop.classList.add("active"); knop.setAttribute("aria-expanded", "true"); }
+    richtLade();
     report();
   }
 
+  // De twee kolommen achter "Plaats bericht".
+  function plaatsHTML(){
+    return '<div class="plaatskolommen">' + PLAATS_KOLOMMEN.map(function(k){
+      return '<div class="plaatskolom">' +
+        '<h4>' + k.kop + '</h4>' +
+        '<span class="pil ' + k.pil + '">' + k.label + '</span>' +
+        '<p>' + esc(k.tekst) + '</p>' +
+        '<a class="plaatsknop" href="' + k.url + '" target="_parent">' + k.knop + '</a>' +
+      '</div>';
+    }).join("") + '</div>';
+  }
+
+  // De inhoud van een lade, altijd in een kaart met een pijltje naar de knop.
   function ladeHTML(naam){
-    if (naam === "plaats") {
-      return '<span class="h">Plaatsen</span>' +
-             link(U("/profiles/blog/new"), "Plaats een forumbijdrage") +
-             link(U("/page/betaalpagina-berichten"), "Plaats een advertentie");
-    }
+    var binnen = ladeInhoud(naam);
+    if (binnen == null) return "";
+    if (naam === "msite") return '<div class="ladekaart msite">' + binnen + '</div>';
+    return '<div class="ladepijl"></div><div class="ladekaart ' + naam + '">' + binnen + '</div>';
+  }
+
+  function ladeInhoud(naam){
+    if (naam === "plaats") return plaatsHTML();
     if (naam === "actueel") return actueelHTML();
     if (naam === "admin") {
       return '<span class="h">Beheer</span>' + ADMIN_LINKS.map(function(l){
@@ -595,7 +807,7 @@
       }).join("");
     }
     if (naam === "msite") return msiteHTML();
-    return "";
+    return null;
   }
 
   // ---- "Nu actueel" — compacte rij linkjes uit actueel.json --------------
@@ -617,7 +829,13 @@
       ACTUEEL = (j && typeof j === "object") ? j : { kaarten: [] };
       var dot = document.getElementById("actueeldot");
       if (dot) dot.classList.toggle("live", (ACTUEEL.kaarten || []).some(function(k){ return k && k.live; }));
-      if (ladeNu === "actueel") { lade.innerHTML = actueelHTML(); report(); }
+      // Alleen de inhoud van de kaart verversen; de kaart en zijn pijltje
+      // blijven staan waar richtLade() ze heeft neergezet.
+      if (ladeNu === "actueel") {
+        var kaart = lade.querySelector(".ladekaart");
+        if (kaart) { kaart.innerHTML = actueelHTML(); richtLade(); }
+        report();
+      }
     };
     var haal = function(url){ return fetch(url, { cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }); };
     haal(ACTUEEL_URL)
@@ -784,7 +1002,7 @@
     var wasOpen = paneel.classList.contains("open");
     bouwPaneel();
     if (wasOpen) paneel.classList.add("open");
-    if (ladeNu) lade.innerHTML = ladeHTML(ladeNu);
+    if (ladeNu) { lade.innerHTML = ladeHTML(ladeNu); richtLade(); }
     report();
   });
 
@@ -796,6 +1014,7 @@
       var wasOpen = paneel.classList.contains("open");
       bouwPaneel();
       if (wasOpen) paneel.classList.add("open");
+      richtLade();
       report();
     };
     if (mq.addEventListener) mq.addEventListener("change", bijWissel);
@@ -808,7 +1027,7 @@
   laadBanner();
 
   window.addEventListener("load", report);
-  window.addEventListener("resize", report);
+  window.addEventListener("resize", function(){ richtLade(); report(); });
   report();
 })();
 </script>

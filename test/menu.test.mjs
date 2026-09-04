@@ -45,7 +45,7 @@ function menuData() {
     pak("var DEUR_VOLGORDE =", "var ACTUEEL = null");
 
   const fn = new Function("U", "myPage", "uid",
-    bron + "\nreturn { DOORS, memberGroups, ADMIN_LINKS, PERKS, ZUSTERS, PANEELKNOPPEN, DEUR_VOLGORDE };");
+    bron + "\nreturn { DOORS, memberGroups, ADMIN_LINKS, PERKS, ZUSTERS, PANEELKNOPPEN, PLAATS_KOLOMMEN, DEUR_VOLGORDE };");
   return fn((p) => NL + p, NL + "/profiles/settings/editProfileInfo", "UID");
 }
 

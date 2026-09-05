@@ -200,7 +200,7 @@
      onleesbaar. Nu #800000, de primaire huisstijlkleur, op 10,61:1. De
      ondermarge gaat van 2 naar 6px zodat de kop aan zijn eigen lijst vastzit
      en niet tussen twee groepen in zweeft. */
-  .gk { font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: .06em;
+  .gk { font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 12.5px; letter-spacing: .06em;
         text-transform: uppercase; color: var(--brand); margin-bottom: 6px; }
   /* Op desktop staat elke groep gewoon open; teller en caret horen bij de
      accordeon die alleen op mobiel bestaat. */
@@ -211,8 +211,22 @@
      warm grijsbruin dat op de warme paneelachtergrond roodachtig oogt en
      nauwelijks verschilt van de accenten eromheen. Gemeten: 7,36:1 werd
      12,25:1. Rood blijft van nu af voorbehouden aan koppen. */
-  .grp a { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13.5px; line-height: 1.35;
-           color: #333; padding: 5px 0; }
+  /* LANGE WOORDEN AFBREKEN. De kolom is bij het iframe van 955px maar 134px
+     breed, en die breedte ligt vast: er moeten zes sporen passen omdat de
+     kolom Lezen er dubbel in staat. "Ondernemersnieuws" is 155px op 15px en
+     stak dus buiten zijn kolom, over de buurkolom heen. Dat deed het op 13,5px
+     trouwens al, 140px in een kolom van 134px, dus dit is een bestaand gebrek
+     dat met de grotere letter alleen zichtbaarder werd.
+     De afbreekpunten staan als \u00ad (zacht afbreekstreepje) in de labels
+     zelf, op de samenstellingsgrens: "Ondernemers-nieuws". Ze zijn onzichtbaar
+     zolang het woord past. Niet hyphens:auto, want dat leunt op een Nederlands
+     afbreekwoordenboek dat niet in elke browser zit; waar het ontbreekt breekt
+     de tekst midden in een lettergreep af.
+     overflow-wrap is het vangnet voor een toekomstig label zonder afbreekpunt:
+     lelijk afgebroken is nog altijd beter dan over de buurkolom heen.
+     Gemeten in Chromium bij 1600, 1200, 969, 955, 900 en 800px. */
+  .grp a { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; line-height: 1.4;
+           color: #333; padding: 5px 0; overflow-wrap: break-word; }
   .grp a:hover { color: var(--brand); }
 
   /* Abonneerknop onderin de Nieuws-kolom */
@@ -451,13 +465,13 @@
   // nieuwsbrief alleen via laposta.
   var DOORS = {
     lezen: { naam: "Lezen", sub: "rubrieken", groups: [
-      ["Wonen &amp; klussen", [["Woningen algemeen",U("/profiles/blog/list?tag=Woningen+Algemeen")],["Woningbeheer &amp; huishouding",U("/profiles/blog/list?tag=Woningbeheer+en+Huishouding")],["Bouw",U("/profiles/blog/list?tag=Bouw")],["Inrichting",U("/profiles/blog/list?tag=Inrichting")],["Exterieur",U("/profiles/blog/list?tag=Exterieur")],["Telecommunicatie",U("/page/telecommunicatie")],["Telecommunicatie in het forum",U("/profiles/blog/list?tag=Telecommunicatie")]]],
+      ["Wonen &amp; klussen", [["Woningen algemeen",U("/profiles/blog/list?tag=Woningen+Algemeen")],["Woningbeheer &amp; huishouding",U("/profiles/blog/list?tag=Woningbeheer+en+Huishouding")],["Bouw",U("/profiles/blog/list?tag=Bouw")],["Inrichting",U("/profiles/blog/list?tag=Inrichting")],["Exterieur",U("/profiles/blog/list?tag=Exterieur")],["Tele\u00adcommuni\u00adcatie",U("/page/telecommunicatie")],["Tele\u00adcommuni\u00adcatie in het forum",U("/profiles/blog/list?tag=Telecommunicatie")]]],
       ["Werk &amp; ondernemen", [["Werk algemeen",U("/profiles/blog/list?tag=Werk+Algemeen")],["Midden- en kleinbedrijf",U("/profiles/blog/list?tag=Midden-+en+Kleinbedrijf")],["Horeca en toerisme",U("/profiles/blog/list?tag=Horeca+en+Toerisme")],["Vervoer",U("/profiles/blog/list?tag=Vervoer")],["Overige diensten",U("/profiles/blog/list?tag=Overige+Diensten")]]],
       ["Geld, overheid &amp; migratie", [["Geldzaken",U("/profiles/blog/list?tag=Geldzaken")],["Overheid",U("/profiles/blog/list?tag=Overheid")],["Migratie",U("/profiles/blog/list?tag=Migratie")]]],
-      ["Leren &amp; taal", [["Onderwijs",U("/profiles/blog/list?tag=Onderwijs")],["Cursussen en opleidingen",U("/profiles/blog/list?tag=Cursussen+en+Opleidingen")],["Kinderen",U("/profiles/blog/list?tag=Kinderen")],["Vertaling",U("/profiles/blog/list?tag=Vertaling")],["Woordenlijsten",U("/profiles/blog/list?tag=Lexicon")],["Correspondentie",U("/profiles/blog/list?tag=Correspondentie")]]],
-      ["Leven &amp; zorg", [["Gezondheid, sport &amp; spel",U("/profiles/blog/list?tag=Gezondheid%2C+Sport+en+Spel")],["Ouderverzorging",U("/profiles/blog/list?tag=Ouderverzorging")],["Dieren",U("/profiles/blog/list?tag=Dieren")],["Recepten",U("/profiles/blog/list?tag=Recepten")]]],
+      ["Leren &amp; taal", [["Onderwijs",U("/profiles/blog/list?tag=Onderwijs")],["Cursussen en opleidingen",U("/profiles/blog/list?tag=Cursussen+en+Opleidingen")],["Kinderen",U("/profiles/blog/list?tag=Kinderen")],["Vertaling",U("/profiles/blog/list?tag=Vertaling")],["Woorden\u00adlijsten",U("/profiles/blog/list?tag=Lexicon")],["Correspon\u00addentie",U("/profiles/blog/list?tag=Correspondentie")]]],
+      ["Leven &amp; zorg", [["Gezondheid, sport &amp; spel",U("/profiles/blog/list?tag=Gezondheid%2C+Sport+en+Spel")],["Ouder\u00adverzorging",U("/profiles/blog/list?tag=Ouderverzorging")],["Dieren",U("/profiles/blog/list?tag=Dieren")],["Recepten",U("/profiles/blog/list?tag=Recepten")]]],
       ["Ontmoeten &amp; cultuur", [["Clubs, verenigingen &amp; bijeenkomsten",U("/profiles/blog/list?tag=Clubs%2C+Verenigingen+en+Bij%C3%A9%C3%A9nkomsten")],["Contact gezocht",U("/profiles/blog/list?tag=Contact+Gezocht")],["Kunst &amp; cultuur",U("/profiles/blog/list?tag=Kunst+en+Cultuur")],["Korte verhalen",U("/profiles/blog/list?tag=Korte+Verhalen")]]],
-      ["Marktplaats", [["Vastgoed van leden",U("/page/onroerend-goed")],["Huizen aangeboden",U("/profiles/blog/list?tag=Woningen+Aangeboden")],["Roerende goederen te koop",U("/profiles/blog/list?tag=Te+Koop+Aangeboden")],["Te koop gevraagd",U("/profiles/blog/list?tag=Te+Koop+Gevraagd")],["Werk aangeboden",U("/profiles/blog/list?tag=Werk+Aangeboden")],["Werk gevraagd",U("/profiles/blog/list?tag=Werk+Gevraagd")],["Woningen gevraagd",U("/profiles/blog/list?tag=Woningen+Gevraagd")],["Vakantiewoningen",U("/profiles/blog/list?tag=Vakantiehuis")],["Woningruil",U("/profiles/blog/list?tag=Woningruil")],["Kringloopwinkel","https://www.facebook.com/groups/kringloopfrankrijk/"]]],
+      ["Marktplaats", [["Vastgoed van leden",U("/page/onroerend-goed")],["Huizen aangeboden",U("/profiles/blog/list?tag=Woningen+Aangeboden")],["Roerende goederen te koop",U("/profiles/blog/list?tag=Te+Koop+Aangeboden")],["Te koop gevraagd",U("/profiles/blog/list?tag=Te+Koop+Gevraagd")],["Werk aangeboden",U("/profiles/blog/list?tag=Werk+Aangeboden")],["Werk gevraagd",U("/profiles/blog/list?tag=Werk+Gevraagd")],["Woningen gevraagd",U("/profiles/blog/list?tag=Woningen+Gevraagd")],["Vakantie\u00adwoningen",U("/profiles/blog/list?tag=Vakantiehuis")],["Woningruil",U("/profiles/blog/list?tag=Woningruil")],["Kringloop\u00adwinkel","https://www.facebook.com/groups/kringloopfrankrijk/"]]],
       ["Meer in het forum", [["In de schijnwerpers",U("/profiles/blog/list?promoted=1")],["Alle berichten",U("/profiles/blog/list")],["Alle foto's",U("/photo")],["Alle video's",U("/video/video")]]]
     ]},
     doen: { naam: "Meedoen", sub: "plaatsen &amp; steunen", groups: [
@@ -471,7 +485,7 @@
       ["Uitgelicht", [["In de schijnwerpers",U("/profiles/blog/list?promoted=1")],["Groepen",U("/groups")],["Onze sponsors",U("/page/sponsors")],["Auteurs",U("/profiles/friend/listFeatured")]]]
     ]},
     nieuws: { naam: "Nieuws", sub: "&amp; feeds", groups: [
-      ["Lezen", [["Dagelijks Frankrijknieuws",U("/page/dagelijks-frankrijknieuws")],["Ondernemersnieuws",U("/page/dagelijks-ondernemersnieuws-uit-frankrijk")],["Reizen in Frankrijk",U("/page/reizen-in-frankrijk")],["Bosbranden",U("/page/bosbranden")]]],
+      ["Lezen", [["Dagelijks Frankrijk\u00adnieuws",U("/page/dagelijks-frankrijknieuws")],["Ondernemers\u00adnieuws",U("/page/dagelijks-ondernemersnieuws-uit-frankrijk")],["Reizen in Frankrijk",U("/page/reizen-in-frankrijk")],["Bosbranden",U("/page/bosbranden")]]],
       ["Abonneren", [["Dagelijkse nieuwsbrief","https://laposta.nl/f/ssysinmqgflb"],["RSS — berichten",U("/profiles/blog/feed?xn_auth=no")],["RSS — activiteit",U("/activity/log/list?fmt=rss")]]]
     ]}
   };
@@ -497,7 +511,7 @@
   // Redactie — Actueel staat er ACHTER Banner beheren en niet ervoor: die
   // volgorde ligt vast in test/menu.test.mjs, en een bestaande afspraak omgooien
   // voor een voorkeur van het moment is de moeite niet waard.
-  var ADMIN_LINKS = [["Banner beheren","/banner-beheer","_blank"],["Redactie — Actueel","/review","_blank"],["Dashboard",U("/main/dashboard")],["Tags",U("/page/tags")],["Standaard teksten",U("/page/standard-berichten")],["Bestandsbeheer",U("/main/filemanager/list")],["Mijn pagina's",U("/page/page/listForContributor")]];
+  var ADMIN_LINKS = [["Banner beheren","/banner-beheer","_blank"],["Redactie — Actueel","/review","_blank"],["Dashboard",U("/main/dashboard")],["Tags",U("/page/tags")],["Standaard teksten",U("/page/standard-berichten")],["Bestands\u00adbeheer",U("/main/filemanager/list")],["Mijn pagina's",U("/page/page/listForContributor")]];
   var PERKS = ["Uw eigen profielpagina","Chat met leden die online zijn","Ledenlijst &amp; leden zoeken in uw regio","Gratis berichten en advertenties plaatsen"];
 
   var ZUSTERS = [["Infofrankrijk","https://infofrankrijk.com/"],["Café Claude","https://www.cafeclaude.fr/"],["Nedergids","https://nedergids.nl/"],["Communities Abroad","https://www.communitiesabroad.com"]];

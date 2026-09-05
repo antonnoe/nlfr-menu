@@ -60,6 +60,18 @@
     padding-bottom:5px; border-bottom:1px solid rgba(128,0,0,.12); }
   .gouvtegel > h3 .telling { font-family:'Mulish',sans-serif; font-weight:400; font-size:12.5px; color:#8a7f7c; }
 
+  /* ---- Beheertoken -------------------------------------------------------
+     Zelfde aanpak als /banner-beheer: één keer invullen, daarna in deze
+     browser bewaard. Zo hoeft de link in het menu geen token te dragen — en
+     dat is precies de bedoeling, want die menubron is publiek opvraagbaar. */
+  .tokenvak { background:#fff; border:1px solid rgba(128,0,0,.25); border-radius:14px; padding:16px; margin-bottom:14px; max-width:520px; }
+  .tokenvak[hidden] { display:none; }
+  .tokenvak h2 { margin-top:0; }
+  .tokenvak label { display:block; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:var(--brand); margin-bottom:4px; }
+  .tokenvak input { width:100%; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:14px; padding:10px 12px;
+    border:1px solid rgba(128,0,0,.25); border-radius:9px; min-height:44px; }
+  .tokenvak .hint { font-size:12.5px; color:#8a7f7c; margin:8px 0 0; }
+
   .kaart { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 10px 30px -24px rgba(90,0,0,.5); }
   .kaart.pub { border-color:rgba(47,107,58,.4); background:rgba(47,107,58,.05); }
   .meta { font-size:12px; color:#8a7f7c; margin-bottom:8px; }
@@ -182,6 +194,17 @@
     <button type="button" class="tab" role="tab" id="tabOverheid" data-tab="overheid" aria-selected="false" tabindex="-1" aria-controls="inhoud">Overheid</button>
   </div>
   <div id="melding"></div>
+  <div class="tokenvak" id="tokenvak" hidden>
+    <h2>Beheertoken</h2>
+    <label for="tokenveld">Token</label>
+    <input type="password" id="tokenveld" autocomplete="off" placeholder="het REVIEW_TOKEN uit Vercel">
+    <p class="hint">Wordt alleen in deze browser bewaard en als header meegestuurd, nooit in de URL — een URL komt in de
+      browsergeschiedenis en in serverlogs terecht. Daarna kun je hier komen via Beheer in het menu, zonder token in de link.</p>
+    <div class="knoppen">
+      <button type="button" class="actie pubbtn" id="tokenok">Bewaren</button>
+      <button type="button" class="actie wegbtn" id="tokenweg">Token vergeten</button>
+    </div>
+  </div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
 
 <script>
@@ -192,8 +215,36 @@
   // nieuw tabblad, zodat de reviewsessie niet verloren gaat.
   var PREVIEW_URL = "/actueel";
 
+  // ---- Beheertoken ---------------------------------------------------------
+  // DRIE EISEN, in deze volgorde. (1) De link in het menu mag geen token
+  // dragen: die menubron (index.html) is een statisch bestand dat iedereen kan
+  // opvragen. (2) Het token mag niet in de URL van deze pagina blijven staan,
+  // want een URL komt in de browsergeschiedenis en in serverlogs terecht.
+  // (3) Je wilt hem niet elke keer opnieuw intikken.
+  //
+  // Dus: staat er ?token=… in de URL, dan wordt hij bewaard en METEEN uit de
+  // adresbalk gehaald. Daarna komt hij uit deze browser en gaat hij alleen nog
+  // als header mee. Zelfde aanpak als /banner-beheer, met een eigen sleutel.
+  var TOKENSLEUTEL = "nlfr_review_token";
+  function bewaardToken(){
+    try { return localStorage.getItem(TOKENSLEUTEL) || ""; } catch(e){ return ""; }
+  }
+  function bewaarToken(t){
+    try { if (t) localStorage.setItem(TOKENSLEUTEL, t); else localStorage.removeItem(TOKENSLEUTEL); } catch(e){}
+  }
   var params = new URLSearchParams(location.search);
-  var token = params.get("token") || "";
+  var uitUrl = (params.get("token") || "").trim();
+  var token = uitUrl || bewaardToken();
+  if (uitUrl){
+    bewaarToken(uitUrl);
+    // Uit de adresbalk halen, zodat hij niet in de geschiedenis blijft staan en
+    // niet meelift als Referer naar een externe link die je hier aanklikt.
+    try {
+      params.delete("token");
+      var rest = params.toString();
+      history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash);
+    } catch(e){}
+  }
   var nbEl = document.getElementById("nbLink");
   if (nbEl){ nbEl.href = PREVIEW_URL; }
   var meldingEl = document.getElementById("melding");
@@ -212,16 +263,24 @@
   function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
   function melding(tekst, soort){ meldingEl.innerHTML = tekst ? '<div class="melding '+(soort||"info")+'">'+esc(tekst)+'</div>' : ""; }
 
+  // Het token gaat als HEADER mee, niet in de querystring: zo staat hij niet in
+  // de serverlogs van elke aanvraag. api/review.js leest allebei (leesToken),
+  // dus een oude bookmark met ?token=… blijft ook werken.
   function api(method, body){
-    var url = "/api/review?token=" + encodeURIComponent(token);
+    var url = "/api/review";
     var opties = { method: method, headers: { "X-Review-Token": token } };
     if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
-    return fetch(url, opties).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, data: j }; }); });
+    return fetch(url, opties).then(function(r){
+      // De STATUS gaat mee: 401 (token fout) vraagt om het tokenvak, 503 (KV
+      // niet geconfigureerd) juist niet — dan is er niets mis met het token en
+      // zou opnieuw vragen de redacteur op een dwaalspoor zetten.
+      return r.json().then(function(j){ return { ok: r.ok, status: r.status, data: j }; });
+    });
   }
 
   // GET met extra querystring (de kandidatenlijst; zie ?deel=if in api/review.js).
   function apiGet(extra){
-    var url = "/api/review?token=" + encodeURIComponent(token) + (extra || "");
+    var url = "/api/review" + (extra ? "?" + String(extra).replace(/^&/, "") : "");
     return fetch(url, { headers: { "X-Review-Token": token } })
       .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, data: j }; }); });
   }
@@ -1015,10 +1074,45 @@
     });
   });
 
+  // ---- Het tokenvak ---------------------------------------------------------
+  var tokenvakEl = document.getElementById("tokenvak");
+  var tabsEl = document.querySelector(".tabs");
+  function toonTokenvak(open){
+    if (tokenvakEl) { if (open) tokenvakEl.removeAttribute("hidden"); else tokenvakEl.setAttribute("hidden", ""); }
+    // De tabbladen zeggen niets zolang er geen toegang is.
+    if (tabsEl) tabsEl.hidden = open;
+    if (open){ inhoudEl.innerHTML = ""; var v = document.getElementById("tokenveld"); if (v) v.focus(); }
+  }
+  var tokenokEl = document.getElementById("tokenok");
+  if (tokenokEl) tokenokEl.addEventListener("click", function(){
+    var v = document.getElementById("tokenveld");
+    var t = (v && v.value || "").trim();
+    if (!t){ melding("Vul eerst het token in.", "fout"); return; }
+    token = t; bewaarToken(t);
+    if (v) v.value = "";
+    toonTokenvak(false);
+    laad();
+  });
+  var tokenwegEl = document.getElementById("tokenweg");
+  if (tokenwegEl) tokenwegEl.addEventListener("click", function(){
+    token = ""; bewaarToken("");
+    melding("Token vergeten. Deze browser heeft geen toegang meer.", "info");
+    toonTokenvak(true);
+  });
+  var tokenveldEl = document.getElementById("tokenveld");
+  if (tokenveldEl) tokenveldEl.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){ e.preventDefault(); tokenokEl.click(); }
+  });
+
   function laad(behoudMelding){
-    if (!token){ melding("Geen token in de URL. Voeg ?token=… toe.", "fout"); inhoudEl.innerHTML = ""; return; }
+    if (!token){
+      melding("Deze browser kent het beheertoken nog niet. Vul het één keer in; daarna onthoudt hij het.", "info");
+      toonTokenvak(true);
+      return;
+    }
     api("GET").then(function(res){
       if (res.ok && res.data.ok){
+        toonTokenvak(false);
         if (!behoudMelding) melding("");
         state.concepten = res.data.concepten || [];
         state.duplicaten = res.data.duplicatenAantal || 0;
@@ -1032,7 +1126,14 @@
         state.ifIndex = res.data.ifIndex || null;
         if (state.index >= state.concepten.length) state.index = 0;
         render();
-      } else { melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout"); inhoudEl.innerHTML = ""; }
+      } else {
+        melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout");
+        inhoudEl.innerHTML = "";
+        // Alleen bij een geweigerd token opnieuw vragen. Dat gebeurt als het
+        // REVIEW_TOKEN in Vercel is veranderd, of als er ooit iets halfs is
+        // geplakt. Bij 503 (geen KV) ligt het niet aan het token.
+        if (res.status === 401) toonTokenvak(true);
+      }
     }).catch(function(){ melding("Netwerkfout.", "fout"); });
   }
 

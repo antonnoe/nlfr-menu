@@ -215,7 +215,7 @@ function maakDom(zonder = []) {
   };
 }
 
-async function start({ zoek = "", status = 200, body = { ok: true, concepten: [] }, zonder = [], hangend = false } = {}) {
+async function start({ zoek = "", status = 200, body = { ok: true, concepten: [] }, zonder = [], hangend = false, bevestig = false } = {}) {
   const { document, haal } = maakDom(zonder);
   const gezien = [];
   // Met `hangend` blijft elk verzoek open staan tot de test hem zelf afwikkelt.
@@ -237,7 +237,10 @@ async function start({ zoek = "", status = 200, body = { ok: true, concepten: []
     document,
     { search: zoek, pathname: "/review", hash: "" },
     fetchStub,
-    { confirm: () => false },
+    // De standaard is WEIGEREN. Zo moet elke test die iets onomkeerbaars laat
+    // gebeuren, zelf zeggen dat er bevestigd is; een test die dat vergeet ziet
+    // de handeling niet gebeuren in plaats van hem stilzwijgend mee te krijgen.
+    { confirm: () => bevestig },
     { replaceState: () => {} },
     undefined // geen localStorage: elke aanroep hoort in een try/catch te zitten
   );
@@ -261,7 +264,7 @@ test("mét token blijft de weghaalknop bereikbaar", async () => {
   // DE BEVINDING DIE DIT AFDEKT: de weghaalknop zat in het invoervak, en dat
   // verbergt zichzelf zodra je binnen bent. Op een gedeelde browser kon je je
   // toegang daarna niet meer opheffen.
-  const t = await start({ zoek: "?token=geheim" });
+  const t = await start({ zoek: "?token=geheim", bevestig: true });
   assert.equal(t.verborgen("tokenvak"), true, "het invoervak is weg zodra je binnen bent");
   assert.equal(t.verborgen("tokenstand"), false, "maar de standregel staat er, mét de weghaalknop");
 
@@ -346,6 +349,7 @@ test('"Token vergeten" tijdens een lopend verzoek vult het scherm niet alsnog', 
   const t = await start({
     zoek: "?token=geheim",
     hangend: true,
+    bevestig: true,
     body: { ok: true, concepten: [{ id: "c1", kop: "Geheim concept", tekst: "Vertrouwelijk." }] },
   });
   assert.ok(t.gezien.length > 0, "het eerste verzoek is vertrokken");
@@ -396,6 +400,7 @@ test("na het vergeten van het token is ook de opgehaalde inhoud weg", async () =
   // zojuist gewiste redactionele inhoud zo weer terugzetten.
   const t = await start({
     zoek: "?token=geheim",
+    bevestig: true,
     body: { ok: true, concepten: [{ id: "c1", kop: "Vertrouwelijke kop", tekst: "Nog niet gepubliceerd." }] },
   });
   assert.match(t.haal("inhoud").innerHTML, /Vertrouwelijke kop/, "eerst staat het er wel");
@@ -414,4 +419,75 @@ test("na het vergeten van het token is ook de opgehaalde inhoud weg", async () =
   for (let i = 0; i < 8; i += 1) await Promise.resolve();
   assert.ok(!/Vertrouwelijke kop/.test(t.haal("inhoud").innerHTML),
     `de gewiste inhoud staat terug op het scherm: ${t.haal("inhoud").innerHTML.slice(0, 160)}`);
+});
+
+// ---- De weghaalknop: vorm en bevestiging ------------------------------------
+// AANLEIDING. De knop stond in .ifknop, hetzelfde groen als Verwijzen, Nakijken
+// en Klaar: knoppen die je de hele dag indrukt. Boven aan de pagina, waar het
+// oog begint, nodigt die vorm uit tot een klik die je toegang opheft. Dat is
+// niet met een kleur op te lossen alleen; er hoort een bevestiging voor.
+
+test("de weghaalknop doet niets als de bevestiging wordt afgewezen", async () => {
+  // De toets die telt. Zonder deze kan de bevestiging uit de code verdwijnen
+  // zonder dat één test rood wordt: alle andere toetsen hierboven bevestigen.
+  const t = await start({ zoek: "?token=geheim", bevestig: false });
+  assert.equal(t.verborgen("tokenstand"), false, "vooraf staat de standregel er");
+
+  t.haal("tokenweg").klik();
+
+  assert.equal(t.verborgen("tokenstand"), false, "de standregel hoort te blijven staan");
+  assert.equal(t.verborgen("tokenvak"), true, "en er hoort niet opnieuw om een token gevraagd te worden");
+  assert.equal(t.haal("melding").innerHTML, "", "en er is niets gemeld, want er is niets gebeurd");
+});
+
+test("de bevestiging zegt wat de gevolgen zijn", () => {
+  // Een bevestiging die alleen "Weet je het zeker?" vraagt, voegt een klik toe
+  // en geen informatie. Deze moet noemen dat je eruit ligt en wat je dan nodig
+  // hebt, want dat is precies wat je op dat moment niet weet.
+  const begin = review.indexOf('id="tokenweg"');
+  const blok = review.slice(review.indexOf("tokenwegEl.addEventListener", begin));
+  const eind = blok.indexOf("});");
+  assert.ok(eind > 0, "de klikafhandeling van de weghaalknop niet gevonden");
+  const code = blok.slice(0, eind);
+  assert.match(code, /window\.confirm\(/, "er hoort een bevestiging voor te staan");
+  assert.match(code, /niet meer bereikbaar/, "de bevestiging hoort het gevolg te noemen");
+  assert.match(code, /REVIEW_TOKEN/, "en wat je daarna nodig hebt");
+});
+
+test("de weghaalknop draagt niet de vorm van een gewone actieknop", () => {
+  // .ifknop is de groene actieknop van Verwijzen, Nakijken en Klaar. Deze
+  // handeling is zeldzaam en onomkeerbaar en hoort daar niet op te lijken.
+  const knop = review.match(/<button[^>]*id="tokenweg"[^>]*>/);
+  assert.ok(knop, "de weghaalknop niet gevonden in de markup");
+  assert.doesNotMatch(knop[0], /ifknop/, "de weghaalknop hoort geen actieknop te zijn");
+  assert.match(knop[0], /class="tokenweg"/, "maar zijn eigen, stille vorm te hebben");
+});
+
+test("de standregel en de weghaalknop halen WCAG AA op wit", () => {
+  // Ze stonden op #8a7f7c: 2,9:1, in de praktijk niet te lezen. De uitleg naast
+  // een onomkeerbare knop is juist het stuk dat gelezen moet worden.
+  const kanaal = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const lum = (hex) => {
+    let h = hex.replace("#", "");
+    // #666 is geldige CSS en komt hier ook echt voor; zonder deze regel rekent
+    // parseInt op halve bytes en komt er NaN uit in plaats van een lage waarde.
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+    return 0.2126 * kanaal(r) + 0.7152 * kanaal(g) + 0.0722 * kanaal(b);
+  };
+  const contrast = (a, b) => { const [h, l] = [lum(a), lum(b)].sort((x, y) => y - x); return (h + 0.05) / (l + 0.05); };
+  // IJking: zonder deze rekent de rest ongecontroleerd.
+  assert.equal(Math.round(contrast("#000000", "#ffffff")), 21);
+  assert.ok(Math.abs(contrast("#767676", "#ffffff") - 4.54) < 0.02);
+
+  for (const selector of [".tokenstand", ".tokenweg"]) {
+    const start = review.indexOf(selector + " {");
+    assert.ok(start >= 0, `regel niet gevonden in review.html: ${selector}`);
+    const eind = review.indexOf("}", start);
+    assert.ok(eind > start, `geen sluitaccolade na ${selector}`);
+    const m = review.slice(start, eind).match(/(?:^|[;{\s])color:\s*(#[0-9a-f]{3,6})/i);
+    assert.ok(m, `geen kleur in de regel voor ${selector}`);
+    const verhouding = contrast(m[1], "#ffffff");
+    assert.ok(verhouding >= 4.5, `${selector} staat op ${m[1]}, ${verhouding.toFixed(2)}:1 op wit`);
+  }
 });

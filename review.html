@@ -71,9 +71,21 @@
   .tokenvak input { width:100%; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:14px; padding:10px 12px;
     border:1px solid rgba(128,0,0,.25); border-radius:9px; min-height:44px; }
   .tokenvak .hint { font-size:12.5px; color:#8a7f7c; margin:8px 0 0; }
-  .tokenstand { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;
-    font-size:12.5px; color:#8a7f7c; }
+  /* DE WEGHAALKNOP IS GEEN ACTIEKNOP. Hij stond in .ifknop: hetzelfde groen als
+     Verwijzen, Nakijken en Klaar, knoppen die je de hele dag indrukt. Boven aan
+     de pagina, waar het oog begint, nodigt die vorm uit tot een klik die je
+     toegang opheft. De uitleg ernaast stond op #8a7f7c, 2,9:1 op wit en dus
+     onleesbaar; de nadruk lag precies omgekeerd.
+     Nu een stille tekstlink op #666 (5,74:1), rechts uitgelijnd zodat hij buiten
+     het leespad valt, met een bevestiging ervoor. Het aanraakvlak is kleiner dan
+     de 44px die de knoppen hier aanhouden. Dat is bewust: dit is een zeldzame
+     handeling op een beheerscherm, en de bevestiging vangt een misklik op. */
+  .tokenstand { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap;
+    margin-bottom:12px; font-size:12.5px; color:#666; }
   .tokenstand[hidden] { display:none; }
+  .tokenweg { font-family:'Mulish',sans-serif; font-size:12.5px; color:#666; background:none;
+    border:0; padding:6px 2px; text-decoration:underline; cursor:pointer; }
+  .tokenweg:hover, .tokenweg:focus-visible { color:var(--brand); }
 
   .kaart { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 10px 30px -24px rgba(90,0,0,.5); }
   .kaart.pub { border-color:rgba(47,107,58,.4); background:rgba(47,107,58,.05); }
@@ -223,7 +235,7 @@
        je op Ning uitlogt. Eén regel, altijd zichtbaar, is de prijs daarvoor. -->
   <div class="tokenstand" id="tokenstand" hidden>
     <span>Het beheertoken is in deze browser bewaard.</span>
-    <button type="button" class="ifknop klein" id="tokenweg">Token vergeten</button>
+    <button type="button" class="tokenweg" id="tokenweg">Token vergeten</button>
   </div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
 
@@ -1196,6 +1208,12 @@
   if (tokenokEl) tokenokEl.addEventListener("click", bewaarUitVeld);
   var tokenwegEl = document.getElementById("tokenweg");
   if (tokenwegEl) tokenwegEl.addEventListener("click", function(){
+    // BEVESTIGEN, want dit is onomkeerbaar zonder het token er weer bij te
+    // halen. Wie hier per ongeluk klikt sluit zichzelf uit de redactie tot hij
+    // het REVIEW_TOKEN opnieuw heeft opgezocht.
+    if (!window.confirm("Het beheertoken uit deze browser verwijderen?\n\n" +
+        "De reviewtool is daarna niet meer bereikbaar. Je hebt het REVIEW_TOKEN " +
+        "dan opnieuw nodig, uit Vercel of uit je wachtwoordmanager.")) return;
     // zetToken hoogt de generatie op, waarmee een verzoek dat NU nog onderweg is
     // zijn antwoord niet meer op het scherm krijgt.
     zetToken("");

@@ -77,14 +77,20 @@
      toegang opheft. De uitleg ernaast stond op #8a7f7c, 2,9:1 op wit en dus
      onleesbaar; de nadruk lag precies omgekeerd.
      Nu een stille tekstlink op #666 (5,74:1), rechts uitgelijnd zodat hij buiten
-     het leespad valt, met een bevestiging ervoor. Het aanraakvlak is kleiner dan
-     de 44px die de knoppen hier aanhouden. Dat is bewust: dit is een zeldzame
-     handeling op een beheerscherm, en de bevestiging vangt een misklik op. */
+     het leespad valt, met een bevestiging ervoor.
+     HET TIKDOEL BLIJFT 44px. Een eerdere versie hiervan liet dat vallen, met als
+     redenering dat dit een beheerscherm op een desktop is. Dat is niet zo: deze
+     tool wordt op een telefoon gebruikt, en dat staat boven aan
+     test/reviewtool.test.mjs. Een tikdoel is ook geen rem: het is even moeilijk
+     te raken voor wie hem zoekt als voor wie hem mijdt. Wat de knop terughoudend
+     maakt is zijn kleur, zijn vorm, zijn plaats en de bevestiging, niet zijn
+     hoogte. inline-flex houdt de tekst klein terwijl het vlak 44px hoog is. */
   .tokenstand { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap;
     margin-bottom:12px; font-size:12.5px; color:#666; }
   .tokenstand[hidden] { display:none; }
-  .tokenweg { font-family:'Mulish',sans-serif; font-size:12.5px; color:#666; background:none;
-    border:0; padding:6px 2px; text-decoration:underline; cursor:pointer; }
+  .tokenweg { display:inline-flex; align-items:center; min-height:44px; font-family:'Mulish',sans-serif;
+    font-size:12.5px; color:#666; background:none; border:0; padding:0 2px;
+    text-decoration:underline; cursor:pointer; }
   .tokenweg:hover, .tokenweg:focus-visible { color:var(--brand); }
 
   .kaart { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 10px 30px -24px rgba(90,0,0,.5); }

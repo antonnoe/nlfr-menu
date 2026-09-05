@@ -25,11 +25,35 @@ const menu = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 // ---- 1. De menuregel --------------------------------------------------------
 
+// De echte ADMIN_LINKS-array uit index.html, uitgevoerd en niet als tekst
+// bekeken. Een toets op tekenposities ("staat ADMIN_LINKS eerder in het bestand
+// dan /review") bewijst niets: die naam staat ook in het commentaar erboven, dus
+// zo'n assert slaagt om de verkeerde reden. Zelfde aanpak als menuData() in
+// test/menu.test.mjs.
+function adminLinks() {
+  const begin = menu.indexOf("var ADMIN_LINKS =");
+  const eind = menu.indexOf("var PERKS");
+  assert.ok(begin > 0 && eind > begin, "ADMIN_LINKS niet gevonden in index.html");
+  // eslint-disable-next-line no-new-func
+  return new Function("U", `${menu.slice(begin, eind)}; return ADMIN_LINKS;`)(
+    (pad) => `https://www.nederlanders.fr${pad}`
+  );
+}
+
 test("de Beheer-lade heeft een regel naar /review, in een nieuw tabblad", () => {
-  const regel = menu.match(/\["Redactie[^\]]*"\/review"[^\]]*\]/);
-  assert.ok(regel, "de regel Redactie — Actueel ontbreekt in ADMIN_LINKS");
-  assert.ok(regel[0].includes('"_blank"'), "hij hoort in een nieuw tabblad te openen");
-  assert.ok(menu.indexOf("ADMIN_LINKS") < menu.indexOf('"/review"'), "en in ADMIN_LINKS te staan");
+  const regel = adminLinks().find((l) => l[1] === "/review");
+  assert.ok(regel, `geen regel naar /review in ADMIN_LINKS: ${JSON.stringify(adminLinks())}`);
+  assert.equal(regel[0], "Redactie — Actueel", "met dit label");
+  assert.equal(regel[2], "_blank", "en in een nieuw tabblad");
+});
+
+test("de bestaande volgorde van de Beheer-lade blijft staan", () => {
+  // test/menu.test.mjs pint vast dat de lade met Banner beheren begint. Die
+  // afspraak omgooien voor een nieuwe regel is de moeite niet; hier staat dat
+  // de nieuwe regel er echt achter is gezet en niet ervoor.
+  const links = adminLinks();
+  assert.equal(links[0][1], "/banner-beheer");
+  assert.equal(links[1][1], "/review");
 });
 
 test("in de menubron staat nergens een token", () => {
@@ -94,13 +118,14 @@ test("de kandidatenlijst bouwt een geldige querystring zonder token", () => {
   const eind = review.indexOf("function bronnenHtml(");
   assert.ok(begin > 0 && eind > begin, "apiGet niet gevonden");
   const maakApiGet = new Function(
-    "fetch", "token",
+    "fetch", "token", "verwerkAntwoord",
     `${review.slice(begin, eind)}; return apiGet;`
   );
   let gezien = "";
   const apiGet = maakApiGet(
-    (u) => { gezien = u; return Promise.resolve({ ok: true, json: () => Promise.resolve({}) }); },
-    "geheim"
+    (u) => { gezien = u; return Promise.resolve({ ok: true, status: 200 }); },
+    "geheim",
+    (r) => Promise.resolve({ ok: r.ok, status: r.status, data: {} })
   );
   apiGet("&deel=if&artikel=o1");
   assert.equal(gezien, "/api/review?deel=if&artikel=o1");
@@ -131,4 +156,127 @@ test("maar de regel is wél te vinden in de opgehaalde menubron", () => {
   assert.ok(menu.includes('"/banner-beheer"'), "net als die van de bannerbeheerder");
   assert.ok(menu.includes("ADMIN_ID"), "en het beheerders-id ook");
   // De consequentie: geen geheim in dit bestand. Zie de tweede test hierboven.
+});
+
+// ---- De twee standen van het tokenvak, met de pagina echt gestart ----------
+// De toetsen hierboven lezen de bron. Deze twee DRAAIEN het script, tegen een
+// nagebootste DOM: alleen zo zie je of de weghaalknop na het inloggen ook
+// werkelijk bereikbaar blijft, en of een 401 halverwege het tokenvak terugbrengt.
+// Zelfde stub-aanpak als test/review-overheid-tab.test.mjs.
+
+function maakDom(zonder = []) {
+  const registry = new Map();
+  const maakEl = (naam) => {
+    const el = {
+      naam, innerHTML: "", textContent: "", disabled: false, hidden: false,
+      attrs: new Map(), listeners: {},
+      getAttribute: (k) => (el.attrs.has(k) ? el.attrs.get(k) : null),
+      setAttribute: (k, v) => el.attrs.set(k, String(v)),
+      hasAttribute: (k) => el.attrs.has(k),
+      removeAttribute: (k) => el.attrs.delete(k),
+      addEventListener: (soort, fn) => { (el.listeners[soort] = el.listeners[soort] || []).push(fn); },
+      querySelectorAll: () => [], querySelector: () => null, closest: () => null,
+      focus: () => {}, value: "",
+      klik: () => (el.listeners.click || []).forEach((fn) => fn()),
+      toets: (key) => (el.listeners.keydown || []).forEach((fn) => fn({ key, preventDefault: () => {} })),
+    };
+    return el;
+  };
+  // `zonder` bootst een markup-wijziging na: een element dat er niet (meer) is.
+  const haal = (id) => {
+    if (zonder.indexOf(id) > -1) return null;
+    if (!registry.has(id)) registry.set(id, maakEl(id));
+    return registry.get(id);
+  };
+  // Het invoervak begint verborgen, de standregel ook — het script bepaalt welke.
+  haal("tokenvak").setAttribute("hidden", "");
+  haal("tokenstand").setAttribute("hidden", "");
+  const tabs = [haal("tabRedactie"), haal("tabOverheid")];
+  tabs[0].setAttribute("data-tab", "redactie");
+  tabs[1].setAttribute("data-tab", "overheid");
+  return {
+    haal,
+    document: {
+      getElementById: haal,
+      querySelector: (sel) => (sel === ".tabs" ? maakEl("tabs") : null),
+      querySelectorAll: (sel) => (sel === ".tab[data-tab]" ? tabs : []),
+    },
+  };
+}
+
+async function start({ zoek = "", status = 200, body = { ok: true, concepten: [] }, zonder = [] } = {}) {
+  const { document, haal } = maakDom(zonder);
+  const gezien = [];
+  const fetchStub = (url, opties) => {
+    gezien.push({ url: String(url), headers: (opties && opties.headers) || {} });
+    return Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
+  };
+  const script = review.slice(
+    review.lastIndexOf("<script>") + "<script>".length,
+    review.lastIndexOf("</script>")
+  );
+  // eslint-disable-next-line no-new-func
+  new Function("document", "location", "fetch", "window", "history", "localStorage", script)(
+    document,
+    { search: zoek, pathname: "/review", hash: "" },
+    fetchStub,
+    { confirm: () => false },
+    { replaceState: () => {} },
+    undefined // geen localStorage: elke aanroep hoort in een try/catch te zitten
+  );
+  for (let i = 0; i < 8; i += 1) await Promise.resolve();
+  return { haal, gezien, verborgen: (id) => haal(id).hasAttribute("hidden") };
+}
+
+test("zonder token: het invoervak staat open en de standregel niet", async () => {
+  const t = await start();
+  assert.equal(t.verborgen("tokenvak"), false, "het invoervak hoort open te staan");
+  assert.equal(t.verborgen("tokenstand"), true, "en de standregel niet");
+  assert.equal(t.gezien.length, 0, "er wordt niets opgehaald zonder token");
+});
+
+test("mét token blijft de weghaalknop bereikbaar", async () => {
+  // DE BEVINDING DIE DIT AFDEKT: de weghaalknop zat in het invoervak, en dat
+  // verbergt zichzelf zodra je binnen bent. Op een gedeelde browser kon je je
+  // toegang daarna niet meer opheffen.
+  const t = await start({ zoek: "?token=geheim" });
+  assert.equal(t.verborgen("tokenvak"), true, "het invoervak is weg zodra je binnen bent");
+  assert.equal(t.verborgen("tokenstand"), false, "maar de standregel staat er, mét de weghaalknop");
+
+  // En die knop doet ook echt iets: hij zet de pagina terug op vragen.
+  t.haal("tokenweg").klik();
+  assert.equal(t.verborgen("tokenvak"), false, "na weghalen wordt er opnieuw gevraagd");
+  assert.equal(t.verborgen("tokenstand"), true);
+});
+
+test("een 401 op een willekeurig verzoek brengt het tokenvak terug", async () => {
+  // DE TWEEDE BEVINDING: dit werd alleen bij het laden afgevangen. Wordt
+  // REVIEW_TOKEN gewisseld terwijl de pagina openstaat, dan liep elke knop in
+  // een foutmelding zonder plek om het nieuwe token in te vullen.
+  const t = await start({ zoek: "?token=verlopen", status: 401, body: { ok: false, fout: "Ongeldig of ontbrekend token." } });
+  assert.equal(t.verborgen("tokenvak"), false, "het invoervak hoort terug te komen");
+  assert.equal(t.verborgen("tokenstand"), true, "en de standregel weg, want dit token is dood");
+});
+
+test("het token gaat als header mee, en niet in de URL", async () => {
+  const t = await start({ zoek: "?token=geheim" });
+  assert.ok(t.gezien.length > 0, "er is iets opgehaald");
+  for (const v of t.gezien) {
+    assert.ok(!/token=/.test(v.url), `token in de URL: ${v.url}`);
+    assert.equal(v.headers["X-Review-Token"], "geheim");
+  }
+});
+
+test("Enter in het tokenveld werkt ook zonder de knop ernaast", async () => {
+  // Enter riep eerst tokenokEl.click() aan, zonder te kijken of die knop er is,
+  // terwijl hij er twee regels eerder wél op werd gecontroleerd. Bij een
+  // gewijzigde markup is dat een TypeError op de enige toets die een redacteur
+  // op een telefoon gebruikt. Nu roepen knop en Enter dezelfde functie aan.
+  const t = await start({ zonder: ["tokenok"] });
+  const veld = t.haal("tokenveld");
+  veld.value = "een-nieuw-token";
+  assert.doesNotThrow(() => veld.toets("Enter"));
+  // En hij doet ook echt wat de knop zou doen: het token is aangenomen.
+  assert.equal(t.verborgen("tokenstand"), false, "de standregel hoort nu te staan");
+  assert.equal(t.verborgen("tokenvak"), true, "en het invoervak weg");
 });

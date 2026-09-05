@@ -50,6 +50,14 @@ test("de tool heeft twee tabbladen, en Redactie actueel is de standaard", () => 
   assert.ok(review.indexOf('id="tabRedactie"') < review.indexOf('id="tabOverheid"'));
 });
 
+test("alleen het open tabblad is een tabstop", () => {
+  // Roving tabindex: met Tab kom je de balk in en er weer uit, tussen de
+  // tabbladen loop je met de pijltjes. Zonder dit staat er een extra tabstop
+  // vóór elke inhoud, op elk scherm.
+  assert.match(review.match(/<button[^>]*id="tabRedactie"[^>]*>/)[0], /tabindex="0"/);
+  assert.match(review.match(/<button[^>]*id="tabOverheid"[^>]*>/)[0], /tabindex="-1"/);
+});
+
 test("het overheidstabblad leest de nieuwspagina zelf, niet de reviewopslag", () => {
   // /api/actueel toont wat er NU live staat (binnen het venster, binnen de cap
   // per tegel). /api/review kent ook records die daar allang buiten vallen.
@@ -312,7 +320,10 @@ function maakDom() {
       querySelectorAll: () => [],
       querySelector: () => null,
       closest: () => null,
+      focus: () => { el.heeftFocus = true; },
+      heeftFocus: false,
       klik: () => (el.listeners.click || []).forEach((fn) => fn()),
+      toets: (key) => (el.listeners.keydown || []).forEach((fn) => fn({ key, preventDefault: () => {} })),
     };
     return el;
   };
@@ -396,4 +407,36 @@ test("klikken op Overheid (.gouv) haalt de nieuwspagina op en toont de tegels", 
   tool.tabs[1].klik();
   for (let i = 0; i < 4; i += 1) await Promise.resolve();
   assert.equal(tool.gezien.filter((u) => u.startsWith("/api/actueel")).length, voor);
+});
+
+test("de pijltjestoetsen verplaatsen tabblad, tabstop en focus", async () => {
+  // Hetzelfde patroon als de tabbalk op /actueel (zie de keydown-handler daar).
+  // Een tabbalk die alleen met de muis werkt is geen tabbalk.
+  const tool = await startTool();
+  const [redactie, overheid] = tool.tabs;
+
+  redactie.toets("ArrowRight");
+  for (let i = 0; i < 8; i += 1) await Promise.resolve();
+  assert.equal(overheid.getAttribute("aria-selected"), "true");
+  assert.equal(overheid.getAttribute("tabindex"), "0", "de tabstop verhuist mee");
+  assert.equal(redactie.getAttribute("tabindex"), "-1");
+  assert.ok(overheid.heeftFocus, "en de focus ook, anders praat de schermlezer over het verkeerde tabblad");
+  assert.ok(tool.inhoud().includes("staat live op /actueel"), "de inhoud volgt");
+
+  overheid.toets("ArrowLeft");
+  for (let i = 0; i < 4; i += 1) await Promise.resolve();
+  assert.equal(redactie.getAttribute("aria-selected"), "true");
+  assert.equal(redactie.getAttribute("tabindex"), "0");
+  assert.ok(tool.inhoud().includes("Concepten"));
+
+  // Aan de rand blijft hij staan: geen wrap-around, en geen fout.
+  redactie.toets("ArrowLeft");
+  for (let i = 0; i < 4; i += 1) await Promise.resolve();
+  assert.equal(redactie.getAttribute("aria-selected"), "true");
+
+  // Andere toetsen blijven van de tabbalk af.
+  redactie.toets("Enter");
+  redactie.toets("ArrowDown");
+  for (let i = 0; i < 4; i += 1) await Promise.resolve();
+  assert.equal(redactie.getAttribute("aria-selected"), "true");
 });

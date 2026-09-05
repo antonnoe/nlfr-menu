@@ -99,14 +99,17 @@ test("alles rond localStorage staat in een try/catch", () => {
 
 // ---- 3. Waar het token wél en niet heen gaat --------------------------------
 
-test("verzoeken dragen het token als header, niet in de querystring", () => {
-  // Een querystring komt in de serverlogs van elke aanvraag terecht; een header
-  // niet. api/review.js leest allebei, dus een oude bookmark blijft werken.
-  assert.ok(
-    !/\/api\/review\?token=/.test(review),
-    "er hoort geen ?token= meer in een verzoek-URL te staan"
-  );
+test("verzoeken dragen het token langs allebei de wegen", () => {
+  // BEWUSTE STAP TERUG. In #27 ging het token alleen nog als header mee, omdat
+  // een querystring in de serverlogs van elke aanvraag terechtkomt. Daarna werd
+  // een geldig token geweigerd en was de redactie onbereikbaar. Zolang niet
+  // gemeten is wélke weg het in de praktijk deed, dragen ze het allebei —
+  // api/review.js leest ze allebei, dus dit sluit een hele klasse oorzaken uit
+  // zonder iets te breken. Deze toets legt de keuze vast, niet de smaak: gaat
+  // de querystring er ooit weer af, dan hoort dat een besluit te zijn.
   assert.match(review, /"X-Review-Token": token/, "het token gaat als header mee");
+  assert.match(review, /"\/api\/review\?token=" \+ encodeURIComponent\(token\)/,
+    "en ook in de querystring, tot vaststaat dat de header het alleen ook doet");
 });
 
 test("api/review.js accepteert die header ook echt", () => {
@@ -114,10 +117,11 @@ test("api/review.js accepteert die header ook echt", () => {
   assert.match(route, /req\.headers\["x-review-token"\]/);
 });
 
-test("de kandidatenlijst bouwt een geldige querystring zonder token", () => {
-  // apiGet krijgt "&deel=if&artikel=…" mee — dat "&" moet een "?" worden nu het
-  // token niet meer vooraan staat, anders vraagt de pagina "/api/review&deel=if"
-  // op en krijgt de server nooit een deel-parameter te zien.
+test("de kandidatenlijst bouwt een geldige querystring", () => {
+  // apiGet krijgt "&deel=if&artikel=…" mee. Met het token weer vooraan sluit dat
+  // weer aan; zonder token vooraan moest het een "?" worden. Beide vormen zijn
+  // een keer misgegaan, vandaar dat de opgebouwde URL hier wordt nagerekend in
+  // plaats van dat er naar de code wordt gekeken.
   const begin = review.indexOf("function apiGet(extra){");
   const eind = review.indexOf("function bronnenHtml(");
   assert.ok(begin > 0 && eind > begin, "apiGet niet gevonden");
@@ -133,7 +137,7 @@ test("de kandidatenlijst bouwt een geldige querystring zonder token", () => {
     0
   );
   apiGet("&deel=if&artikel=o1");
-  assert.equal(gezien, "/api/review?deel=if&artikel=o1");
+  assert.equal(gezien, "/api/review?token=geheim&deel=if&artikel=o1");
 });
 
 // ---- 4. De zichtbaarheid van de Beheer-lade --------------------------------
@@ -274,13 +278,42 @@ test("een 401 op een willekeurig verzoek brengt het tokenvak terug", async () =>
   assert.equal(t.verborgen("tokenstand"), true, "en de standregel weg, want dit token is dood");
 });
 
-test("het token gaat als header mee, en niet in de URL", async () => {
+test("het token gaat mee als header, en ook in de verzoek-URL", async () => {
   const t = await start({ zoek: "?token=geheim" });
   assert.ok(t.gezien.length > 0, "er is iets opgehaald");
   for (const v of t.gezien) {
-    assert.ok(!/token=/.test(v.url), `token in de URL: ${v.url}`);
-    assert.equal(v.headers["X-Review-Token"], "geheim");
+    assert.equal(v.headers["X-Review-Token"], "geheim", "de header hoort er altijd te zijn");
+    assert.match(v.url, /[?&]token=geheim/, "en zolang de oorzaak niet gemeten is, de querystring ook");
   }
+});
+
+test("het tokenveld is een gewoon tekstveld, geen wachtwoordveld", () => {
+  // DIT IS DE FIX. In #27 maakte ik er een type=password van; daarna werd een
+  // geldig token geweigerd. Een wachtwoordmanager doet aan zo'n veld wat hij
+  // hoort te doen — zijn eigen opgeslagen waarde aanbieden en invullen — en
+  // autocomplete="off" wordt daar door de meeste managers genegeerd. Wat je
+  // plakt kan dus overschreven zijn tegen de tijd dat je op Bewaren drukt.
+  // /banner-beheer gebruikt al jaren type=text en heeft dit nooit gehad.
+  const veld = review.match(/<input[^>]*id="tokenveld"[^>]*>/);
+  assert.ok(veld, "het tokenveld ontbreekt");
+  assert.match(veld[0], /type="text"/, `geen tekstveld: ${veld[0]}`);
+  assert.ok(!/type="password"/.test(veld[0]), "en zeker geen wachtwoordveld");
+
+  // Hetzelfde veld op /banner-beheer, dat werkt, als ijkpunt.
+  const banner = readFileSync(new URL("../banner-beheer.html", import.meta.url), "utf8");
+  assert.match(banner.match(/<input[^>]*id="token"[^>]*>/)[0], /type="text"/,
+    "als /banner-beheer ooit omgaat, hoort iemand hier opnieuw naar te kijken");
+});
+
+test("een geweigerd token zegt hoeveel tekens er meegingen", async () => {
+  // "Ongeldig of ontbrekend token" alleen is niet te gebruiken: je weet niet of
+  // het veld leeg was, of er iets anders in stond dan je dacht, of dat het
+  // token in Vercel is veranderd. Het aantal tekens verraadt niets en maakt dat
+  // verschil meetbaar.
+  const t = await start({ zoek: "?token=twaalftekens", status: 401, body: { ok: false, fout: "Ongeldig of ontbrekend token." } });
+  assert.match(t.haal("melding").innerHTML, /Ongeldig of ontbrekend token/);
+  assert.match(t.haal("melding").innerHTML, /token van 12 tekens/,
+    `de lengte hoort in de melding te staan: ${t.haal("melding").innerHTML}`);
 });
 
 test("Enter in het tokenveld werkt ook zonder de knop ernaast", async () => {

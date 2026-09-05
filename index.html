@@ -138,12 +138,14 @@
   .ladekaart.plaats { width: 560px; }
   .ladekaart.actueel { width: 340px; }
   .ladekaart.admin { width: 300px; }
+  /* Dezelfde twee kleuren als in het paneel, en om dezelfde reden: de kop stond
+     op 2,61:1 en de links op 7,60:1. Nu 10,95:1 en 12,63:1. */
   .lade .h { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 11.5px;
-             letter-spacing: .06em; text-transform: uppercase; color: #a99e9a; margin-bottom: 6px; }
+             letter-spacing: .06em; text-transform: uppercase; color: var(--brand); margin-bottom: 6px; }
   .lade .ladekaart > a { display: flex; align-items: center; min-height: 44px;
-                         font-size: 14px; color: #5b524f; padding: 5px 0; background: #fff; }
+                         font-size: 14px; color: #333; padding: 5px 0; background: #fff; }
   .lade .ladekaart > a:hover { color: var(--brand); }
-  .lade .leeg { font-size: 13px; color: #8a7f7c; }
+  .lade .leeg { font-size: 13px; color: #666; } /* was #8a7f7c: 3,88:1, onder de eis */
 
   /* De twee kolommen achter "Plaats bericht" */
   .plaatskolommen { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -156,7 +158,7 @@
   .pil.gratis { background: var(--actueel); }
   .pil.betaald { background: var(--brand); }
   .plaatskolom p { margin: 7px 0 11px; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px;
-                   line-height: 1.5; color: #5b524f; }
+                   line-height: 1.5; color: #333; }
   .plaatsknop { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
                 padding: 0 16px; border-radius: 9px; background: var(--brand); color: #fff;
                 font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
@@ -178,20 +180,39 @@
   .deurkop { display: block; background: #fdfbfa; border-bottom: 1px solid rgba(128,0,0,.10);
              padding-bottom: 7px; margin-bottom: 10px; }
   .deurkop .dn { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; color: var(--brand-dark); }
-  .deurkop .ds { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 11.5px; color: #a99e9a; }
+  /* Ondertitel onder de kolomkop. Stond op #a99e9a (2,53:1) en was daarmee
+     niet te lezen; nu #666666, de subtiele tekstkleur uit de huisstijl, op
+     5,57:1. Een halve punt groter, want 11,5px is klein voor een regel die
+     alleen betekenis heeft als je hem ook werkelijk leest. */
+  .deurkop .ds { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 12px; color: #666; }
   .deurkop .dc, .deurkop .dcaret { display: none; }
   .deurbody { display: block; background: #fdfbfa; }
-  .grp { margin-bottom: 12px; background: #fdfbfa; }
+  /* WITRUIMTE TUSSEN GROEPEN, niet tussen regels. Tussen twee items zit 10px
+     (2 x 5px padding); tussen twee groepen zat 12px, en dat verschil ziet
+     niemand — veertien groepen lopen dan als één lijst in elkaar over. Nu 24px,
+     ruim het dubbele van de regelafstand, zodat elke groep als blok leest.
+     Op mobiel blijft dit 0: daar scheiden lijnen de groepen in de accordeon
+     (zie html.compact hieronder). */
+  .grp { margin-bottom: 24px; background: #fdfbfa; }
   .grp:last-child { margin-bottom: 0; }
+  /* GROEPSKOPPEN IN BORDEAUX. Stonden op #a99e9a: 2,53:1 op de
+     paneelachtergrond, ver onder de AA-eis van 4,5:1 en in de praktijk
+     onleesbaar. Nu #800000, de primaire huisstijlkleur, op 10,61:1. De
+     ondermarge gaat van 2 naar 6px zodat de kop aan zijn eigen lijst vastzit
+     en niet tussen twee groepen in zweeft. */
   .gk { font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: .06em;
-        text-transform: uppercase; color: #a99e9a; margin-bottom: 2px; }
+        text-transform: uppercase; color: var(--brand); margin-bottom: 6px; }
   /* Op desktop staat elke groep gewoon open; teller en caret horen bij de
      accordeon die alleen op mobiel bestaat. */
   .gk .gc, .gk .gcaret { display: none; }
   .gl { display: block; }
-  /* ALLE links hetzelfde gewicht: geen bold, geen bordeaux, geen emoji. */
+  /* ALLE links hetzelfde gewicht: geen bold, geen bordeaux, geen emoji.
+     KLEUR: #333333, de hoofdtekstkleur uit de huisstijl. Stond op #5b524f, een
+     warm grijsbruin dat op de warme paneelachtergrond roodachtig oogt en
+     nauwelijks verschilt van de accenten eromheen. Gemeten: 7,36:1 werd
+     12,25:1. Rood blijft van nu af voorbehouden aan koppen. */
   .grp a { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13.5px; line-height: 1.35;
-           color: #5b524f; padding: 5px 0; }
+           color: #333; padding: 5px 0; }
   .grp a:hover { color: var(--brand); }
 
   /* Abonneerknop onderin de Nieuws-kolom */
@@ -203,7 +224,7 @@
   /* Teaser in de kolom Mijn NLFR (niet ingelogd) */
   .teaser { background: #fff; border: 1px solid rgba(128,0,0,.14); border-radius: 12px; padding: 12px; }
   .teaser h3 { margin: 0 0 6px; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 13.5px; color: var(--brand); }
-  .teaser .perk { display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: #5b524f; line-height: 1.3; margin-bottom: 5px; }
+  .teaser .perk { display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: #333; line-height: 1.3; margin-bottom: 5px; }
   .teaser .perk svg { flex: none; margin-top: 3px; }
   .teaser .btns { display: grid; gap: 6px; margin-top: 10px; }
   /* De kolommen zijn smaller sinds Lezen er twee pakt; 12px houdt
@@ -259,8 +280,8 @@
   html.compact .deur.open .deurkop { border-bottom: 1px solid rgba(128,0,0,.10); }
   html.compact .deurkop .dn { flex: 1; }
   html.compact .deurkop .ds { display: none; }
-  html.compact .deurkop .dc { display: inline-block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 12px; color: #a99e9a; }
-  html.compact .deurkop .dcaret { display: inline-flex; color: #a99e9a; transition: transform 180ms ease; }
+  html.compact .deurkop .dc { display: inline-block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 12px; color: #666; }
+  html.compact .deurkop .dcaret { display: inline-flex; color: #666; transition: transform 180ms ease; }
   html.compact .deur.open .deurkop .dcaret { transform: rotate(180deg); }
   html.compact .deurbody { display: none; padding: 10px 14px 12px; background: #fff; }
   html.compact .deur.open .deurbody { display: block; }
@@ -271,9 +292,12 @@
   html.compact .gk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0;
                      cursor: pointer; -webkit-tap-highlight-color: transparent; }
   html.compact .gk .gn { flex: 1; }
+  /* Teller en caret stonden op #a99e9a: 2,61:1 op wit. Een teller is tekst
+     (eis 4,5:1) en een caret is een betekenisdragend icoon (eis 3:1); beide
+     zakten. Nu #666666, op 5,74:1. */
   html.compact .gk .gc { display: inline-block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-                         font-size: 12px; letter-spacing: 0; text-transform: none; color: #a99e9a; }
-  html.compact .gk .gcaret { display: inline-flex; color: #a99e9a; transition: transform 180ms ease; }
+                         font-size: 12px; letter-spacing: 0; text-transform: none; color: #666; }
+  html.compact .gk .gcaret { display: inline-flex; color: #666; transition: transform 180ms ease; }
   html.compact .grp.open .gk .gcaret { transform: rotate(180deg); }
   html.compact .gl { display: none; padding-bottom: 6px; }
   html.compact .grp.open .gl { display: block; }
@@ -309,9 +333,9 @@
   html.msite .mlijst a .ic { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px;
                              border-radius: 9px; background: rgba(128,0,0,.07); color: var(--brand); }
   html.msite .mlijst a .sub { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 400;
-                              font-size: 12.5px; color: #8a7f7c; line-height: 1.25; }
+                              font-size: 12.5px; color: #666; line-height: 1.25; }
   html.msite .mlijst .sep { margin: 6px 2px 2px; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700;
-                            font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: #a99e9a; }
+                            font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--brand); }
   html.msite .mlijst a.full { background: var(--brand); color: #fff; border-color: var(--brand); justify-content: center; }
 
   /* Noodrem: de ouderpagina neemt onze hoogte niet over (oude embedcode of een

@@ -105,6 +105,10 @@
   .icotegel{ flex:none; width:32px; height:32px; border-radius:8px; background:#fff; border:1px solid var(--c-rand); display:grid; place-items:center; color:var(--c-main); }
   .icotegel .ic{ width:18px; height:18px; }
   .koptekst{ flex:1; min-width:0; display:grid; gap:2px; }
+  /* Regel bóven de tegelnaam. Draagt alleen nog de hot-markering; de
+     categorienaam stond hier tot voor kort ook, maar die herhaalde het tabblad
+     waar de lezer al op staat. Zonder markering wordt de regel niet gerenderd,
+     zodat er geen lege regel overblijft. */
   .catlabel{ display:flex; align-items:center; gap:8px; font-family:var(--body); font-weight:600; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--c-dark); }
   .kop h3{ margin:0; font-family:var(--disp); font-weight:600; font-size:15px; line-height:21px; color:var(--ink); }
   .kopmeta{ font-family:var(--body); font-weight:500; font-size:12.5px; line-height:17px; color:var(--c-meta); }
@@ -629,7 +633,12 @@
         body = intro + '<div class="artikelen">'+arts.map(function(a){ return artikelHTML(cat,t,a); }).join("")+'</div>';
       }
     }
-    var catLabel = (CATS.filter(function(c){return c.key===cat;})[0]||{}).label || "";
+    // GEEN CATEGORIENAAM BOVEN DE TEGELNAAM. Daar stond de naam van het tabblad
+    // waar je al op staat: boven elke overheidstegel "OVERHEID", boven elke
+    // nieuwstegel "NIEUWS", enzovoort. Vier keer per scherm hetzelfde woord, in
+    // kapitalen, pal boven de naam die je wél moet lezen. De tabbalk zegt het al.
+    // De regel blijft wel bestaan voor de hot-markering: die hoort bóven de
+    // tegelnaam, niet ernaast.
     // `artikelAantal` komt uit de compacte levering en klopt ook als de
     // artikelen zelf nog niet zijn meegestuurd (de archieftegel).
     var aantalArt = typeof t.artikelAantal === "number" ? t.artikelAantal : (t.artikelen||[]).length;
@@ -638,7 +647,7 @@
     return '<article class="tegel cat-'+cat+(isOpen?" open":"")+'" data-tegel="'+esc(t.id)+'">'+
       '<button type="button" class="kop" aria-expanded="'+(isOpen?"true":"false")+'">'+
         '<span class="icotegel">'+ico(themaIco(t.thema||t.soort))+'</span>'+
-        '<span class="koptekst"><span class="catlabel">'+esc(catLabel)+hot+'</span>'+
+        '<span class="koptekst">'+(hot?'<span class="catlabel">'+hot+'</span>':"")+
           '<h3>'+esc(t.label)+'</h3><span class="kopmeta">'+telling+'</span></span>'+
         '<span class="chevbox">'+ico("ic-chevron")+'</span>'+
       '</button>'+

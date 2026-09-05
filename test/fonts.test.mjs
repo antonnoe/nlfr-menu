@@ -47,8 +47,11 @@ test("de gewichten en groottes zijn niet meegewijzigd", () => {
   const menu = lees("index.html");
   assert.match(menu, /\.sknop \{[^}]*font-weight: 700; font-size: 16px/, "Menu-knop");
   assert.match(menu, /\.deurkop \.dn \{[^}]*font-weight: 700; font-size: 15px/, "deurkop");
-  assert.match(menu, /\.gk \{[^}]*font-weight: 700; font-size: 11\.5px/, "groepskop");
-  assert.match(menu, /\.grp a \{[^}]*font-size: 13\.5px/, "menulinks");
+  // Groepskop en menulink zijn bewust vergroot voor het 60-plus publiek:
+  // 11,5 -> 12,5 en 13,5 -> 15. Zie test/menu-lettergrootte.test.mjs, daar
+  // staat wat er in de browser bij is nagemeten.
+  assert.match(menu, /\.gk \{[^}]*font-weight: 700; font-size: 12\.5px/, "groepskop");
+  assert.match(menu, /\.grp a \{[^}]*font-size: 15px/, "menulinks");
 
   const banner = lees("lib/banner.js");
   assert.match(banner, /\.bnr-titel \{ font-family:Georgia/, "de bannertitel blijft een serif");

@@ -20,8 +20,9 @@ import { readFileSync } from "node:fs";
 const review = readFileSync(new URL("../review.html", import.meta.url), "utf8");
 const stijl = review.slice(review.indexOf("<style>"), review.indexOf("</style>"));
 
-test("elke knopstijl houdt minstens 44 px aan", () => {
-  // Alle min-height-waarden in de stylesheet die op een knop slaan.
+// De hoogte van elke regel die er één opgeeft. Nodig, maar niet genoeg: zie de
+// toets daaronder, die vanaf de knoppen zelf redeneert.
+test("geen enkele stijl in de stylesheet zet een tikdoel onder 44 px", () => {
   const regels = stijl.split("\n").filter((r) => /min-height:\s*\d+px/.test(r));
   assert.ok(regels.length >= 5, `verwacht meerdere knopstijlen, gevonden ${regels.length}`);
   for (const regel of regels) {
@@ -31,6 +32,67 @@ test("elke knopstijl houdt minstens 44 px aan", () => {
       `tikdoel te klein (${m[1]}px): ${regel.trim().slice(0, 90)}`
     );
   }
+});
+
+test("elke knop in de tool komt aan een tikdoel van 44 px", () => {
+  // WAAROM DEZE ERBIJ KWAM. De toets hierboven kijkt alleen naar regels die al
+  // een min-height hébben. Een nieuwe knop zonder die eigenschap glipt er dus
+  // langs: de toets kan niet rood worden voor precies het geval waarvoor hij
+  // bestaat. Dat gebeurde ook echt, bij het stiller maken van "Token vergeten".
+  // Deze toets redeneert de andere kant op, vanaf de knoppen in de bron.
+
+  // Klasse -> de grootste min-height die een regel voor die klasse oplevert.
+  // Commentaar er eerst uit: /* ... */ staat in deze stylesheet vaak boven een
+  // regel en zou anders als deel van de selector meelopen.
+  const zonderUitleg = stijl.replace(/\/\*[\s\S]*?\*\//g, " ");
+  const hoogte = new Map();
+  for (const m of zonderUitleg.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+    const h = m[2].match(/min-height:\s*(\d+)px/);
+    if (!h) continue;
+    for (const sel of m[1].split(",")) {
+      // Het ONDERWERP van de selector is het laatste stuk: bij ".pager .nav"
+      // krijgt .nav de hoogte, niet .pager, en bij "button.actie" is dat .actie.
+      const onderwerp = sel.trim().split(/\s+/).pop() || "";
+      const klassen = [...onderwerp.matchAll(/\.([\w-]+)/g)].map((k) => k[1]);
+      // Alleen bij één klasse in het onderwerp. ".ifknop.klein" eist beide
+      // klassen tegelijk; die hoogte aan elk van de twee toekennen zou zeggen
+      // dat .klein op zichzelf al genoeg is, en dat staat er niet.
+      if (klassen.length !== 1) continue;
+      hoogte.set(klassen[0], Math.max(hoogte.get(klassen[0]) || 0, Number(h[1])));
+    }
+  }
+
+  // Elke knop in het bestand, ook die uit de sjablonen in het script.
+  const knoppen = [...review.matchAll(/<button[^>]*class="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(knoppen.length >= 10, `verwacht meerdere knoppen, gevonden ${knoppen.length}`);
+
+  // WAT DEZE TOETS NIET KAN. Hij leest geen cascade. Een knop kan zijn hoogte
+  // ook van een containerregel krijgen, en dat is hier één keer zo. Die staat
+  // met naam in de lijst hieronder, met de regel die het werk doet, en die
+  // regel wordt apart nagemeten. Zonder deze lijst zou de toets een fout
+  // melden die er niet is; met een stilzwijgende uitzondering zou hij een
+  // echte fout kunnen missen.
+  const VIA_CONTAINER = [{ klasse: "gevaar", regel: ".balk button" }];
+  for (const { regel } of VIA_CONTAINER) {
+    const start = zonderUitleg.indexOf(regel + " {");
+    assert.ok(start >= 0, `containerregel niet gevonden: ${regel}`);
+    const m = zonderUitleg.slice(start, zonderUitleg.indexOf("}", start)).match(/min-height:\s*(\d+)px/);
+    assert.ok(m && Number(m[1]) >= 44,
+      `${regel} zet geen tikdoel van 44px meer, terwijl een knop daarop leunt`);
+  }
+  const viaContainer = new Set(VIA_CONTAINER.map((v) => v.klasse));
+
+  const teklein = [];
+  for (const klassen of knoppen) {
+    const lijst = klassen.split(/\s+/).filter(Boolean);
+    // Eén klasse die 44 haalt is genoeg: modificatoren als .pubbtn en .ketenbtn
+    // staan naast een basisklasse die de hoogte al zet.
+    if (lijst.some((k) => (hoogte.get(k) || 0) >= 44)) continue;
+    if (lijst.some((k) => viaContainer.has(k))) continue;
+    teklein.push(klassen);
+  }
+  assert.deepEqual(teklein, [],
+    "knop zonder klasse die min-height:44px zet; op een telefoon is dat niet te raken");
 });
 
 test("de wisknop zit in het laatje en dat laatje begint dicht", () => {

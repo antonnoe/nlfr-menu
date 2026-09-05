@@ -600,7 +600,7 @@
     var uit = '<h2>Staat live op /actueel ('+totaal+')</h2>'+
       '<div class="ifuitleg">Deze berichten gaan zonder review live en worden hier niet beoordeeld. '+
       'De enige handeling is een Infofrankrijk-verwijzing erbij zetten of weghalen; die verschijnt onder '+
-      'het bericht op de nieuwspagina zodra die opnieuw wordt opgebouwd, hoogstens een kwartier later.'+
+      'het bericht op de nieuwspagina zodra die opnieuw wordt opgebouwd, ongeveer een kwartier later.'+
       (g.gebakkenOp ? ' Stand van de nieuwspagina: '+esc(datum(g.gebakkenOp))+'.' : "")+'</div>';
     if (!tegels.length){
       return uit + '<div class="leeg">Geen overheidsartikelen live.</div>';
@@ -849,7 +849,7 @@
         var id = ifKaartId(btn); if (!id) return;
         btn.disabled = true;
         ifActie({ actie: "verwijs", id: id, ifId: Number(btn.getAttribute("data-if-verwijs")) },
-          "Verwijzing toegevoegd. De nieuwspagina bouwt zichzelf opnieuw op; hoogstens een kwartier.");
+          "Verwijzing toegevoegd. De nieuwspagina bouwt zichzelf opnieuw op; ongeveer een kwartier.");
       });
     });
     inhoudEl.querySelectorAll("button[data-if-af]").forEach(function(btn){
@@ -893,7 +893,20 @@
         btn.disabled = true; btn.textContent = "…";
         api("POST", body).then(function(res){
           if (res.ok && res.data.ok){
-            melding(act==="publiceer"?"Gepubliceerd.":act==="weg"?"Verwijderd.":act==="depubliceer"?"Van de site gehaald.":act==="verwijder-overheid"?"Van de site gehaald.":act==="archiveer"?"Naar archief verplaatst.":"Bewaard.", "info");
+            // BEKEND RISICO, HARDOP GEZEGD. Het artikel is meteen uit de
+            // voorgebakken pagina (api/review.js gooit de momentopname weg),
+            // maar de randcache van /api/actueel houdt een antwoord tot
+            // s-maxage (900 s) vast. Een weggehaald artikel kan dus nog een
+            // kwartier bij een lezer op het scherm staan. Dat hoort de redacteur
+            // te weten op het moment dat hij de knop indrukt, niet achteraf.
+            var MELDINGEN = {
+              publiceer: "Gepubliceerd. De nieuwspagina bouwt zichzelf opnieuw op; ongeveer een kwartier.",
+              weg: "Verwijderd.",
+              depubliceer: "Van de site gehaald. Uit de pagina zelf is hij meteen weg; via de randcache kan hij nog ongeveer een kwartier zichtbaar zijn.",
+              "verwijder-overheid": "Van de site gehaald. Uit de pagina zelf is hij meteen weg; via de randcache kan hij nog ongeveer een kwartier zichtbaar zijn.",
+              archiveer: "Naar archief verplaatst.",
+            };
+            melding(MELDINGEN[act] || "Bewaard.", "info");
             if (act === "publiceer" || act === "weg"){
               state.concepten = state.concepten.filter(function(x){ return x.id !== id; });
               state.totaal = Math.max(0, state.totaal - 1);

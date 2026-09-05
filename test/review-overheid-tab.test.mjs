@@ -374,11 +374,14 @@ function maakDom() {
   tabs[0].setAttribute("aria-selected", "true");
   tabs[1].setAttribute("data-tab", "overheid");
   tabs[1].setAttribute("aria-selected", "false");
+  // De tabbalk zelf: de tool verbergt hem zolang het beheertoken ontbreekt.
+  const tabsBalk = maakEl("tabs");
   const document = {
     getElementById: haal,
+    querySelector: (sel) => (sel === ".tabs" ? tabsBalk : null),
     querySelectorAll: (sel) => (sel === ".tab[data-tab]" ? tabs : []),
   };
-  return { document, haal, tabs };
+  return { document, haal, tabs, tabsBalk };
 }
 
 const REVIEW_PAYLOAD = {
@@ -393,7 +396,7 @@ const REVIEW_PAYLOAD = {
 };
 
 async function startTool({ actueel = LEVERING } = {}) {
-  const { document, haal, tabs } = maakDom();
+  const { document, haal, tabs, tabsBalk } = maakDom();
   const gezien = [];
   const fetchStub = (url) => {
     gezien.push(String(url));
@@ -410,7 +413,7 @@ async function startTool({ actueel = LEVERING } = {}) {
   );
   // De eerste GET afwikkelen (fetch -> json -> render).
   for (let i = 0; i < 8; i += 1) await Promise.resolve();
-  return { haal, tabs, gezien, inhoud: () => haal("inhoud").innerHTML };
+  return { haal, tabs, tabsBalk, gezien, inhoud: () => haal("inhoud").innerHTML };
 }
 
 test("de tool start op het eerste tabblad en haalt alleen /api/review op", async () => {

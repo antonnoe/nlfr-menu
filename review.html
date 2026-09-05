@@ -200,7 +200,16 @@
   <div class="tokenvak" id="tokenvak" hidden>
     <h2>Beheertoken</h2>
     <label for="tokenveld">Token</label>
-    <input type="password" id="tokenveld" autocomplete="off" placeholder="het REVIEW_TOKEN uit Vercel">
+    <!-- TYPE=TEXT, NIET PASSWORD. In #27 maakte ik hier een wachtwoordveld van,
+         netter ogend dan het tekstveld dat /banner-beheer gebruikt. Dat is
+         precies de wijziging waarna een geldig token werd geweigerd. Een
+         wachtwoordmanager doet aan een veld met type=password wat hij hoort te
+         doen: hij biedt zijn eigen opgeslagen waarde aan en vult die in, en
+         autocomplete="off" wordt daar door de meeste managers genegeerd. Wat je
+         plakt kan zo overschreven zijn tegen de tijd dat je op Bewaren drukt.
+         /banner-beheer gebruikt al jaren type=text en heeft dit nooit gehad. -->
+    <input type="text" id="tokenveld" autocomplete="off" spellcheck="false" autocapitalize="off"
+           autocorrect="off" placeholder="het REVIEW_TOKEN uit Vercel">
     <p class="hint">Wordt alleen in deze browser bewaard en als header meegestuurd, nooit in de URL — een URL komt in de
       browsergeschiedenis en in serverlogs terecht. Daarna kun je hier komen via Beheer in het menu, zonder token in de link.</p>
     <div class="knoppen">
@@ -306,9 +315,16 @@
   function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
   function melding(tekst, soort){ meldingEl.innerHTML = tekst ? '<div class="melding '+(soort||"info")+'">'+esc(tekst)+'</div>' : ""; }
 
-  // Het token gaat als HEADER mee, niet in de querystring: zo staat hij niet in
-  // de serverlogs van elke aanvraag. api/review.js leest allebei (leesToken),
-  // dus een oude bookmark met ?token=… blijft ook werken.
+  // HET TOKEN GAAT LANGS ALLEBEI DE WEGEN: querystring én header.
+  //
+  // In #27 haalde ik de querystring weg, omdat een token in de URL in de
+  // serverlogs van elke aanvraag terechtkomt. Dat argument klopt nog steeds.
+  // Maar daarna werd een geldig token geweigerd en was de redactie onbereikbaar,
+  // en dan gaat een werkende redactie voor een nettere logregel. Zolang niet
+  // gemeten is wélke weg het in de praktijk deed, dragen ze het allebei;
+  // api/review.js leest ze allebei (leesToken), dus dit kan geen kwaad en sluit
+  // één hele klasse oorzaken uit. Terugdraaien mag zodra vaststaat dat de header
+  // het alleen ook doet.
   // ÉÉN PLEK WAAR EEN 401 WORDT OPGEMERKT, en dus op elk verzoek — niet alleen
   // op de eerste GET. Wordt REVIEW_TOKEN in Vercel gewisseld terwijl deze
   // pagina openstaat, dan liep je anders bij elke knop tegen een foutmelding
@@ -329,7 +345,7 @@
   }
 
   function api(method, body){
-    var url = "/api/review";
+    var url = "/api/review?token=" + encodeURIComponent(token);
     var opties = { method: method, headers: { "X-Review-Token": token } };
     if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
     var generatie = tokenGeneratie;
@@ -338,7 +354,7 @@
 
   // GET met extra querystring (de kandidatenlijst; zie ?deel=if in api/review.js).
   function apiGet(extra){
-    var url = "/api/review" + (extra ? "?" + String(extra).replace(/^&/, "") : "");
+    var url = "/api/review?token=" + encodeURIComponent(token) + (extra || "");
     var generatie = tokenGeneratie;
     return fetch(url, { headers: { "X-Review-Token": token } })
       .then(function(r){ return verwerkAntwoord(r, generatie); });
@@ -1192,6 +1208,13 @@
   });
 
   function laad(behoudMelding){
+    // De LENGTE van wat er meeging, vastgelegd vóór een 401 het token wist. Bij
+    // een geweigerd token is "Ongeldig of ontbrekend token" niet genoeg om iets
+    // mee te doen: je weet niet of het veld leeg was, of er iets anders in stond
+    // dan je dacht (een wachtwoordmanager die zijn eigen waarde invulde), of dat
+    // het token in Vercel is veranderd. Het getal alleen verraadt niets en maakt
+    // het verschil meetbaar in plaats van een gok.
+    var lengteVerstuurd = token.length;
     if (!token){
       melding("Deze browser kent het beheertoken nog niet. Vul het één keer in; daarna onthoudt hij het.", "info");
       tekenToken();
@@ -1220,8 +1243,15 @@
       } else {
         // Bij 401 heeft verwerkAntwoord het tokenvak al geopend en de inhoud
         // al leeggemaakt; hier blijft alleen de reden van de server over.
-        melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout");
-        if (res.status !== 401) inhoudEl.innerHTML = "";
+        var reden = (res.data && res.data.fout) || "Toegang geweigerd.";
+        if (res.status === 401){
+          reden += " Er ging een token van " + lengteVerstuurd + " teken" +
+            (lengteVerstuurd === 1 ? "" : "s") + " mee. Klopt dat aantal niet met wat je hebt geplakt, " +
+            "dan stond er iets anders in het veld dan je dacht.";
+        } else {
+          inhoudEl.innerHTML = "";
+        }
+        melding(reden, "fout");
       }
     }).catch(function(){ melding("Netwerkfout.", "fout"); });
   }

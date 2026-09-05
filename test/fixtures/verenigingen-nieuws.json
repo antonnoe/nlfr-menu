@@ -1,0 +1,224 @@
+{
+ "_herkomst": "https://antonnoe.github.io/verenigingen-kalender/data/nieuws.json",
+ "_opgehaald": "2026-09-05, ongewijzigd overgenomen — dit is de bron waartegen test/verenigingen-zeef.test.mjs meet",
+ "generated_at": "2026-09-04T07:10:17.270Z",
+ "totaal": 27,
+ "items": [
+  {
+   "bron_id": "atelier-neerlandais",
+   "bron_naam": "Atelier Néerlandais",
+   "datum": "2026-09-03",
+   "titel": "FOTODOK: A Wide Gaze, 6 – 15 november",
+   "link": "https://atelierneerlandais.com/fotodok-a-wide-gaze-6-15-november/",
+   "excerpt": "Van 6 t/m 15 november presenteert FOTODOK op uitnodiging van de Nederlandse ambassade in Frankrijk de groepstentoonstelling A Wider Gaze in Atelier Néerlandais in Parijs. Deze tentoonstelling opent in de aanloop naar de prestigieuze fotobeurs Paris Photo. De makers…"
+  },
+  {
+   "bron_id": "atelier-neerlandais",
+   "bron_naam": "Atelier Néerlandais",
+   "datum": "2026-09-03",
+   "titel": "Art Basel x Mondriaanfonds, 21-25 oktober",
+   "link": "https://atelierneerlandais.com/art-basel-x-mondriaanfonds-21-25-oktober/",
+   "excerpt": "Tijdens Art Basel Paris presenteert het Mondriaan Fonds, in samenwerking met de Nederlandse ambassade in Parijs, een tentoonstelling in Atelier Néerlandais, gecureerd door Julia Geerlings. Binnenkort meer informatie op deze pagina en onze socials."
+  },
+  {
+   "bron_id": "lotgenoten",
+   "bron_naam": "LOTgenoten",
+   "datum": "2026-09-03",
+   "titel": "“De vos doden, een absurditeit”",
+   "link": "https://www.lotgenoten.fr/34236-2/",
+   "excerpt": "“De vos doden, een absurditeit”: deskundigen op het gebied van wilde dieren komen in opstand tegen de beslissing van de regering om de vos als “schadelijk” te classificeren De regering heeft de vos voor drie jaar aangemerkt als een “soort die schade kan veroorzaken” ,…"
+  },
+  {
+   "bron_id": "nvlr",
+   "bron_naam": "NVLR",
+   "datum": "2026-09-03",
+   "titel": "Et Voilà",
+   "link": "https://www.nvlr.eu/nieuws/et-voila",
+   "excerpt": "Et Voilà nummer 02 is uit! Check uw brievenbus of lees het magazine hier."
+  },
+  {
+   "bron_id": "atelier-neerlandais",
+   "bron_naam": "Atelier Néerlandais",
+   "datum": "2026-09-02",
+   "titel": "Parcours Bijoux, 1 – 31 oktober",
+   "link": "https://atelierneerlandais.com/parcours-bijoux-1-31-octobre/",
+   "excerpt": "Van 1 tot en met 31 oktober nodigt Parcours Bijoux bezoekers uit om Parijs vanuit een nieuw perspectief te verkennen en sieraden niet slechts als draagbare objecten te zien, maar als volwaardig artistiek medium. Voor deze nieuwe editie neemt Atelier Néerlandais deel als…"
+  },
+  {
+   "bron_id": "ern-paris",
+   "bron_naam": "ERN Paris",
+   "datum": "2026-09-01",
+   "titel": "Zondag 1 november – Kerkdienst (Kerk+YouTube)",
+   "link": "https://ernparis.fr/zondag-1-november-kerkdienst-kerkyoutube/",
+   "excerpt": "Voorganger: ds. Ruth van der Waall-Schaeffer Ouderling van dienst: nnb. Organist: Johan van den Burg Collecte: Restos du cœur Dienst in de kerk en via YouTube Aanvang 9:45"
+  },
+  {
+   "bron_id": "nvlr",
+   "bron_naam": "NVLR",
+   "datum": "2026-08-31",
+   "titel": "Dubbele nationaliteit",
+   "link": "https://www.nvlr.eu/nieuws/dubbele-nationaliteit",
+   "excerpt": "DUBBELE NATIONALITEITOp donderdag 3 september organiseert de Stichting Nederlanders Buiten Nederland (SNBN) in Nieuwspoort in Den Haag de derde Dag van de Nederlanders buiten Nederland, van 09.30..."
+  },
+  {
+   "bron_id": "ern-paris",
+   "bron_naam": "ERN Paris",
+   "datum": "2026-08-30",
+   "titel": "Zondag 18 oktober – Kerkdienst (Kerk+YouTube)",
+   "link": "https://ernparis.fr/zondag-18-oktober-kerkdienst-kerkyoutube-2/",
+   "excerpt": "Voorganger: ds. Rienk Lanooy Ouderling van dienst: nnb. Organist: Hans Lammers Collecte: Net4Kids Dienst in de kerk en via YouTube Aanvang 9:45"
+  },
+  {
+   "bron_id": "lotgenoten",
+   "bron_naam": "LOTgenoten",
+   "datum": "2026-08-30",
+   "titel": "Opnieuw tropische temperaturen…",
+   "link": "https://www.lotgenoten.fr/opnieuw-tropische-temperaturen/",
+   "excerpt": "Door: goedinfrankrijk.fr Nazomer brengt opnieuw tropische temperaturen: Frankrijk maakt zich op voor zesde hittegolf van het jaar. Wie beslist heeft om net na het hoogseizoen naar Frankrijk af te zakken, hoeft niet te vrezen voor kwakkelweer. Vanaf begin september stijgen de…"
+  },
+  {
+   "bron_id": "lotgenoten",
+   "bron_naam": "LOTgenoten",
+   "datum": "2026-08-28",
+   "titel": "Van druif tot fles kort uitgelegd…",
+   "link": "https://www.lotgenoten.fr/van-druif-tot-fles-kort-uitgelegd/",
+   "excerpt": "1. Van druif naar most Bij een handmatige oogst worden de druiventrossen eerst ontrist: de steeltjes worden verwijderd. Tijdens dit proces worden de druiven ook gekneusd. Zo ontstaat een mengsel van druivensap en gekneusde druiven, dat we most noemen. 2. De alcoholische…"
+  },
+  {
+   "bron_id": "lotgenoten",
+   "bron_naam": "LOTgenoten",
+   "datum": "2026-08-28",
+   "titel": "Melding, bouwvergunning, hoe en wat",
+   "link": "https://www.lotgenoten.fr/melding-bouwvergunning-hoe-en-wat/",
+   "excerpt": "door Rob van der Meulen | jun 26, 2017 Déclaration préalable Een melding ( déclaration préalable ) dient te worden gedaan wanneer meer dan 5 m² vloeroppervlak wordt gerealiseerd of de voetafdruk met meer dan 5 m² wordt vergroot en er geen verplichting bestaat tot de aanvraag…"
+  },
+  {
+   "bron_id": "lotgenoten",
+   "bron_naam": "LOTgenoten",
+   "datum": "2026-08-28",
+   "titel": "Zonnepanelen, hoe en wat en waarom anno 2026",
+   "link": "https://www.lotgenoten.fr/zonnepanelen-hoe-en-wat-en-waarom-anno-2026/",
+   "excerpt": "Zonnepanelen zijn in Frankrijk in 2026 niet automatisch een slechte investering. Het oude model, plaatsen, subsidie ontvangen en een groot overschot tegen een aantrekkelijk tarief verkopen, is voor nieuwe kleine installaties echter verdwenen. Het huidige model beloont een…"
+  },
+  {
+   "bron_id": "ern-paris",
+   "bron_naam": "ERN Paris",
+   "datum": "2026-08-24",
+   "titel": "Doorkijkje",
+   "link": "https://ernparis.fr/doorkijkje-09-26/",
+   "excerpt": "ds. Ruth van der Waall-Schaeffer Er is geen speld tussen te krijgen: Vanaf het allereerste begin zien we dat God een God van communicatie is. Voordat er mensen waren, sprak God, en door Zijn woord ontstond de schepping. Toen Hij"
+  },
+  {
+   "bron_id": "lotgenoten",
+   "bron_naam": "LOTgenoten",
+   "datum": "2026-08-18",
+   "titel": "Franse online banken vergeleken: kosten, limieten en vooral snelheid",
+   "link": "https://www.lotgenoten.fr/franse-online-banken-vergeleken-kosten-limieten-en-vooral-snelheid/",
+   "excerpt": "Een gratis bankrekening openen kan tegenwoordig in Frankrijk bij een groot aantal online banken. Maar “gratis” betekent niet automatisch dat iedere bank hetzelfde werkt. Vooral bij overschrijvingen (virements) zijn er grote verschillen. Kan een nieuwe begunstigde meteen…"
+  },
+  {
+   "bron_id": "nvlr",
+   "bron_naam": "NVLR",
+   "datum": "2026-08-10",
+   "titel": "Festival de Caunes-Minervois vanaf 24 augustus",
+   "link": "https://www.nvlr.eu/nieuws/festival-de-caunes-minervois",
+   "excerpt": "Een culturele reis in het hart van de Minervois. 24 - 29 augustus 2026 Klik hier voor het programma en alle informatie. Een niet te missen evenement Het Festival de Caunes-Minervois is een unieke..."
+  },
+  {
+   "bron_id": "cmunf",
+   "bron_naam": "CMUnf",
+   "datum": "2026-08-10",
+   "titel": "CAK wijzigt regels nieuwe gevallen met vroegpensioen",
+   "link": "https://cmunf.fr/nieuws/cak-wijzigt-regels-nieuwe-gevallen-met-vroegpensioen.html",
+   "excerpt": "Het CAK heeft een artikel gepubliceerd (hier) waarin beschreven wordt dat de regels voor nieuwe gevallen met vroeg-pensioen zijn veranderd. Voor bestaande gevallen veranderd er niets. Waar het op neer komt is dat een vroegpensioen voor nieuwe gevallen niet meer tot recht op…"
+  },
+  {
+   "bron_id": "ern-paris",
+   "bron_naam": "ERN Paris",
+   "datum": "2026-08-05",
+   "titel": "Uitzicht op woensdag 5 augustus",
+   "link": "https://ernparis.fr/uitzicht-op-woensdag-5-augustus/",
+   "excerpt": "Ruth van der Waall-Schaeffer Ankers"
+  },
+  {
+   "bron_id": "ern-paris",
+   "bron_naam": "ERN Paris",
+   "datum": "2026-08-04",
+   "titel": "Zondag 4 oktober – Kerkdienst (Kerk+YouTube)",
+   "link": "https://ernparis.fr/zondag-4-oktober-kerkdienst-kerkyoutube/",
+   "excerpt": "Voorganger: Kees Posthumus Ouderling van dienst: nnb. Organist: Johan van den Burg Collecte: Net4Kids Dienst in de kerk en via YouTube Aanvang 9:45"
+  },
+  {
+   "bron_id": "nvlr",
+   "bron_naam": "NVLR",
+   "datum": "2026-08-02",
+   "titel": "Rêves de Japon",
+   "link": "https://www.nvlr.eu/nieuws/reves-de-japon",
+   "excerpt": "Deze fantastische expositie (dromen van Japan) is nog te zien tot 30 september in Narbonne. Gedeeltelijk gratis en gedeeltelijk betaald. De eerste zondag van de maand sowieso overal gratis toegang."
+  },
+  {
+   "bron_id": "atelier-neerlandais",
+   "bron_naam": "Atelier Néerlandais",
+   "datum": "2026-07-28",
+   "titel": "Paris Design Week 2026: Design Museum Den Bosch x Atelier Néerlandais, 10 – 18 september",
+   "link": "https://atelierneerlandais.com/paris-design-week-2026-design-museum-den-bosch-x-atelier-neerlandais/",
+   "excerpt": "Op uitnodiging van de Nederlandse ambassade in Frankrijk presenteert Design Museum Den Bosch van 10 t/m 18 september een selectie uit de Posthuman-collectie in het Atelier Néerlandais tijdens Paris Design Week. Met deze presentatie verwelkomt het Atelier Néerlandais een van…"
+  },
+  {
+   "bron_id": "ern-paris",
+   "bron_naam": "ERN Paris",
+   "datum": "2026-07-26",
+   "titel": "Zomer overweging op zondag 26 juli",
+   "link": "https://ernparis.fr/zomer-overweging-zondag-26-juli/",
+   "excerpt": "Ruth van der Waall-Schaeffer Heilige Ruimte"
+  },
+  {
+   "bron_id": "bourgondische-zaken",
+   "bron_naam": "Bourgondische Zaken",
+   "datum": "2026-07-26",
+   "titel": "Rondleiding Cité des Présents",
+   "link": "https://bourgondischezaken.com/rondleiding-cite-des-presents/",
+   "excerpt": "Door René Meeuws Op 19 juli organiseerde Bourgondische Zaken een rondleiding in het in mei heropende Cité des Présents, voorheen Musée du Septennat. Dat museum herbergt duizenden geschenken die François Mitterand gedurende zijn twee periodes van zeven jaar als president van…"
+  },
+  {
+   "bron_id": "bourgondische-zaken",
+   "bron_naam": "Bourgondische Zaken",
+   "datum": "2026-07-20",
+   "titel": "BZ-dag op 8 augustus 2026",
+   "link": "https://bourgondischezaken.com/bz-dag-op-8-augustus-2026/",
+   "excerpt": "Mis het niet: de BZ-ledendag op 8 augustus bij De Oude School in Larochemillay ! Dit jaar vindt de BZ dag plaats in de oude school van Larochemillay. Om het iedereen zo veel mogelijk naar de zin te maken, bieden we niet alleen een aantal lezingen en workshops aan. Ook nodigen…"
+  },
+  {
+   "bron_id": "nvlr",
+   "bron_naam": "NVLR",
+   "datum": "2026-07-13",
+   "titel": "Exposition 17-19 juillet 2026, Miriam Janssen",
+   "link": "https://www.nvlr.eu/nieuws/exposition-17-19-juillet-2026-miriam-janssen",
+   "excerpt": "Bonjour, hi, hallo, heehee, Exposition 17-19 juillet 2026, Vernissage le 18 juillet 18.00 h. Presbytère de Montolieu Ik heet jullie allemaal van harte welkom om deze tentoonstelling te komen..."
+  },
+  {
+   "bron_id": "anm",
+   "bron_naam": "ANM",
+   "datum": "2026-07-12",
+   "titel": "Fotofestival Fréjus",
+   "link": "https://www.a-n-m.nl/nieuws/fotofestival-frejus",
+   "excerpt": "Van 26 september tot 4 oktober wordt in Fréjus het 8e Festival International de la Photographie Surréaliste et Créative georganiseerd. De ANM-fotoclub zal op woensdag 30 september of vrijdag 2..."
+  },
+  {
+   "bron_id": "bourgondische-zaken",
+   "bron_naam": "Bourgondische Zaken",
+   "datum": "2026-07-12",
+   "titel": "Les Étoiles du Morvan 2026",
+   "link": "https://bourgondischezaken.com/les-etoiles-du-morvan-2026/",
+   "excerpt": "waar muziek tot de verbeelding spreekt Van 9 tot 13 augustus 2026 is de Morvan het decor voor de vierde editie van Les Étoiles du Morvan, het internationale kamermuziekfestival dat muziekliefhebbers uit heel Europa trekt. Vijf avonden lang kun je ervaren hoe muziek verhalen…"
+  },
+  {
+   "bron_id": "nvlr",
+   "bron_naam": "NVLR",
+   "datum": "2026-07-08",
+   "titel": "Bosbranden in de regio, wees voorbereid",
+   "link": "https://www.nvlr.eu/nieuws/bosbranden-in-de-regio-wees-voorbereid",
+   "excerpt": "Wat te doen bij een bosbrand in de buurt? In de Hérault en Aude hebben we te maken gehad met hevige branden. In Pouzols waar ook leden van onze vereniging wonen, moest men hals over kop de woning..."
+  }
+ ]
+}

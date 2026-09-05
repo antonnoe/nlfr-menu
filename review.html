@@ -38,6 +38,28 @@
   .opruimlade p { margin:0; font-size:13px; color:#6d6360; }
   .balk button.gevaar { border-color:rgba(128,0,0,.35); background:#fff; }
 
+  /* ---- Tabbladen: Redactie actueel | Overheid (.gouv) --------------------
+     TWEE STROMEN, ÉÉN TOOL. Het eerste tabblad is de dagelijkse taak (de
+     conceptenwachtrij) en staat daarom standaard open. Het tweede gaat over
+     berichten die AL LIVE STAAN; daar is niets te publiceren en niets te
+     weigeren, alleen een Infofrankrijk-verwijzing bij te zetten of weg te
+     halen. Bewust geen tweede pagina: het token staat in de URL, en een
+     tweede pagina zou dat opnieuw moeten meedragen.
+     Tikdoel 44px, net als elke andere knop hier — zie test/reviewtool.test.mjs. */
+  .tabs { display:flex; gap:6px; margin:6px 0 14px; border-bottom:1px solid rgba(128,0,0,.15); }
+  .tab { font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; min-height:44px; padding:8px 16px;
+    border:1px solid transparent; border-bottom:none; border-radius:10px 10px 0 0; margin-bottom:-1px;
+    background:none; color:#8a7f7c; cursor:pointer; }
+  .tab:hover { color:var(--brand); }
+  .tab[aria-selected="true"] { background:#fff; color:var(--brand); border-color:rgba(128,0,0,.15); }
+
+  /* Eén tegel van /actueel op het overheidstabblad: de kop van de tegel, met
+     daaronder de artikelen die er nu werkelijk in staan. */
+  .gouvtegel { margin:20px 0 6px; }
+  .gouvtegel > h3 { font-family:'Poppins',sans-serif; font-size:14px; color:var(--brand); margin:0 0 10px;
+    padding-bottom:5px; border-bottom:1px solid rgba(128,0,0,.12); }
+  .gouvtegel > h3 .telling { font-family:'Mulish',sans-serif; font-weight:400; font-size:12.5px; color:#8a7f7c; }
+
   .kaart { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 10px 30px -24px rgba(90,0,0,.5); }
   .kaart.pub { border-color:rgba(47,107,58,.4); background:rgba(47,107,58,.05); }
   .meta { font-size:12px; color:#8a7f7c; margin-bottom:8px; }
@@ -112,7 +134,15 @@
   .ifgekozen { list-style:none; margin:0 0 8px; padding:0; display:grid; gap:5px; }
   .ifgekozen li { display:flex; gap:8px; align-items:center; background:#fff; border:1px solid rgba(47,107,58,.25); border-radius:8px; padding:6px 10px; font-size:13.5px; }
   .ifgekozen a { color:var(--brand); text-decoration:none; flex:1; }
-  .ifgekozen button { flex:none; border:none; background:none; color:var(--brand); cursor:pointer; font-size:20px; line-height:1; min-width:44px; min-height:44px; }
+  /* WEGHALEN IS EEN VOLWAARDIGE KNOP, geen kruisje. Een verwijzing zetten is
+     één klik; hem weer weg krijgen hoorde dat ook te zijn, en een naamloos
+     "×" is dat niet — je moet er eerst op hoveren om te weten wat het doet.
+     Deze knop staat bij ELKE bestaande verwijzing, op allebei de tabbladen:
+     het blok komt uit dezelfde ifBlokHtml(). */
+  .ifgekozen button { flex:none; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px;
+    border-radius:8px; padding:6px 12px; min-height:44px; cursor:pointer;
+    border:1px solid rgba(128,0,0,.25); background:#fff; color:var(--brand); }
+  .ifgekozen button:hover { background:rgba(128,0,0,.06); }
   .ifzoekrij { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
   .ifzoekrij input { flex:1; min-width:180px; font-family:'Mulish',sans-serif; font-size:14px; padding:8px 10px; border:1px solid rgba(128,0,0,.2); border-radius:8px; }
   /* TIKDOELEN: 44px, dezelfde maat als button.actie hierboven. Deze tool wordt
@@ -147,8 +177,12 @@
       <a id="nbLink" class="nb-link" href="/actueel" target="_blank" rel="noopener">Bekijk nieuwspagina ↗</a>
     </div>
   </div>
+  <div class="tabs" role="tablist" aria-label="Reviewtool">
+    <button type="button" class="tab" role="tab" id="tabRedactie" data-tab="redactie" aria-selected="true" aria-controls="inhoud">Redactie actueel</button>
+    <button type="button" class="tab" role="tab" id="tabOverheid" data-tab="overheid" aria-selected="false" aria-controls="inhoud">Overheid (.gouv)</button>
+  </div>
   <div id="melding"></div>
-  <div id="inhoud"><div class="leeg">Laden…</div></div>
+  <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
 
 <script>
 (function(){
@@ -168,7 +202,11 @@
     // Infofrankrijk: gekozen verwijzingen per bericht-id, de auditlijst, wat er
     // bijna uit het 12-maandenvenster valt, en het geopende kandidatenpaneel
     // (hoogstens één tegelijk).
-    verwijzingen: {}, nakijken: [], bijnaVerlopen: [], ifIndex: null, ifPaneel: null };
+    verwijzingen: {}, nakijken: [], bijnaVerlopen: [], ifIndex: null, ifPaneel: null,
+    // Welk tabblad open staat, en de levering van /actueel waarop het tweede
+    // draait. "leeg" = nog niet opgehaald; hij wordt pas gehaald als je het
+    // tabblad voor het eerst opent.
+    tab: "redactie", gouv: { status: "leeg", tegels: [], fout: null, gebakkenOp: null } };
 
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
@@ -355,12 +393,18 @@
     try { return new Date(iso).toISOString().slice(0,10); } catch(e){ return "?"; }
   }
 
+  // Wat er NU onder dit bericht staat, met bij elke regel een knop om hem weer
+  // weg te halen. Eén functie, en dus dezelfde knop op allebei de tabbladen:
+  // ifBlokHtml() hieronder wordt door de conceptenkaart, de publicatiekaart én
+  // het overheidstabblad gebruikt.
   function gekozenHtml(id){
     var items = state.verwijzingen[id] || [];
     if (!items.length) return "";
     return '<ul class="ifgekozen">'+items.map(function(v){
-      return '<li><a href="'+esc(v.url)+'" target="_blank" rel="noopener">'+esc(v.titel||v.url)+'</a>'+
-        '<button type="button" title="Verwijzing weghalen" data-if-af="'+esc(String(v.ifId))+'">×</button></li>';
+      var titel = v.titel || v.url;
+      return '<li><a href="'+esc(v.url)+'" target="_blank" rel="noopener">'+esc(titel)+'</a>'+
+        '<button type="button" data-if-af="'+esc(String(v.ifId))+'" '+
+          'aria-label="'+esc("Verwijzing weghalen: "+titel)+'">Weghalen</button></li>';
     }).join("")+'</ul>';
   }
 
@@ -468,8 +512,93 @@
       '<ul class="weigeringen">'+rijen+'</ul>';
   }
 
+  // ---- Tabblad 2: Overheid (.gouv) ------------------------------------------
+  // WAT HIER STAAT, STAAT AL LIVE. De overheidsberichten gaan zonder review de
+  // pagina op; dit tabblad is nawerk, geen poort. Er is daarom precies één
+  // handeling: er een Infofrankrijk-artikel bij zetten, of dat weer weghalen.
+  // Geen publiceren, geen weigeren, geen archiveren en geen "Van de site
+  // halen" — die knoppen horen bij de stromen die de poort wél passeren en
+  // staan op het eerste tabblad.
+  //
+  // DE LIJST KOMT VAN /api/actueel, niet uit /api/review. Die tweede kent alle
+  // opgeslagen overheidsrecords, ook de berichten die hun live venster voorbij
+  // zijn of buiten de volumecap van hun tegel vallen (zie lib/tegels.js). Dit
+  // tabblad gaat over wat de lezer NU ziet, dus lezen we dezelfde levering als
+  // de lezer. Geen token nodig: die route is publiek.
+
+  // De datum van een artikel in de COMPACTE levering. Daar is de bronnenarray
+  // ingeklapt tot `bronMeta` (naam + datum van de eerste bron); zie
+  // lib/levering.js.
+  function gouvDatum(a){
+    return Date.parse((a && a.bronMeta && a.bronMeta.datum) || "") || 0;
+  }
+
+  // De overheidstegels uit een /api/actueel-antwoord, nieuwste bovenaan — zowel
+  // de artikelen binnen een tegel als de tegels onderling (op hun nieuwste
+  // artikel). Pure functie: alleen de levering in, een lijst uit.
+  function gouvTegels(data){
+    return ((data && data.tegels) || [])
+      .filter(function(t){ return t && t.soort === "overheid" && (t.artikelen || []).length; })
+      .map(function(t){
+        var arts = (t.artikelen || []).slice().sort(function(a, b){ return gouvDatum(b) - gouvDatum(a); });
+        return {
+          id: t.id,
+          label: t.label || t.thema || t.id,
+          artikelen: arts,
+          nieuwste: gouvDatum(arts[0]),
+        };
+      })
+      .sort(function(a, b){ return b.nieuwste - a.nieuwste; });
+  }
+
+  // Eén kaart: kop, bron, datum, de bronlink en het Infofrankrijk-blok. Verder
+  // niets — geen enkele knop met een data-act erop.
+  function gouvArtikelHtml(a){
+    var bm = a.bronMeta || {};
+    return '<div class="kaart" data-id="'+esc(a.id)+'">'+
+      '<div class="meta"><b>'+esc(bm.naam || "bron onbekend")+'</b>'+
+        (bm.datum ? ' · '+esc(datum(bm.datum)) : "")+'</div>'+
+      '<div class="kop">'+esc(a.titel || "zonder kop")+'</div>'+
+      (a.summary ? '<div class="tekst">'+esc(a.summary)+'</div>' : "")+
+      (a.url ? '<div class="bronnen"><a href="'+esc(a.url)+'" target="_blank" rel="noopener">Bron →</a></div>' : "")+
+      ifBlokHtml(a.id)+
+    '</div>';
+  }
+
+  function gouvHtml(){
+    var g = state.gouv || {};
+    if (g.status === "laden") return '<div class="leeg">De nieuwspagina wordt opgehaald…</div>';
+    if (g.status === "fout"){
+      return '<div class="melding fout">'+esc(g.fout || "Kon /api/actueel niet ophalen.")+'</div>'+
+        '<div><button type="button" class="ifknop" id="gouvOpnieuw">Opnieuw proberen</button></div>';
+    }
+    var tegels = g.tegels || [];
+    var totaal = tegels.reduce(function(n, t){ return n + t.artikelen.length; }, 0);
+    var uit = '<h2>Overheid — staat live op /actueel ('+totaal+')</h2>'+
+      '<div class="ifuitleg">Deze berichten gaan zonder review live en worden hier niet beoordeeld. '+
+      'De enige handeling is een Infofrankrijk-verwijzing erbij zetten of weghalen; die verschijnt onder '+
+      'het bericht op de nieuwspagina na de eerstvolgende cronronde.'+
+      (g.gebakkenOp ? ' Stand van de nieuwspagina: '+esc(datum(g.gebakkenOp))+'.' : "")+'</div>';
+    if (!tegels.length){
+      return uit + '<div class="leeg">Geen overheidsartikelen live.</div>';
+    }
+    tegels.forEach(function(t){
+      uit += '<div class="gouvtegel"><h3>'+esc(t.label)+
+        ' <span class="telling">'+t.artikelen.length+' artikel'+(t.artikelen.length===1?"":"en")+'</span></h3>'+
+        t.artikelen.map(gouvArtikelHtml).join("")+'</div>';
+    });
+    return uit;
+  }
+  // ---- einde tabblad 2 -------------------------------------------------------
+
   function render(){
     var html = "";
+
+    if (state.tab === "overheid"){
+      inhoudEl.innerHTML = gouvHtml();
+      koppel();
+      return;
+    }
 
     html += bronUrlWeigeringenHtml();
 
@@ -563,6 +692,9 @@
   }
 
   function koppel(){
+    var gouvOpnieuw = document.getElementById("gouvOpnieuw");
+    if (gouvOpnieuw) gouvOpnieuw.addEventListener("click", function(){ laadGouv(); });
+
     var vorige = document.getElementById("vorige");
     var volgende = document.getElementById("volgende");
     if (vorige) vorige.addEventListener("click", function(){ state.index--; render(); });
@@ -778,6 +910,49 @@
       });
     });
   }
+
+  // De levering van /actueel ophalen. Publiek, dus zonder token; de verwijzingen
+  // die eronder staan komen wél uit /api/review (state.verwijzingen).
+  function laadGouv(){
+    state.gouv = { status: "laden", tegels: [], fout: null, gebakkenOp: null };
+    render();
+    fetch("/api/actueel", { headers: { Accept: "application/json" } })
+      .then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function(data){
+        state.gouv = {
+          status: "klaar",
+          tegels: gouvTegels(data),
+          fout: null,
+          gebakkenOp: data.gebakkenOp || data.bijgewerkt || null,
+        };
+        render();
+      })
+      .catch(function(e){
+        state.gouv = { status: "fout", tegels: [], fout: "De nieuwspagina kon niet worden opgehaald (" + e.message + ").", gebakkenOp: null };
+        render();
+      });
+  }
+
+  var tabKnoppen = Array.prototype.slice.call(document.querySelectorAll(".tab[data-tab]"));
+  function zetTab(naam){
+    if (state.tab === naam) return;
+    state.tab = naam;
+    // Een openstaand zoekpaneel hoort bij het bericht waar je vandaan komt.
+    state.ifPaneel = null;
+    tabKnoppen.forEach(function(k){
+      k.setAttribute("aria-selected", k.getAttribute("data-tab") === naam ? "true" : "false");
+    });
+    inhoudEl.setAttribute("aria-labelledby", naam === "overheid" ? "tabOverheid" : "tabRedactie");
+    // Pas bij het eerste bezoek ophalen; daarna blijft de lijst staan.
+    if (naam === "overheid" && state.gouv.status === "leeg") laadGouv();
+    else render();
+  }
+  tabKnoppen.forEach(function(k){
+    k.addEventListener("click", function(){ zetTab(k.getAttribute("data-tab")); });
+  });
 
   function laad(behoudMelding){
     if (!token){ melding("Geen token in de URL. Voeg ?token=… toe.", "fout"); inhoudEl.innerHTML = ""; return; }

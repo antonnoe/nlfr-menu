@@ -48,6 +48,9 @@ import {
   SCAN_OVERHEID,
   SCAN_REGISTER,
   KEY_IF_INDEX,
+  KEY_ACTUEEL_SNAPSHOT,
+  KEY_ACTUEEL_TEKST_SNAPSHOT,
+  KEY_ACTUEEL_ARCHIEF_SNAPSHOT,
   KEY_VERWIJZING,
   SCAN_VERWIJZING,
   VERWIJZING_TTL_S,
@@ -241,6 +244,41 @@ async function leesIfIndex() {
 // buiten te vallen.
 function keurIfUrl(url) {
   return bronUrlOordeel(url, bronVoorNaam("Infofrankrijk") || {});
+}
+
+// ---- De voorgebakken momentopname ongeldig maken ---------------------------
+// GEMETEN PROBLEEM, geen theorie. Een verwijzing legde de hele keten correct af
+// — KV, /api/review, lib/tegels.js, lib/levering.js, actueel.html — en werd toch
+// niet zichtbaar, omdat /api/actueel de VOORGEBAKKEN momentopname uitserveert.
+// Die is van vóór de klik en wordt pas losgelaten als hij ouder is dan
+// SNAPSHOT_MAX_LEEFTIJD_S (een uur), of als de cron een nieuwe bakt. Loopt de
+// cron niet, dan blijft dezelfde momentopname tot SNAPSHOT_TTL_S (zes uur)
+// staan. Een verwijzing die pas uren later verschijnt, is in de praktijk geen
+// verwijzing.
+//
+// Weggooien in plaats van bijwerken: de eerstvolgende aanvraag van /api/actueel
+// bakt hem dan opnieuw met exact dezelfde code als de cron (lib/lever.js), en er
+// is dus geen tweede plek die de regels van hangVerwijzingen na moet doen.
+//
+// ALLE DRIE, altijd samen. De verwijzing zit alleen in de tekst-levering, maar
+// de drie leveringen horen hetzelfde bakmoment te dragen; de sonde toetst dat
+// (I10). Eén sleutel weggooien zou die drie uit elkaar laten lopen.
+//
+// Stil bij een fout: de verwijzing zelf is dan al opgeslagen en verschijnt bij
+// de eerstvolgende cronronde alsnog. Een 500 zou de redacteur laten denken dat
+// zijn klik niet is aangekomen.
+async function vervalSnapshots() {
+  for (const sleutel of [
+    KEY_ACTUEEL_SNAPSHOT,
+    KEY_ACTUEEL_TEKST_SNAPSHOT,
+    KEY_ACTUEEL_ARCHIEF_SNAPSHOT,
+  ]) {
+    try {
+      await del(sleutel);
+    } catch (e) {
+      console.warn(`[review] momentopname ${sleutel} niet kunnen wissen: ${e && e.message}`);
+    }
+  }
 }
 
 export default async function handler(req, res) {
@@ -707,10 +745,14 @@ export default async function handler(req, res) {
           VERWIJZING_TTL_S
         );
       }
-      // De pagina toont dit pas na de eerstvolgende cronronde (de leveringen
-      // worden voorgebakken). Dat staat zo in het antwoord, zodat de reviewtool
-      // het kan zeggen in plaats van dat het lijkt of er niets gebeurt.
-      return res.status(200).json({ ok: true, items, zichtbaarNaCron: true });
+      // En meteen de voorgebakken leveringen ongeldig maken, anders serveert
+      // /api/actueel nog tot een uur (zonder cron: tot zes uur) de momentopname
+      // van vóór deze klik.
+      await vervalSnapshots();
+      // De pagina bakt bij de eerstvolgende aanvraag opnieuw. Wat er dan nog
+      // tussen zit is de randcache van /api/actueel (s-maxage 900), dus hoogstens
+      // de croninterval — niet meer de levensduur van de momentopname.
+      return res.status(200).json({ ok: true, items, snapshotVervallen: true });
     }
 
     // ---- Infofrankrijk: nakijken (alleen redactie) --------------------------

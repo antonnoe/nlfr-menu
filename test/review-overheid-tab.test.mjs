@@ -41,7 +41,9 @@ test("de tool heeft twee tabbladen, en Redactie actueel is de standaard", () => 
   assert.ok(redactie, "het eerste tabblad ontbreekt");
   assert.ok(overheid, "het tweede tabblad ontbreekt");
   assert.equal(redactie[1], "Redactie actueel");
-  assert.equal(overheid[1], "Overheid (.gouv)");
+  // Alleen "Overheid": de tegel Nederlandse overheid staat er ook in, dus
+  // ".gouv" zou de helft van wat er staat wegdefiniëren.
+  assert.equal(overheid[1], "Overheid");
   assert.match(redactie[0], /aria-selected="true"/, "het eerste tabblad staat open bij het laden");
   assert.match(overheid[0], /aria-selected="false"/, "het tweede niet");
   // En de tool begint ook in de code op dat tabblad, niet alleen in de markup.
@@ -68,7 +70,7 @@ test("het overheidstabblad leest de nieuwspagina zelf, niet de reviewopslag", ()
 
 const ifBegin = review.indexOf("function ifDatum(iso){");
 const ifEind = review.indexOf("// ---- Geweigerde bron-URL's");
-const gouvBegin = review.indexOf("// ---- Tabblad 2: Overheid (.gouv)");
+const gouvBegin = review.indexOf("// ---- Tabblad 2: Overheid");
 const gouvEind = review.indexOf("// ---- einde tabblad 2");
 assert.ok(ifBegin > 0 && ifEind > ifBegin, "IF-renderfuncties niet gevonden in review.html");
 assert.ok(gouvBegin > 0 && gouvEind > gouvBegin, "het overheidstabblad niet gevonden in review.html");
@@ -173,11 +175,47 @@ test("op het overheidstabblad staat geen enkele publicatieactie", () => {
     assert.ok(!uit.includes(">" + label + "<"), `de knop "${label}" hoort hier niet te staan`);
   }
   // Wel dit: de artikelen, gegroepeerd per tegel, met hun tegelkop.
-  assert.ok(uit.includes("Overheid — staat live op /actueel (3)"), "de telling over alle overheidstegels");
+  assert.ok(uit.includes("Staat live op /actueel (3)"), "de telling over alle overheidstegels");
+  // Het woord "Overheid" staat al op het tabblad; boven de tegelnamen is het ruis.
+  assert.ok(!/>[^<]*Overheid[^<]*</.test(uit.slice(0, uit.indexOf("<div class=\"gouvtegel\""))),
+    "geen tweede keer \u201cOverheid\u201d boven de tegelnamen");
   assert.ok(uit.includes("<h3>Douane <span class=\"telling\">2 artikelen</span></h3>"));
   assert.ok(uit.includes("<h3>Geld &amp; belasting <span class=\"telling\">1 artikel</span></h3>"));
   assert.ok(uit.indexOf("Bercy verschuift") < uit.indexOf("Nieuwe douanewijziging"),
     "de tegel met het nieuwste bericht staat bovenaan");
+});
+
+test("achter het artikelaantal staat hoeveel verwijzingen die tegel heeft", () => {
+  // De redacteur wil per categorie zien of er al iets ligt, zonder elke kaart
+  // open te klappen. Nul is geen mededeling: dan staat er alleen het aantal.
+  const tegels = maakRenderer(leegState).gouvTegels(LEVERING);
+  const { gouvHtml } = maakRenderer({
+    ...leegState,
+    // Twee verwijzingen onder het ene douanebericht, één onder het andere:
+    // samen drie in die tegel. De tegel Geld & belasting heeft er geen.
+    verwijzingen: {
+      "o-nieuw": [
+        { ifId: 1, titel: "A", url: "https://infofrankrijk.com/a/" },
+        { ifId: 2, titel: "B", url: "https://infofrankrijk.com/b/" },
+      ],
+      "o-oud": [{ ifId: 3, titel: "C", url: "https://infofrankrijk.com/c/" }],
+    },
+    gouv: { status: "klaar", tegels, gebakkenOp: LEVERING.gebakkenOp },
+  });
+  const uit = gouvHtml();
+  assert.ok(uit.includes('<h3>Douane <span class="telling">2 artikelen · 3 verwijzingen</span></h3>'), uit.slice(0, 400));
+  assert.ok(uit.includes('<h3>Geld &amp; belasting <span class="telling">1 artikel</span></h3>'),
+    "zonder verwijzingen staat er niets achter het artikelaantal");
+});
+
+test("één verwijzing is enkelvoud", () => {
+  const tegels = maakRenderer(leegState).gouvTegels(LEVERING);
+  const { gouvHtml } = maakRenderer({
+    ...leegState,
+    verwijzingen: { "o-bercy": [{ ifId: 1, titel: "A", url: "https://infofrankrijk.com/a/" }] },
+    gouv: { status: "klaar", tegels, gebakkenOp: null },
+  });
+  assert.ok(gouvHtml().includes('<span class="telling">1 artikel · 1 verwijzing</span>'));
 });
 
 test("zonder overheidsartikelen staat er een lege staat, geen kale pagina", () => {
@@ -378,18 +416,18 @@ async function startTool({ actueel = LEVERING } = {}) {
 test("de tool start op het eerste tabblad en haalt alleen /api/review op", async () => {
   const tool = await startTool();
   assert.ok(tool.inhoud().includes("Concepten"), "de conceptenwachtrij staat er");
-  assert.ok(!tool.inhoud().includes("staat live op /actueel"), "en het overheidstabblad nog niet");
+  assert.ok(!tool.inhoud().includes("Staat live op /actueel"), "en het overheidstabblad nog niet");
   assert.ok(tool.gezien.every((u) => u.startsWith("/api/review")), `onverwachte verzoeken: ${tool.gezien}`);
 });
 
-test("klikken op Overheid (.gouv) haalt de nieuwspagina op en toont de tegels", async () => {
+test("klikken op Overheid haalt de nieuwspagina op en toont de tegels", async () => {
   const tool = await startTool();
   tool.tabs[1].klik();
   for (let i = 0; i < 8; i += 1) await Promise.resolve();
 
   assert.ok(tool.gezien.some((u) => u.startsWith("/api/actueel")), "nu pas wordt /api/actueel opgehaald");
   const html = tool.inhoud();
-  assert.ok(html.includes("Overheid — staat live op /actueel (3)"));
+  assert.ok(html.includes("Staat live op /actueel (3)"));
   assert.ok(html.includes("Nieuwe douanewijziging"), "de artikelen staan er");
   assert.ok(html.includes(">Weghalen<"), "en de bestaande verwijzing kan weg");
   assert.ok(!html.includes("data-act"), "zonder ook maar één publicatieactie");
@@ -421,7 +459,7 @@ test("de pijltjestoetsen verplaatsen tabblad, tabstop en focus", async () => {
   assert.equal(overheid.getAttribute("tabindex"), "0", "de tabstop verhuist mee");
   assert.equal(redactie.getAttribute("tabindex"), "-1");
   assert.ok(overheid.heeftFocus, "en de focus ook, anders praat de schermlezer over het verkeerde tabblad");
-  assert.ok(tool.inhoud().includes("staat live op /actueel"), "de inhoud volgt");
+  assert.ok(tool.inhoud().includes("Staat live op /actueel"), "de inhoud volgt");
 
   overheid.toets("ArrowLeft");
   for (let i = 0; i < 4; i += 1) await Promise.resolve();

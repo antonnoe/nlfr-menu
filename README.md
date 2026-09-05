@@ -516,6 +516,25 @@ live artikelen over hetzelfde verhaal, datums binnen een plausibel venster,
 artikel-id's aanwezig en uniek. Wat bewust *niet* getoetst wordt (en waarom)
 staat in `scripts/sonde.mjs` zelf.
 
+Twee invarianten sluiten de storingen van 3 augustus 2026 af, allebei op de
+uitvoer in plaats van op de code:
+
+* **I14 — ongefilterde bronnenlijst.** Kon de synthese de bronopgave van het
+  model niet matchen, dan stond de volledige clusterlijst als attributie onder
+  het artikel. De vlag `bronnenTerugval` bestond al maar bleef op het concept
+  hangen; hij loopt nu mee tot in het API-antwoord en maakt de sonde rood zodra
+  een **live** artikel hem draagt.
+* **I15 — hetzelfde bericht twee keer live.** Getoetst op de identiteit van de
+  bron, niet op tekstgelijkenis: twee losse AI-samenvattingen van hetzelfde
+  bericht zijn immers twee verschillende teksten. Gelijk zijn: host plus pad
+  zonder querystring, en voor Service-Public het actualiténummer — dat is over
+  de particuliers- en de professionnels-feed heen gelijk, ook als host én pad
+  verschillen. Een synthese met meerdere bronnen mag er legitiem één delen; daar
+  geldt dezelfde grens van twee gedeelde links die `ontdubbelPers()` al hanteert.
+  `test/sonde-invarianten.test.mjs` draait de sonde als kindproces tegen een
+  lokaal geserveerde pagina en laat zien dat de storing van 3 augustus er rood
+  van was geworden.
+
 Handmatig draaien met de gevonden links erbij: *Run workflow* → vink
 **toon_links** aan, en vul eventueel **toon_filter** met een stuk van een titel
 om één item na te trekken.

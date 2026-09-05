@@ -34,7 +34,9 @@ jobs:
 
       # npm ci en niet npm install: de suite hoort tegen de vastgelegde
       # versies te draaien. Zonder deze stap ontbreekt @anthropic-ai/sdk en
-      # falen drie testbestanden op een module-fout in plaats van op inhoud.
+      # falen VIJF testbestanden op een module-fout in plaats van op inhoud:
+      # bronnen, byline, nl-overheid, redactie en verwijzing-route. (Er stond
+      # drie; geteld op 2026-09-05 door de suite zonder node_modules te draaien.)
       - run: npm ci
 
       - run: npm test

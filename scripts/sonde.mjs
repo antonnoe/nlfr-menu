@@ -19,6 +19,7 @@
 import { laadBronnen } from "../lib/feeds.js";
 import { artikelSleutel } from "../lib/levering.js";
 import { bronUrlOordeel, bronVoorNaam, bronVoorThema, isAssetHost } from "../lib/bronurl.js";
+import { dubbeleBerichten } from "../lib/tegels.js";
 import { kernUitTekst, zelfdeVerhaal } from "../lib/cluster.js";
 import {
   PUBLICATIE_TTL_S,
@@ -402,9 +403,18 @@ async function main() {
   }
 
   // ---- I7. Elke bronnaam staat in bronnen.json en is actief ----------------
-  // Storingshistorie: de bronnenlijst werd ooit ongefilterd gebruikt, waardoor
-  // uitgezette bronnen alsnog op de pagina kwamen. Dit is de directe toets
-  // daarop, op de uitvoer in plaats van op de code.
+  // Wat deze toets doet: een bron die in bronnen.json op `actief: false` staat,
+  // hoort van de pagina te verdwijnen; levert hij tóch items, dan draait er
+  // ergens nog een oude voorraad of wordt de vlag niet gelezen. Toetsen op de
+  // UITVOER in plaats van op de code, want de vlag zegt niets over wat er al in
+  // KV staat.
+  //
+  // NIET de ongefilterde bronnenlijst. 569328c schreef die storing aan I7 toe;
+  // dat is onjuist en het is nooit gecorrigeerd. Die storing (23e276d, 3
+  // augustus) ging over de bronnenLIJST ONDER EEN SYNTHESE: viel de opgave van
+  // het model niet te matchen, dan stond de volledige clusterlijst inclusief
+  // bijvangst als attributie onder het artikel. Met `actief: false` heeft dat
+  // niets te maken. De directe toets daarop is I14 hieronder.
   const bekend = new Map(laadBronnen().map((b) => [b.naam, b]));
   const perItemBronnaam = new Set();
   for (const { art } of artikelen) {
@@ -436,6 +446,61 @@ async function main() {
     } else {
       gezien.set(sleutel, true);
     }
+  }
+
+  // ---- I14. Geen live artikel met een ongefilterde bronnenlijst ------------
+  // Storingshistorie (23e276d, 3 augustus): kon de GEBRUIKT-opgave van het model
+  // niet op de clusteritems worden gematcht, dan viel bouwBronnen() terug op de
+  // VOLLEDIGE clusterlijst. Onder het artikel stond dan clusterbijvangst als
+  // attributie: kranten die over een ander onderwerp schreven, gepresenteerd
+  // als bron van deze synthese. Dat is geen cosmetisch probleem maar een
+  // onjuiste bronvermelding.
+  //
+  // De vlag bestond al (lib/synthese.js zet hem, api/cron.js schrijft hem op het
+  // concept), maar zag alleen de reviewtool hem. Een redacteur die hem over het
+  // hoofd zag, publiceerde de terugval gewoon mee. Sinds lib/tegels.js hem op
+  // het artikel meegeeft staat hij in de compacte levering, en is dit de toets
+  // op wat er WERKELIJK live staat.
+  //
+  // Alleen LIVE tegels: een artikel in het archief is niet meer te repareren
+  // (het concept is weg), en rood blijven staan tot het na veertien dagen
+  // vervalt maakt de sonde onbruikbaar. De reparatie is depubliceren.
+  for (const { tegel, art } of artikelen) {
+    if (tegel.soort === "archief" || tegel.id === "archief") continue;
+    if (!art.bronnenTerugval) continue;
+    meld(
+      "I14 bronnenlijst-terugval",
+      `tegel ${tegel.id} · "${kort(art.titel)}" · de bronnenlijst is de ongefilterde clusterlijst ` +
+        `(${art.bronAantal ?? (art.bronnen || []).length} bronnen), niet wat de synthese gebruikte`
+    );
+  }
+
+  // ---- I15. Geen twee live artikelen met dezelfde bron-identiteit ----------
+  // Storingshistorie (fdfd877, 3 augustus): Service-Public zet dezelfde
+  // actualité op de particuliers- én de professionnels-feed. De opslagsleutel
+  // was hashId(url), dus dat werden twee records met elk een eigen
+  // AI-samenvatting — hetzelfde bericht twee keer op /actueel.
+  //
+  // WAAROM DIT NIET AL DOOR I5 WORDT GEVANGEN. I5 toetst op TEKSTGELIJKENIS, en
+  // juist daar is dit geval blind voor: twee losse AI-samenvattingen van
+  // hetzelfde bericht zijn twee verschillende teksten. De identiteit zit in de
+  // BRON, niet in de formulering. I15 toetst dus de bron: host + pad zonder
+  // querystring, en voor Service-Public het actualiténummer — dat laatste is
+  // over alle feeds heen gelijk, ook als host én pad verschillen. De drempels
+  // en de normalisatie komen uit lib/tegels.js (dubbeleBerichten), zodat hier
+  // geen nieuwe drempel wordt bedacht.
+  //
+  // Alleen LIVE tegels, om dezelfde reden als bij I5: de archieftegel bewaart
+  // per definitie oudere exemplaren van verhalen die live een vervolg kregen.
+  const live = artikelen.filter(({ tegel }) => tegel.soort !== "archief" && tegel.id !== "archief");
+  for (const paar of dubbeleBerichten(live.map((r) => r.art))) {
+    const a = live[paar.a];
+    const b = live[paar.b];
+    meld(
+      "I15 dubbel-bericht",
+      `"${kort(a.art.titel)}" (${a.tegel.id}) en "${kort(b.art.titel)}" (${b.tegel.id}) ` +
+        `zijn hetzelfde bericht — zelfde ${paar.reden}: ${paar.bewijs}`
+    );
   }
 
   toonInventaris(data, artikelen, teksten, archief);

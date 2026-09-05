@@ -178,8 +178,8 @@
     </div>
   </div>
   <div class="tabs" role="tablist" aria-label="Reviewtool">
-    <button type="button" class="tab" role="tab" id="tabRedactie" data-tab="redactie" aria-selected="true" aria-controls="inhoud">Redactie actueel</button>
-    <button type="button" class="tab" role="tab" id="tabOverheid" data-tab="overheid" aria-selected="false" aria-controls="inhoud">Overheid (.gouv)</button>
+    <button type="button" class="tab" role="tab" id="tabRedactie" data-tab="redactie" aria-selected="true" tabindex="0" aria-controls="inhoud">Redactie actueel</button>
+    <button type="button" class="tab" role="tab" id="tabOverheid" data-tab="overheid" aria-selected="false" tabindex="-1" aria-controls="inhoud">Overheid (.gouv)</button>
   </div>
   <div id="melding"></div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
@@ -943,15 +943,41 @@
     // Een openstaand zoekpaneel hoort bij het bericht waar je vandaan komt.
     state.ifPaneel = null;
     tabKnoppen.forEach(function(k){
-      k.setAttribute("aria-selected", k.getAttribute("data-tab") === naam ? "true" : "false");
+      var isActief = k.getAttribute("data-tab") === naam;
+      k.setAttribute("aria-selected", isActief ? "true" : "false");
+      // ROVING TABINDEX: alleen het gekozen tabblad is een tabstop. Met Tab kom
+      // je de balk in en er weer uit; tussen de tabbladen loop je met de
+      // pijltjes. Dat is het tabpatroon, en het is ook wat /actueel al doet.
+      k.setAttribute("tabindex", isActief ? "0" : "-1");
     });
     inhoudEl.setAttribute("aria-labelledby", naam === "overheid" ? "tabOverheid" : "tabRedactie");
     // Pas bij het eerste bezoek ophalen; daarna blijft de lijst staan.
     if (naam === "overheid" && state.gouv.status === "leeg") laadGouv();
     else render();
   }
+  // De positie van het tabblad dat nu open staat.
+  function tabPositie(){
+    for (var i = 0; i < tabKnoppen.length; i += 1){
+      if (tabKnoppen[i].getAttribute("data-tab") === state.tab) return i;
+    }
+    return 0;
+  }
   tabKnoppen.forEach(function(k){
     k.addEventListener("click", function(){ zetTab(k.getAttribute("data-tab")); });
+    // Pijltjes verplaatsen de keuze én de focus; aan de randen blijft hij staan
+    // (geen wrap-around, net als de tabbalk op /actueel). Andere toetsen laten
+    // we met rust, anders sloop je Tab en de sneltoetsen van de browser.
+    k.addEventListener("keydown", function(e){
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      if (e.preventDefault) e.preventDefault();
+      var i = tabPositie();
+      i = e.key === "ArrowRight"
+        ? Math.min(tabKnoppen.length - 1, i + 1)
+        : Math.max(0, i - 1);
+      var doel = tabKnoppen[i];
+      zetTab(doel.getAttribute("data-tab"));
+      if (doel.focus) doel.focus();
+    });
   });
 
   function laad(behoudMelding){

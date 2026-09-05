@@ -1,5 +1,19 @@
-// /api/review — backend van de reviewtool. Toegang via geheim token in de
-// querystring (?token=...), vergeleken met de env-var REVIEW_TOKEN. Geen login.
+// /api/review — backend van de reviewtool. Toegang via een geheim token in de
+// header X-Review-Token, vergeleken met de env-var REVIEW_TOKEN. Geen login.
+//
+// UITSLUITEND DE HEADER, NIET DE QUERYSTRING. Een token in een URL belandt in de
+// browsergeschiedenis en in de serverlogs van elke aanvraag, en lift mee als
+// Referer naar elke externe link die op die pagina wordt aangeklikt — en /review
+// staat vol met links naar bronnen en naar Infofrankrijk. Een header doet dat
+// alle drie niet.
+//
+// De route heeft ?token= een tijd lang óók gelezen: eerst als enige weg, later
+// als terugval toen een geldig token werd geweigerd. Die oorzaak bleek elders te
+// liggen (een wachtwoordveld waar de wachtwoordmanager in schreef) en de
+// headerroute is inmiddels op productie bewezen, dus de terugval is eruit.
+// review.html haalt een token dat nog in zijn eigen URL staat wel op, bewaart
+// het en wist het uit de adresbalk — een oude bookmark blijft dus werken, maar
+// het token reist daarna alleen nog als header.
 // ---------------------------------------------------------------------------
 // GET  -> lijst met concepten + publicaties (token vereist).
 // POST -> { actie, id, tekst? } met actie:
@@ -67,16 +81,7 @@ import {
 //   3) als alternatief de header x-review-token.
 // Whitespace wordt getrimd (een geplakte env-waarde heeft vaak een \n aan het eind).
 function leesToken(req) {
-  let t = req && req.query ? req.query.token : undefined;
-  if (Array.isArray(t)) t = t[0];
-  if (!t && req && req.url) {
-    try {
-      t = new URL(req.url, "http://localhost").searchParams.get("token");
-    } catch {
-      t = null;
-    }
-  }
-  if (!t && req && req.headers) t = req.headers["x-review-token"];
+  const t = req && req.headers ? req.headers["x-review-token"] : undefined;
   return (t == null ? "" : String(t)).trim();
 }
 

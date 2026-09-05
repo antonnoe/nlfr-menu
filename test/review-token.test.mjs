@@ -99,17 +99,18 @@ test("alles rond localStorage staat in een try/catch", () => {
 
 // ---- 3. Waar het token wél en niet heen gaat --------------------------------
 
-test("verzoeken dragen het token langs allebei de wegen", () => {
-  // BEWUSTE STAP TERUG. In #27 ging het token alleen nog als header mee, omdat
-  // een querystring in de serverlogs van elke aanvraag terechtkomt. Daarna werd
-  // een geldig token geweigerd en was de redactie onbereikbaar. Zolang niet
-  // gemeten is wélke weg het in de praktijk deed, dragen ze het allebei —
-  // api/review.js leest ze allebei, dus dit sluit een hele klasse oorzaken uit
-  // zonder iets te breken. Deze toets legt de keuze vast, niet de smaak: gaat
-  // de querystring er ooit weer af, dan hoort dat een besluit te zijn.
+test("verzoeken dragen het token alleen als header, nooit in de URL", () => {
+  // Een token in een URL belandt in de browsergeschiedenis en in de serverlogs
+  // van elke aanvraag, en lift mee als Referer naar elke externe link die op
+  // /review wordt aangeklikt — en die pagina staat vol met bronlinks. De
+  // querystring stond er een tijd als terugval bij toen een geldig token werd
+  // geweigerd; die oorzaak lag elders en de headerroute is op productie
+  // bewezen, dus hij is eruit.
   assert.match(review, /"X-Review-Token": token/, "het token gaat als header mee");
-  assert.match(review, /"\/api\/review\?token=" \+ encodeURIComponent\(token\)/,
-    "en ook in de querystring, tot vaststaat dat de header het alleen ook doet");
+  assert.ok(
+    !/\/api\/review\?token=/.test(review),
+    "geen enkele verzoek-URL mag nog een ?token= dragen"
+  );
 });
 
 test("api/review.js accepteert die header ook echt", () => {
@@ -117,11 +118,12 @@ test("api/review.js accepteert die header ook echt", () => {
   assert.match(route, /req\.headers\["x-review-token"\]/);
 });
 
-test("de kandidatenlijst bouwt een geldige querystring", () => {
-  // apiGet krijgt "&deel=if&artikel=…" mee. Met het token weer vooraan sluit dat
-  // weer aan; zonder token vooraan moest het een "?" worden. Beide vormen zijn
-  // een keer misgegaan, vandaar dat de opgebouwde URL hier wordt nagerekend in
-  // plaats van dat er naar de code wordt gekeken.
+test("de kandidatenlijst bouwt een geldige querystring, zonder token", () => {
+  // apiGet krijgt "&deel=if&artikel=…" mee. Zonder token vooraan moet dat "&"
+  // een "?" worden, anders vraagt de pagina "/api/review&deel=if" op en ziet de
+  // server nooit een deel-parameter. Deze vorm is bij het heen-en-weer schuiven
+  // van het token twee keer misgegaan, vandaar dat de opgebouwde URL hier wordt
+  // nagerekend in plaats van dat er naar de code wordt gekeken.
   const begin = review.indexOf("function apiGet(extra){");
   const eind = review.indexOf("function bronnenHtml(");
   assert.ok(begin > 0 && eind > begin, "apiGet niet gevonden");
@@ -137,7 +139,7 @@ test("de kandidatenlijst bouwt een geldige querystring", () => {
     0
   );
   apiGet("&deel=if&artikel=o1");
-  assert.equal(gezien, "/api/review?token=geheim&deel=if&artikel=o1");
+  assert.equal(gezien, "/api/review?deel=if&artikel=o1");
 });
 
 // ---- 4. De zichtbaarheid van de Beheer-lade --------------------------------
@@ -278,12 +280,15 @@ test("een 401 op een willekeurig verzoek brengt het tokenvak terug", async () =>
   assert.equal(t.verborgen("tokenstand"), true, "en de standregel weg, want dit token is dood");
 });
 
-test("het token gaat mee als header, en ook in de verzoek-URL", async () => {
+test("het token gaat mee als header, en staat in geen enkele verzoek-URL", async () => {
+  // Ook als de PAGINA met ?token=… wordt geopend: dat token wordt opgepikt,
+  // bewaard en uit de adresbalk gewist, en reist daarna alleen nog als header.
+  // Een oude bookmark blijft dus werken zonder dat het token in de logs komt.
   const t = await start({ zoek: "?token=geheim" });
   assert.ok(t.gezien.length > 0, "er is iets opgehaald");
   for (const v of t.gezien) {
     assert.equal(v.headers["X-Review-Token"], "geheim", "de header hoort er altijd te zijn");
-    assert.match(v.url, /[?&]token=geheim/, "en zolang de oorzaak niet gemeten is, de querystring ook");
+    assert.ok(!/token=/.test(v.url), `token in de verzoek-URL: ${v.url}`);
   }
 });
 

@@ -315,16 +315,15 @@
   function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
   function melding(tekst, soort){ meldingEl.innerHTML = tekst ? '<div class="melding '+(soort||"info")+'">'+esc(tekst)+'</div>' : ""; }
 
-  // HET TOKEN GAAT LANGS ALLEBEI DE WEGEN: querystring én header.
+  // HET TOKEN GAAT ALLEEN ALS HEADER MEE, nooit in de URL. Een token in een URL
+  // belandt in de browsergeschiedenis en in de serverlogs van elke aanvraag, en
+  // lift mee als Referer naar elke externe link die je op deze pagina aanklikt —
+  // en deze pagina staat vol met links naar bronnen en naar Infofrankrijk.
   //
-  // In #27 haalde ik de querystring weg, omdat een token in de URL in de
-  // serverlogs van elke aanvraag terechtkomt. Dat argument klopt nog steeds.
-  // Maar daarna werd een geldig token geweigerd en was de redactie onbereikbaar,
-  // en dan gaat een werkende redactie voor een nettere logregel. Zolang niet
-  // gemeten is wélke weg het in de praktijk deed, dragen ze het allebei;
-  // api/review.js leest ze allebei (leesToken), dus dit kan geen kwaad en sluit
-  // één hele klasse oorzaken uit. Terugdraaien mag zodra vaststaat dat de header
-  // het alleen ook doet.
+  // De querystring stond er een tijd als terugval bij, toen een geldig token
+  // werd geweigerd. Die oorzaak lag elders (een wachtwoordveld waar de
+  // wachtwoordmanager in schreef) en de headerroute is op productie bewezen,
+  // dus de terugval is eruit. api/review.js leest ?token= niet meer.
   // ÉÉN PLEK WAAR EEN 401 WORDT OPGEMERKT, en dus op elk verzoek — niet alleen
   // op de eerste GET. Wordt REVIEW_TOKEN in Vercel gewisseld terwijl deze
   // pagina openstaat, dan liep je anders bij elke knop tegen een foutmelding
@@ -345,7 +344,7 @@
   }
 
   function api(method, body){
-    var url = "/api/review?token=" + encodeURIComponent(token);
+    var url = "/api/review";
     var opties = { method: method, headers: { "X-Review-Token": token } };
     if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
     var generatie = tokenGeneratie;
@@ -354,7 +353,10 @@
 
   // GET met extra querystring (de kandidatenlijst; zie ?deel=if in api/review.js).
   function apiGet(extra){
-    var url = "/api/review?token=" + encodeURIComponent(token) + (extra || "");
+    // `extra` komt binnen als "&deel=if&…"; zonder token ervoor moet dat een "?"
+    // worden, anders vraagt de pagina "/api/review&deel=if" op en ziet de server
+    // nooit een deel-parameter.
+    var url = "/api/review" + (extra ? "?" + String(extra).replace(/^&/, "") : "");
     var generatie = tokenGeneratie;
     return fetch(url, { headers: { "X-Review-Token": token } })
       .then(function(r){ return verwerkAntwoord(r, generatie); });

@@ -262,6 +262,17 @@
     token = nieuw || "";
     bewaarToken(token);
     tokenGeneratie += 1;
+    // OOK DE OPGEHAALDE GEGEVENS WEG. Het scherm leegmaken is niet genoeg: de
+    // concepten, publicaties en overheidsberichten stonden nog in `state`, en
+    // render() wordt vanaf een stuk of zes plekken aangeroepen (een tabwissel,
+    // het Infofrankrijk-paneel). Eén zo'n aanroep zou de zojuist gewiste
+    // redactionele inhoud zo weer terugzetten. Een tokenwissel is een nieuwe
+    // sessie; wat bij de vorige hoorde gaat mee.
+    state.concepten = []; state.index = 0; state.duplicaten = 0; state.totaal = 0;
+    state.publicaties = []; state.overheid = []; state.bronUrlWeigeringen = [];
+    state.verwijzingen = {}; state.nakijken = []; state.bijnaVerlopen = [];
+    state.ifIndex = null; state.ifPaneel = null;
+    state.gouv = { status: "leeg", tegels: [], fout: null, gebakkenOp: null };
     tekenToken();
   }
   var params = new URLSearchParams(location.search);

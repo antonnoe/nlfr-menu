@@ -33,7 +33,10 @@ const menu = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 function adminLinks() {
   const begin = menu.indexOf("var ADMIN_LINKS =");
   const eind = menu.indexOf("var PERKS");
-  assert.ok(begin > 0 && eind > begin, "ADMIN_LINKS niet gevonden in index.html");
+  // >= 0, niet > 0: indexOf geeft 0 terug als het anker vooraan staat, en dan is
+  // het wél gevonden. Onwaarschijnlijk in een HTML-bestand, maar een toets die
+  // "niet gevonden" zegt over iets dat er staat, stuurt de verkeerde kant op.
+  assert.ok(begin >= 0 && eind > begin, "ADMIN_LINKS niet gevonden in index.html");
   // eslint-disable-next-line no-new-func
   return new Function("U", `${menu.slice(begin, eind)}; return ADMIN_LINKS;`)(
     (pad) => `https://www.nederlanders.fr${pad}`
@@ -41,8 +44,9 @@ function adminLinks() {
 }
 
 test("de Beheer-lade heeft een regel naar /review, in een nieuw tabblad", () => {
-  const regel = adminLinks().find((l) => l[1] === "/review");
-  assert.ok(regel, `geen regel naar /review in ADMIN_LINKS: ${JSON.stringify(adminLinks())}`);
+  const links = adminLinks();
+  const regel = links.find((l) => l[1] === "/review");
+  assert.ok(regel, `geen regel naar /review in ADMIN_LINKS: ${JSON.stringify(links)}`);
   assert.equal(regel[0], "Redactie — Actueel", "met dit label");
   assert.equal(regel[2], "_blank", "en in een nieuw tabblad");
 });
@@ -346,4 +350,30 @@ test("een late 401 wist een net ingevuld nieuw token niet", async () => {
   // En het nieuwe token gaat ook echt mee met het verzoek dat erna vertrok.
   const laatste = t.gezien[t.gezien.length - 1];
   assert.equal(laatste.headers["X-Review-Token"], "nieuw-en-geldig");
+});
+
+test("na het vergeten van het token is ook de opgehaalde inhoud weg", async () => {
+  // Het scherm leegmaken is niet genoeg: de gegevens stonden nog in `state`, en
+  // render() wordt vanaf meerdere plekken aangeroepen. Eén tabwissel zou de
+  // zojuist gewiste redactionele inhoud zo weer terugzetten.
+  const t = await start({
+    zoek: "?token=geheim",
+    body: { ok: true, concepten: [{ id: "c1", kop: "Vertrouwelijke kop", tekst: "Nog niet gepubliceerd." }] },
+  });
+  assert.match(t.haal("inhoud").innerHTML, /Vertrouwelijke kop/, "eerst staat het er wel");
+
+  t.haal("tokenweg").klik();
+  assert.equal(t.haal("inhoud").innerHTML, "", "het scherm is leeg");
+
+  // Nu heen en weer over de tabbladen. Dat roept render() aan zonder dat er een
+  // nieuw verzoek nodig is, en de tweede wissel tekent de conceptenlijst — dus
+  // precies het pad dat de gewiste gegevens terug op het scherm zou zetten.
+  // (Alleen naar Overheid gaan is niet genoeg: dat tabblad toont geen concepten,
+  // en dan slaagt deze toets ook zonder de opruiming.)
+  t.haal("tabOverheid").klik();
+  for (let i = 0; i < 8; i += 1) await Promise.resolve();
+  t.haal("tabRedactie").klik();
+  for (let i = 0; i < 8; i += 1) await Promise.resolve();
+  assert.ok(!/Vertrouwelijke kop/.test(t.haal("inhoud").innerHTML),
+    `de gewiste inhoud staat terug op het scherm: ${t.haal("inhoud").innerHTML.slice(0, 160)}`);
 });

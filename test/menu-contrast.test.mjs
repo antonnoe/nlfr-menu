@@ -47,8 +47,26 @@ test("de contrastformule klopt met de bekende ijkpunten uit WCAG", () => {
 
 // ---- De kleuren uit index.html zelf lezen ----------------------------------
 // Uit de echte stylesheet, niet overgetypt: een test op een kopie blijft groen
-// terwijl het menu verandert.
-const VARIABELEN = { "--brand": "#800000", "--brand-dark": "#5c0f0f", "--actueel": "#2f6b3a" };
+// terwijl het menu verandert. Dat geldt ook voor de variabelen zelf: stonden
+// die hier overgetypt, dan bleef een lichter gemaakte --brand onopgemerkt,
+// want de test zou het oude #800000 blijven invullen. Ze komen dus uit :root.
+const VARIABELEN = (() => {
+  const m = css.match(/:root \{([^}]*)\}/);
+  assert.ok(m, "geen :root-regel gevonden in index.html");
+  const uit = {};
+  for (const [, naam, waarde] of m[1].matchAll(/(--[\w-]+):\s*([^;]+)/g)) {
+    uit[naam] = waarde.trim();
+  }
+  return uit;
+})();
+
+test("de kleurvariabelen komen uit :root en zijn echte hexwaarden", () => {
+  // Zonder deze toets kan kleurVan() stilletjes undefined teruggeven zodra een
+  // variabele wordt hernoemd, en dan rekent de rest tegen niets.
+  for (const naam of ["--brand", "--brand-dark", "--actueel"]) {
+    assert.match(VARIABELEN[naam] || "", /^#[0-9a-f]{3,6}$/i, `${naam} ontbreekt of is geen hex`);
+  }
+});
 
 function kleurVan(selector) {
   // De regel begint bij de selector en loopt tot de sluitaccolade.

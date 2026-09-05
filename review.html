@@ -243,6 +243,27 @@
   function bewaarToken(t){
     try { if (t) localStorage.setItem(TOKENSLEUTEL, t); else localStorage.removeItem(TOKENSLEUTEL); } catch(e){}
   }
+  // GENERATIETELLER. Elk verzoek onthoudt onder welke generatie het de deur uit
+  // ging; wisselt het token intussen, dan is het antwoord verouderd en wordt het
+  // genegeerd. Twee races die dat afvangt, allebei uit de review van #28:
+  //
+  //   1. Je klikt "Token vergeten" terwijl de eerste GET nog onderweg is. Dat
+  //      verzoek draagt nog de oude, geldige header; zonder deze teller zou het
+  //      antwoord daarna gewoon render() aanroepen en het scherm weer vol
+  //      redactionele gegevens zetten — precies wat je met die knop wilde
+  //      voorkomen op een geleende computer.
+  //   2. Twee verzoeken met een verlopen token overlappen. De eerste 401 opent
+  //      het vak, jij tikt een nieuw en geldig token in, en dán komt de tweede
+  //      401 van het oude verzoek binnen en wist jouw nieuwe token weer.
+  var tokenGeneratie = 0;
+  // De ENIGE plek die `token` verandert, zodat teller, opslag en weergave nooit
+  // uit elkaar kunnen lopen.
+  function zetToken(nieuw){
+    token = nieuw || "";
+    bewaarToken(token);
+    tokenGeneratie += 1;
+    tekenToken();
+  }
   var params = new URLSearchParams(location.search);
   var uitUrl = (params.get("token") || "").trim();
   var token = uitUrl || bewaardToken();
@@ -286,13 +307,12 @@
   // De STATUS reist mee, want niet elke fout is een tokenfout: bij 503 (geen KV)
   // is er niets mis met het token en zou opnieuw vragen de redacteur op een
   // dwaalspoor zetten.
-  function verwerkAntwoord(r){
+  function verwerkAntwoord(r, generatie){
     return r.json().catch(function(){ return {}; }).then(function(j){
-      if (r.status === 401){
-        token = "";
-        bewaarToken("");
-        tekenToken();
-      }
+      // Verouderd antwoord: het token is gewisseld sinds dit verzoek vertrok.
+      // Niets renderen, en vooral: het huidige token NIET wissen.
+      if (generatie !== tokenGeneratie) return { verouderd: true, ok: false, status: 0, data: {} };
+      if (r.status === 401) zetToken("");
       return { ok: r.ok, status: r.status, data: j };
     });
   }
@@ -301,13 +321,16 @@
     var url = "/api/review";
     var opties = { method: method, headers: { "X-Review-Token": token } };
     if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
-    return fetch(url, opties).then(verwerkAntwoord);
+    var generatie = tokenGeneratie;
+    return fetch(url, opties).then(function(r){ return verwerkAntwoord(r, generatie); });
   }
 
   // GET met extra querystring (de kandidatenlijst; zie ?deel=if in api/review.js).
   function apiGet(extra){
     var url = "/api/review" + (extra ? "?" + String(extra).replace(/^&/, "") : "");
-    return fetch(url, { headers: { "X-Review-Token": token } }).then(verwerkAntwoord);
+    var generatie = tokenGeneratie;
+    return fetch(url, { headers: { "X-Review-Token": token } })
+      .then(function(r){ return verwerkAntwoord(r, generatie); });
   }
 
   function bronnenHtml(bronnen){
@@ -810,6 +833,7 @@
     if (ontdubbelBtn) ontdubbelBtn.addEventListener("click", function(){
       ontdubbelBtn.disabled = true; ontdubbelBtn.textContent = "…";
       api("POST", { actie: "ontdubbel" }).then(function(res){
+        if (res.verouderd) return;
         if (res.ok && res.data.ok){ melding("Duplicaten verwijderd: "+res.data.verwijderd+". Over: "+res.data.over+".", "info"); laad(); }
         else { melding((res.data&&res.data.fout)||"Mislukt.", "fout"); ontdubbelBtn.disabled=false; }
       });
@@ -827,6 +851,7 @@
       if (!window.confirm("De wachtrij met "+state.totaal+" persconcepten wissen?\n\nAlleen nog niet gepubliceerde persconcepten verdwijnen. Gepubliceerde artikelen, de overheidsberichten (live én archief) en de verenigingsitems blijven ongewijzigd.")) return;
       wisAllesBtn.disabled = true; wisAllesBtn.textContent = "…";
       api("POST", { actie: "wis-alles" }).then(function(res){
+        if (res.verouderd) return;
         if (res.ok && res.data.ok){
           melding("Persconcepten gewist ("+res.data.verwijderd+")."+(res.data.overgeslagen?" Overgeslagen (geen persconcept): "+res.data.overgeslagen+".":""), "info");
           laad();
@@ -850,6 +875,7 @@
           antwoord: btn.getAttribute("data-keten"),
           soort: btn.getAttribute("data-soort"),
         }).then(function(res){
+          if (res.verouderd) return;
           if (res.ok && res.data.ok){
             melding(res.data.keten === "geen"
               ? "Geen keten gelegd."
@@ -879,6 +905,7 @@
       p.laden = true; p.fout = null; render();
       apiGet("&deel=if&artikel=" + encodeURIComponent(p.id) + (p.zoek ? "&zoek=" + encodeURIComponent(p.zoek) : ""))
         .then(function(res){
+          if (res.verouderd) return;
           var q = state.ifPaneel;
           if (!q || q.id !== p.id) return; // paneel is intussen gesloten
           q.laden = false;
@@ -894,6 +921,7 @@
     // het paneel open blijft staan en de redacteur door kan met de volgende.
     function ifActie(body, gelukt){
       api("POST", body).then(function(res){
+        if (res.verouderd) return;
         if (res.ok && res.data.ok){
           melding(gelukt, "info");
           laad(true);
@@ -957,6 +985,7 @@
         var ifId = Number(btn.getAttribute("data-nakijk-klaar"));
         btn.disabled = true;
         api("POST", { actie: "nakijken-klaar", id: String(ifId), ifId: ifId }).then(function(res){
+          if (res.verouderd) return;
           if (res.ok && res.data.ok){ melding("Afgevinkt.", "info"); laad(true); }
           else { melding((res.data && res.data.fout) || "Mislukt.", "fout"); btn.disabled = false; }
         }).catch(function(){ melding("Netwerkfout.", "fout"); btn.disabled = false; });
@@ -976,6 +1005,7 @@
         var oudLabel = btn.textContent;
         btn.disabled = true; btn.textContent = "…";
         api("POST", body).then(function(res){
+          if (res.verouderd) return;
           if (res.ok && res.data.ok){
             // BEKEND RISICO, HARDOP GEZEGD. Het artikel is meteen uit de
             // voorgebakken pagina (api/review.js gooit de momentopname weg),
@@ -1129,18 +1159,18 @@
     var v = document.getElementById("tokenveld");
     var t = (v && v.value || "").trim();
     if (!t){ melding("Vul eerst het token in.", "fout"); return; }
-    token = t; bewaarToken(t);
     if (v) v.value = "";
-    tekenToken();
+    zetToken(t);
     laad();
   }
   var tokenokEl = document.getElementById("tokenok");
   if (tokenokEl) tokenokEl.addEventListener("click", bewaarUitVeld);
   var tokenwegEl = document.getElementById("tokenweg");
   if (tokenwegEl) tokenwegEl.addEventListener("click", function(){
-    token = ""; bewaarToken("");
+    // zetToken hoogt de generatie op, waarmee een verzoek dat NU nog onderweg is
+    // zijn antwoord niet meer op het scherm krijgt.
+    zetToken("");
     melding("Token vergeten. Deze browser heeft geen toegang meer.", "info");
-    tekenToken();
   });
   var tokenveldEl = document.getElementById("tokenveld");
   // Enter roept dezelfde functie aan als de knop, niet de knop zelf: een
@@ -1157,6 +1187,11 @@
       return;
     }
     api("GET").then(function(res){
+      // Verouderd: het token is gewisseld terwijl dit verzoek onderweg was.
+      // Niets tonen — anders vult een antwoord dat nog met het OUDE token is
+      // opgehaald het scherm alsnog met redactionele gegevens, nadat de
+      // redacteur net op "Token vergeten" heeft geklikt.
+      if (res.verouderd) return;
       if (res.ok && res.data.ok){
         if (!behoudMelding) melding("");
         state.concepten = res.data.concepten || [];

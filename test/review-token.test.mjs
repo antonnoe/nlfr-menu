@@ -118,14 +118,15 @@ test("de kandidatenlijst bouwt een geldige querystring zonder token", () => {
   const eind = review.indexOf("function bronnenHtml(");
   assert.ok(begin > 0 && eind > begin, "apiGet niet gevonden");
   const maakApiGet = new Function(
-    "fetch", "token", "verwerkAntwoord",
+    "fetch", "token", "verwerkAntwoord", "tokenGeneratie",
     `${review.slice(begin, eind)}; return apiGet;`
   );
   let gezien = "";
   const apiGet = maakApiGet(
     (u) => { gezien = u; return Promise.resolve({ ok: true, status: 200 }); },
     "geheim",
-    (r) => Promise.resolve({ ok: r.ok, status: r.status, data: {} })
+    (r) => Promise.resolve({ ok: r.ok, status: r.status, data: {} }),
+    0
   );
   apiGet("&deel=if&artikel=o1");
   assert.equal(gezien, "/api/review?deel=if&artikel=o1");
@@ -204,12 +205,18 @@ function maakDom(zonder = []) {
   };
 }
 
-async function start({ zoek = "", status = 200, body = { ok: true, concepten: [] }, zonder = [] } = {}) {
+async function start({ zoek = "", status = 200, body = { ok: true, concepten: [] }, zonder = [], hangend = false } = {}) {
   const { document, haal } = maakDom(zonder);
   const gezien = [];
+  // Met `hangend` blijft elk verzoek open staan tot de test hem zelf afwikkelt.
+  // Dat is de enige manier om een race na te spelen: het antwoord komt dan
+  // aantoonbaar ná de handeling die ertussendoor plaatsvindt.
+  const open = [];
   const fetchStub = (url, opties) => {
     gezien.push({ url: String(url), headers: (opties && opties.headers) || {} });
-    return Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
+    const antwoord = { ok: status < 400, status, json: () => Promise.resolve(body) };
+    if (!hangend) return Promise.resolve(antwoord);
+    return new Promise((res) => open.push((over) => res({ ...antwoord, ...(over || {}) })));
   };
   const script = review.slice(
     review.lastIndexOf("<script>") + "<script>".length,
@@ -225,7 +232,12 @@ async function start({ zoek = "", status = 200, body = { ok: true, concepten: []
     undefined // geen localStorage: elke aanroep hoort in een try/catch te zitten
   );
   for (let i = 0; i < 8; i += 1) await Promise.resolve();
-  return { haal, gezien, verborgen: (id) => haal(id).hasAttribute("hidden") };
+  const leegLoop = async () => { for (let i = 0; i < 8; i += 1) await Promise.resolve(); };
+  const wikkelAf = async (over) => { open.splice(0).forEach((fn) => fn(over)); await leegLoop(); };
+  // Alleen het OUDSTE openstaande verzoek afwikkelen. Nodig om een laat antwoord
+  // na te spelen zonder de verzoeken die daarna zijn vertrokken mee te nemen.
+  const wikkelEerste = async (over) => { const fn = open.shift(); if (fn) fn(over); await leegLoop(); };
+  return { haal, gezien, wikkelAf, wikkelEerste, verborgen: (id) => haal(id).hasAttribute("hidden") };
 }
 
 test("zonder token: het invoervak staat open en de standregel niet", async () => {
@@ -279,4 +291,59 @@ test("Enter in het tokenveld werkt ook zonder de knop ernaast", async () => {
   // En hij doet ook echt wat de knop zou doen: het token is aangenomen.
   assert.equal(t.verborgen("tokenstand"), false, "de standregel hoort nu te staan");
   assert.equal(t.verborgen("tokenvak"), true, "en het invoervak weg");
+});
+
+// ---- De twee races -----------------------------------------------------------
+
+test('"Token vergeten" tijdens een lopend verzoek vult het scherm niet alsnog', async () => {
+  // P1 uit de review van #28. Het verzoek dat nog onderweg is draagt de OUDE,
+  // geldige header. Zonder een generatieteller zou het antwoord daarna gewoon
+  // render() aanroepen en de kaarten terugzetten — nadat de redacteur op een
+  // geleende computer net zijn toegang had opgeheven. Dat is de knop precies
+  // waardeloos maken.
+  const t = await start({
+    zoek: "?token=geheim",
+    hangend: true,
+    body: { ok: true, concepten: [{ id: "c1", kop: "Geheim concept", tekst: "Vertrouwelijk." }] },
+  });
+  assert.ok(t.gezien.length > 0, "het eerste verzoek is vertrokken");
+
+  t.haal("tokenweg").klik();
+  assert.equal(t.verborgen("tokenvak"), false, "het invoervak staat open");
+  assert.equal(t.haal("inhoud").innerHTML, "", "en het scherm is leeg");
+
+  // Nú pas komt het antwoord van vóór de klik binnen.
+  await t.wikkelAf();
+  assert.equal(t.haal("inhoud").innerHTML, "", `het scherm hoort leeg te blijven: ${t.haal("inhoud").innerHTML.slice(0, 120)}`);
+  assert.equal(t.verborgen("tokenvak"), false, "en het invoervak open");
+  // En de melding blijft staan waar de redacteur hem achterliet. Zonder de
+  // vangregel in laad() zou het late antwoord hier "Toegang geweigerd" van
+  // maken: een foutmelding voor een handeling die precies deed wat hij moest.
+  // Zonder déze regel slaagt de test hierboven ook zonder die vangregel, want
+  // het scherm wordt dan langs een andere weg leeggemaakt.
+  assert.match(t.haal("melding").innerHTML, /Token vergeten/,
+    `de melding is overschreven door een verouderd antwoord: ${t.haal("melding").innerHTML}`);
+});
+
+test("een late 401 wist een net ingevuld nieuw token niet", async () => {
+  // P2 uit dezelfde review. Twee verzoeken met een verlopen token overlappen:
+  // de eerste 401 opent het vak, de redacteur tikt een nieuw en geldig token in,
+  // en dán komt de tweede 401 van het oude verzoek binnen. Zonder de teller
+  // wist die het zojuist ingevulde token weer.
+  const t = await start({ zoek: "?token=verlopen", hangend: true, status: 401, body: { ok: false, fout: "Ongeldig of ontbrekend token." } });
+
+  const veld = t.haal("tokenveld");
+  veld.value = "nieuw-en-geldig";
+  t.haal("tokenok").klik();
+  assert.equal(t.verborgen("tokenstand"), false, "het nieuwe token is aangenomen");
+
+  // De late 401 van het verzoek met het OUDE token. Alleen dát verzoek; het
+  // verzoek dat ná het nieuwe token vertrok blijft openstaan, net als in het echt.
+  await t.wikkelEerste();
+  assert.equal(t.verborgen("tokenstand"), false, "het nieuwe token hoort te blijven staan");
+  assert.equal(t.verborgen("tokenvak"), true, "en er hoort niet opnieuw om gevraagd te worden");
+
+  // En het nieuwe token gaat ook echt mee met het verzoek dat erna vertrok.
+  const laatste = t.gezien[t.gezien.length - 1];
+  assert.equal(laatste.headers["X-Review-Token"], "nieuw-en-geldig");
 });

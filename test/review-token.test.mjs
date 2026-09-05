@@ -480,12 +480,21 @@ test("de standregel en de weghaalknop halen WCAG AA op wit", () => {
   assert.equal(Math.round(contrast("#000000", "#ffffff")), 21);
   assert.ok(Math.abs(contrast("#767676", "#ffffff") - 4.54) < 0.02);
 
+  // Eerst de stylesheet eruit snijden, en pas daarna zoeken. Zonder die stap
+  // kan ".tokenweg {" ook uit de markup of het script komen — een sjabloon dat
+  // toevallig zo begint, en de toets meet dan iets anders dan de stijl. Zelfde
+  // aanpak als test/reviewtool.test.mjs en test/menu-contrast.test.mjs.
+  const a = review.indexOf("<style>");
+  const b = review.indexOf("</style>");
+  assert.ok(a >= 0 && b > a, "geen stylesheet gevonden in review.html");
+  const stijl = review.slice(a, b);
+
   for (const selector of [".tokenstand", ".tokenweg"]) {
-    const start = review.indexOf(selector + " {");
-    assert.ok(start >= 0, `regel niet gevonden in review.html: ${selector}`);
-    const eind = review.indexOf("}", start);
+    const start = stijl.indexOf(selector + " {");
+    assert.ok(start >= 0, `regel niet gevonden in de stylesheet van review.html: ${selector}`);
+    const eind = stijl.indexOf("}", start);
     assert.ok(eind > start, `geen sluitaccolade na ${selector}`);
-    const m = review.slice(start, eind).match(/(?:^|[;{\s])color:\s*(#[0-9a-f]{3,6})/i);
+    const m = stijl.slice(start, eind).match(/(?:^|[;{\s])color:\s*(#[0-9a-f]{3,6})/i);
     assert.ok(m, `geen kleur in de regel voor ${selector}`);
     const verhouding = contrast(m[1], "#ffffff");
     assert.ok(verhouding >= 4.5, `${selector} staat op ${m[1]}, ${verhouding.toFixed(2)}:1 op wit`);

@@ -34,8 +34,23 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const HTML = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
-const CSS = HTML.slice(HTML.indexOf("<style>"), HTML.indexOf("</style>"));
-const SCRIPT = HTML.slice(HTML.indexOf("<script"));
+
+// De grenzen eerst opzoeken en dan pas snijden. indexOf geeft -1 als de
+// markering weg is, en slice(-1) levert dan het laatste teken van het bestand:
+// een lege stylesheet en een leeg script, waarop elke zoekactie hieronder niets
+// vindt en alle labeltoetsen stil groen blijven. Dat is geen theoretisch geval,
+// het is deze sessie al twee keer in andere testbestanden gebeurd.
+function snij(van, tot) {
+  const a = HTML.indexOf(van);
+  assert.ok(a >= 0, `markering niet gevonden in index.html: ${van}`);
+  if (tot === undefined) return HTML.slice(a);
+  const b = HTML.indexOf(tot, a);
+  assert.ok(b > a, `eindmarkering niet gevonden in index.html: ${tot}`);
+  return HTML.slice(a, b);
+}
+
+const CSS = snij("<style>", "</style>");
+const SCRIPT = snij("<script");
 
 // De maten die in de browser zijn nagemeten.
 const ITEM_PX = 15;

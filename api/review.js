@@ -75,11 +75,14 @@ import {
   IF_MAX_LEEFTIJD_MAANDEN,
 } from "../lib/config.js";
 
-// Leest het token robuust, ongeacht runtime-eigenaardigheden:
-//   1) req.query.token als de runtime die vult (Vercel Node vult dit normaal);
-//   2) anders zelf uit req.url parsen (werkt altijd, ook als req.query leeg is);
-//   3) als alternatief de header x-review-token.
-// Whitespace wordt getrimd (een geplakte env-waarde heeft vaak een \n aan het eind).
+// Het token komt uit ÉÉN bron: de header x-review-token. Node maakt binnenkomende
+// headernamen zelf kleine letters, dus de client mag hem als X-Review-Token
+// sturen. Er is bewust geen tweede bron meer — waarom niet staat bovenaan dit
+// bestand.
+//
+// Witruimte wordt getrimd. Een token dat uit een wachtwoordmanager of uit de
+// Vercel-interface wordt geplakt draagt geregeld een spatie of een regelovergang
+// mee, en dat is geen reden om iemand buiten te sluiten.
 function leesToken(req) {
   const t = req && req.headers ? req.headers["x-review-token"] : undefined;
   return (t == null ? "" : String(t)).trim();

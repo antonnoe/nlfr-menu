@@ -85,7 +85,14 @@ test("de route leest de querystring nergens meer", async () => {
   // tweede, ongebruikte leesplek op als die ooit terugkomt.
   const { readFileSync } = await import("node:fs");
   const bron = readFileSync(new URL("../api/review.js", import.meta.url), "utf8");
-  const leesToken = bron.slice(bron.indexOf("function leesToken(req)"), bron.indexOf("function tokenGeldig"));
+  // Eerst kijken of de ankers er zijn. Zonder die controle levert een hernoemde
+  // functie een willekeurige slice op, en dan slagen de asserts hieronder om de
+  // verkeerde reden — precies de fout die deze toets moet uitsluiten.
+  const begin = bron.indexOf("function leesToken(req)");
+  const eind = bron.indexOf("function tokenGeldig");
+  assert.ok(begin >= 0, "leesToken niet gevonden in api/review.js — hernoemd?");
+  assert.ok(eind > begin, "tokenGeldig niet gevonden ná leesToken — hernoemd of verplaatst?");
+  const leesToken = bron.slice(begin, eind);
   assert.ok(!/req\.query/.test(leesToken), `leesToken raakt req.query nog aan:\n${leesToken}`);
   assert.ok(!/searchParams/.test(leesToken), `leesToken parst de URL nog:\n${leesToken}`);
   assert.match(leesToken, /req\.headers\["x-review-token"\]/, "de header blijft de bron");

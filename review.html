@@ -71,6 +71,9 @@
   .tokenvak input { width:100%; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:14px; padding:10px 12px;
     border:1px solid rgba(128,0,0,.25); border-radius:9px; min-height:44px; }
   .tokenvak .hint { font-size:12.5px; color:#8a7f7c; margin:8px 0 0; }
+  .tokenstand { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;
+    font-size:12.5px; color:#8a7f7c; }
+  .tokenstand[hidden] { display:none; }
 
   .kaart { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 10px 30px -24px rgba(90,0,0,.5); }
   .kaart.pub { border-color:rgba(47,107,58,.4); background:rgba(47,107,58,.05); }
@@ -202,8 +205,16 @@
       browsergeschiedenis en in serverlogs terecht. Daarna kun je hier komen via Beheer in het menu, zonder token in de link.</p>
     <div class="knoppen">
       <button type="button" class="actie pubbtn" id="tokenok">Bewaren</button>
-      <button type="button" class="actie wegbtn" id="tokenweg">Token vergeten</button>
     </div>
+  </div>
+  <!-- BLIJFT STAAN ZOLANG DEZE BROWSER EEN TOKEN HEEFT. De weghaalknop zat eerst
+       in het vak hierboven, en dat vak verbergt zichzelf zodra je binnen bent —
+       waarmee de enige manier om je toegang op te heffen onbereikbaar werd. Op
+       een geleende of gedeelde computer blijft het token dan achter, ook nadat
+       je op Ning uitlogt. Eén regel, altijd zichtbaar, is de prijs daarvoor. -->
+  <div class="tokenstand" id="tokenstand" hidden>
+    <span>Het beheertoken is in deze browser bewaard.</span>
+    <button type="button" class="ifknop klein" id="tokenweg">Token vergeten</button>
   </div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
 
@@ -266,23 +277,37 @@
   // Het token gaat als HEADER mee, niet in de querystring: zo staat hij niet in
   // de serverlogs van elke aanvraag. api/review.js leest allebei (leesToken),
   // dus een oude bookmark met ?token=… blijft ook werken.
+  // ÉÉN PLEK WAAR EEN 401 WORDT OPGEMERKT, en dus op elk verzoek — niet alleen
+  // op de eerste GET. Wordt REVIEW_TOKEN in Vercel gewisseld terwijl deze
+  // pagina openstaat, dan liep je anders bij elke knop tegen een foutmelding
+  // aan zonder een plek om het nieuwe token in te vullen; alleen herladen hielp.
+  // Het dode token gaat meteen weg, zodat de stand ondubbelzinnig is.
+  //
+  // De STATUS reist mee, want niet elke fout is een tokenfout: bij 503 (geen KV)
+  // is er niets mis met het token en zou opnieuw vragen de redacteur op een
+  // dwaalspoor zetten.
+  function verwerkAntwoord(r){
+    return r.json().catch(function(){ return {}; }).then(function(j){
+      if (r.status === 401){
+        token = "";
+        bewaarToken("");
+        tekenToken();
+      }
+      return { ok: r.ok, status: r.status, data: j };
+    });
+  }
+
   function api(method, body){
     var url = "/api/review";
     var opties = { method: method, headers: { "X-Review-Token": token } };
     if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
-    return fetch(url, opties).then(function(r){
-      // De STATUS gaat mee: 401 (token fout) vraagt om het tokenvak, 503 (KV
-      // niet geconfigureerd) juist niet — dan is er niets mis met het token en
-      // zou opnieuw vragen de redacteur op een dwaalspoor zetten.
-      return r.json().then(function(j){ return { ok: r.ok, status: r.status, data: j }; });
-    });
+    return fetch(url, opties).then(verwerkAntwoord);
   }
 
   // GET met extra querystring (de kandidatenlijst; zie ?deel=if in api/review.js).
   function apiGet(extra){
     var url = "/api/review" + (extra ? "?" + String(extra).replace(/^&/, "") : "");
-    return fetch(url, { headers: { "X-Review-Token": token } })
-      .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, data: j }; }); });
+    return fetch(url, { headers: { "X-Review-Token": token } }).then(verwerkAntwoord);
   }
 
   function bronnenHtml(bronnen){
@@ -1075,44 +1100,64 @@
   });
 
   // ---- Het tokenvak ---------------------------------------------------------
+  // TWEE STANDEN, ALTIJD PRECIES ÉÉN ZICHTBAAR. Zonder token het invoervak;
+  // mét token één regel die zegt dat deze browser er een heeft, met de knop om
+  // hem weg te gooien. Die knop hoort NIET in het invoervak: dat verbergt
+  // zichzelf zodra je binnen bent, en dan is de enige manier om je toegang op
+  // te heffen onbereikbaar.
   var tokenvakEl = document.getElementById("tokenvak");
+  var tokenstandEl = document.getElementById("tokenstand");
   var tabsEl = document.querySelector(".tabs");
-  function toonTokenvak(open){
-    if (tokenvakEl) { if (open) tokenvakEl.removeAttribute("hidden"); else tokenvakEl.setAttribute("hidden", ""); }
-    // De tabbladen zeggen niets zolang er geen toegang is.
-    if (tabsEl) tabsEl.hidden = open;
-    if (open){ inhoudEl.innerHTML = ""; var v = document.getElementById("tokenveld"); if (v) v.focus(); }
+  function zetVerborgen(el, verborgen){
+    if (!el) return;
+    if (verborgen) el.setAttribute("hidden", ""); else el.removeAttribute("hidden");
   }
-  var tokenokEl = document.getElementById("tokenok");
-  if (tokenokEl) tokenokEl.addEventListener("click", function(){
+  function tekenToken(){
+    var heeft = Boolean(token);
+    zetVerborgen(tokenvakEl, heeft);
+    zetVerborgen(tokenstandEl, !heeft);
+    // De tabbladen zeggen niets zolang er geen toegang is.
+    if (tabsEl) tabsEl.hidden = !heeft;
+    if (!heeft){
+      inhoudEl.innerHTML = "";
+      var v = document.getElementById("tokenveld");
+      if (v) v.focus();
+    }
+  }
+
+  function bewaarUitVeld(){
     var v = document.getElementById("tokenveld");
     var t = (v && v.value || "").trim();
     if (!t){ melding("Vul eerst het token in.", "fout"); return; }
     token = t; bewaarToken(t);
     if (v) v.value = "";
-    toonTokenvak(false);
+    tekenToken();
     laad();
-  });
+  }
+  var tokenokEl = document.getElementById("tokenok");
+  if (tokenokEl) tokenokEl.addEventListener("click", bewaarUitVeld);
   var tokenwegEl = document.getElementById("tokenweg");
   if (tokenwegEl) tokenwegEl.addEventListener("click", function(){
     token = ""; bewaarToken("");
     melding("Token vergeten. Deze browser heeft geen toegang meer.", "info");
-    toonTokenvak(true);
+    tekenToken();
   });
   var tokenveldEl = document.getElementById("tokenveld");
+  // Enter roept dezelfde functie aan als de knop, niet de knop zelf: een
+  // .click() op een element dat er niet is, is een TypeError, en of de knop er
+  // is hangt af van markup die hier verderop kan veranderen.
   if (tokenveldEl) tokenveldEl.addEventListener("keydown", function(e){
-    if (e.key === "Enter"){ e.preventDefault(); tokenokEl.click(); }
+    if (e.key === "Enter"){ e.preventDefault(); bewaarUitVeld(); }
   });
 
   function laad(behoudMelding){
     if (!token){
       melding("Deze browser kent het beheertoken nog niet. Vul het één keer in; daarna onthoudt hij het.", "info");
-      toonTokenvak(true);
+      tekenToken();
       return;
     }
     api("GET").then(function(res){
       if (res.ok && res.data.ok){
-        toonTokenvak(false);
         if (!behoudMelding) melding("");
         state.concepten = res.data.concepten || [];
         state.duplicaten = res.data.duplicatenAantal || 0;
@@ -1127,16 +1172,19 @@
         if (state.index >= state.concepten.length) state.index = 0;
         render();
       } else {
+        // Bij 401 heeft verwerkAntwoord het tokenvak al geopend en de inhoud
+        // al leeggemaakt; hier blijft alleen de reden van de server over.
         melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout");
-        inhoudEl.innerHTML = "";
-        // Alleen bij een geweigerd token opnieuw vragen. Dat gebeurt als het
-        // REVIEW_TOKEN in Vercel is veranderd, of als er ooit iets halfs is
-        // geplakt. Bij 503 (geen KV) ligt het niet aan het token.
-        if (res.status === 401) toonTokenvak(true);
+        if (res.status !== 401) inhoudEl.innerHTML = "";
       }
     }).catch(function(){ melding("Netwerkfout.", "fout"); });
   }
 
+  // Eerst de twee tokenstanden goed zetten, dan pas laden. Eén plek die uit
+  // `token` afleidt wat er zichtbaar is; zonder deze regel bleef de standregel
+  // (met de weghaalknop) verborgen zolang het laden lukte, en dat is precies de
+  // stand waarin je hem nodig hebt.
+  tekenToken();
   laad();
 })();
 </script>

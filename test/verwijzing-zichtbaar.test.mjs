@@ -19,43 +19,17 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import http from "node:http";
 import { readFileSync } from "node:fs";
 
-// ---- Namaak-KV: GET/SET/DEL/SCAN/MGET, precies wat lib/store.js stuurt -----
-const db = new Map();
-const server = http.createServer((req, res) => {
-  let body = "";
-  req.on("data", (c) => (body += c));
-  req.on("end", () => {
-    const a = JSON.parse(body || "[]");
-    const cmd = String(a[0]).toUpperCase();
-    let result = null;
-    if (cmd === "GET") result = db.has(a[1]) ? db.get(a[1]) : null;
-    else if (cmd === "SET") { db.set(a[1], a[2]); result = "OK"; }
-    else if (cmd === "DEL") result = db.delete(a[1]) ? 1 : 0;
-    else if (cmd === "MGET") result = a.slice(1).map((k) => (db.has(k) ? db.get(k) : null));
-    else if (cmd === "SCAN") {
-      const i = a.indexOf("MATCH");
-      const pat = i > -1 ? a[i + 1] : "*";
-      const re = new RegExp(
-        "^" + pat.split("*").map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$"
-      );
-      result = ["0", [...db.keys()].filter((k) => re.test(k))];
-    }
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ result }));
-  });
-});
-await new Promise((r) => server.listen(0, "127.0.0.1", r));
-test.after(() => server.close());
+import { startNepKv, roeper } from "./fixtures/nep-kv.mjs";
 
-// De env moet staan vóór de import: lib/store.js leest hem bij het laden.
-process.env.KV_REST_API_URL = `http://127.0.0.1:${server.address().port}`;
-process.env.KV_REST_API_TOKEN = "test";
+// De namaak-KV staat in test/fixtures/nep-kv.mjs: dezelfde REST-vorm als
+// Upstash, in het geheugen, zodat de ECHTE route en de echte sleutelnamen
+// meedraaien. startNepKv() zet ook de env-vars, en dat moet vóór de import van
+// lib/store.js gebeuren — vandaar de dynamische imports hieronder.
+const { db, sluit } = await startNepKv();
 process.env.REVIEW_TOKEN = "geheim";
-process.env.NO_PROXY = "127.0.0.1,localhost";
-process.env.no_proxy = "127.0.0.1,localhost";
+test.after(sluit);
 
 const C = await import("../lib/config.js");
 const review = (await import("../api/review.js")).default;
@@ -108,15 +82,7 @@ function zetVulling() {
   db.set(C.KEY_ACTUEEL_ARCHIEF_SNAPSHOT, JSON.stringify(voorDeKlik.archief));
 }
 
-async function roep(method, body) {
-  const res = { code: 0, body: null, headers: {} };
-  res.setHeader = (k, v) => { res.headers[k] = v; };
-  res.status = (c) => { res.code = c; return res; };
-  res.json = (j) => { res.body = j; return res; };
-  res.end = () => res;
-  await review({ method, url: "/api/review?token=geheim", headers: { "x-review-token": "geheim" }, body }, res);
-  return res;
-}
+const roep = roeper(review, "geheim");
 
 // ---- De keten, schakel voor schakel ---------------------------------------
 

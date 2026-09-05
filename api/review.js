@@ -256,6 +256,20 @@ function keurIfUrl(url) {
 // staan. Een verwijzing die pas uren later verschijnt, is in de praktijk geen
 // verwijzing.
 //
+// DEZELFDE REGEL GELDT VOOR ELKE ACTIE DIE VERANDERT WAT /actueel TOONT, en het
+// zwaarst voor "Van de site halen". Wie iets weghaalt omdat het fout of
+// schadelijk is, haalt het nu weg — niet over een uur. Dat is geen ongemak maar
+// een redactioneel risico, en het is de reden dat depubliceer en
+// verwijder-overheid hier net zo goed langskomen als verwijs.
+//
+// WELKE ACTIES WEL EN WELKE NIET. Wel: publiceer, depubliceer, archiveer,
+// verwijder-overheid, verwijs en verwijs-weg — die veranderen alle zes wat er op
+// /actueel staat. Niet: weg, bewerk, wis-alles en ontdubbel (die raken alleen
+// CONCEPTEN, en een concept staat per definitie niet op de pagina), niet
+// nakijken en nakijken-klaar (een takenlijst die de lezer nooit ziet), en niet
+// keten — die schrijft registerrecords voor /archief, en die route leest KV
+// rechtstreeks zonder momentopname.
+//
 // Weggooien in plaats van bijwerken: de eerstvolgende aanvraag van /api/actueel
 // bakt hem dan opnieuw met exact dezelfde code als de cron (lib/lever.js), en er
 // is dus geen tweede plek die de regels van hangVerwijzingen na moet doen.
@@ -589,7 +603,8 @@ export default async function handler(req, res) {
       };
       await setJSON(KEY_PUBLICATIE(id), publicatie, PUBLICATIE_TTL_S); // verloopt na 7 dagen
       await del(KEY_CONCEPT(id));
-      return res.status(200).json({ ok: true, publicatie });
+      await vervalSnapshots();
+      return res.status(200).json({ ok: true, publicatie, snapshotVervallen: true });
     }
 
     if (actie === "bewerk") {
@@ -614,8 +629,12 @@ export default async function handler(req, res) {
     }
 
     if (actie === "depubliceer") {
+      // KILL-SWITCH. Eerst het record weg, dan de momentopname: in die volgorde
+      // kan een gelijktijdige aanvraag van /api/actueel nooit opnieuw bakken
+      // mét het artikel dat net is weggehaald.
       await del(KEY_PUBLICATIE(id));
-      return res.status(200).json({ ok: true });
+      await vervalSnapshots();
+      return res.status(200).json({ ok: true, snapshotVervallen: true });
     }
 
     if (actie === "archiveer") {
@@ -631,7 +650,10 @@ export default async function handler(req, res) {
       const gepubT = Date.parse(pub.gepubliceerdOp) || Date.now();
       const rest = Math.max(60, Math.round(PUBLICATIE_TTL_S - (Date.now() - gepubT) / 1000));
       await setJSON(KEY_PUBLICATIE(id), pub, rest); // TTL blijft op het 14-daagse eindpunt
-      return res.status(200).json({ ok: true, publicatie: pub });
+      // Het artikel verhuist van zijn live tegel naar de Archief-tegel: dat is
+      // een zichtbare verandering op /actueel, dus de momentopname klopt niet meer.
+      await vervalSnapshots();
+      return res.status(200).json({ ok: true, publicatie: pub, snapshotVervallen: true });
     }
 
     if (actie === "keten") {
@@ -800,9 +822,11 @@ export default async function handler(req, res) {
     }
 
     if (actie === "verwijder-overheid") {
-      // Kill-switch voor een automatisch gepubliceerd overheidsbericht.
+      // Kill-switch voor een automatisch gepubliceerd overheidsbericht. Zelfde
+      // volgorde als bij depubliceer: eerst het record, dan de momentopname.
       await del(KEY_OVERHEID(id));
-      return res.status(200).json({ ok: true });
+      await vervalSnapshots();
+      return res.status(200).json({ ok: true, snapshotVervallen: true });
     }
 
     return res.status(400).json({ ok: false, fout: `Onbekende actie: ${actie}` });

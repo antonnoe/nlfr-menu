@@ -29,13 +29,28 @@ const bron = html.slice(begin, eind);
 // in plaats van overtypen: verandert daar een label, dan verandert deze test
 // mee in plaats van langs de werkelijkheid heen te toetsen. Uitvoeren en niet
 // als JSON parsen, want "NL'ers in FR" is geen JSON-vriendelijke tekst.
-const catsBron = html.slice(html.indexOf("var CATS = ["), html.indexOf("var THEMA_IC"));
+const catsBegin = html.indexOf("var CATS = [");
+const catsEind = html.indexOf("var THEMA_IC");
+// Eerst kijken of de ankers er nog zijn. Zonder deze toets levert een hernoemde
+// variabele een cryptische SyntaxError uit new Function op, in plaats van een
+// testfout die zegt wat er aan de hand is.
+assert.ok(
+  catsBegin > 0 && catsEind > catsBegin,
+  "CATS niet gevonden in actueel.html — is de variabele hernoemd?"
+);
 // eslint-disable-next-line no-new-func
-const CATS = new Function(`${catsBron}; return CATS;`)();
+const CATS = new Function(`${html.slice(catsBegin, catsEind)}; return CATS;`)();
 
 function maakTegelHTML() {
+  // Letterlijk dezelfde escaping als esc() in actueel.html, ">" inbegrepen. Een
+  // stub die minder escapt dan de pagina laat de test in randgevallen iets
+  // anders zien dan de lezer krijgt, en dat is precies wat je hier niet wilt.
   const esc = (x) =>
-    String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    String(x == null ? "" : x)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   // eslint-disable-next-line no-new-func
   return new Function(
     "esc", "ico", "datum", "artOpen", "teksten", "tekstStatus",
@@ -61,7 +76,14 @@ const tegel = (over = {}) => ({
 
 // De kop van de tegel: alles vóór de body. Daar gaat het om — verderop in het
 // artikel mag "Overheid" natuurlijk gewoon voorkomen.
-const kopVan = (uit) => uit.slice(0, uit.indexOf('<div class="body">'));
+const kopVan = (uit) => {
+  // Zonder deze controle geeft indexOf bij een gewijzigde body-div -1 terug,
+  // wordt vrijwel de hele tegel als "kop" gelezen, en gaan de asserts hieronder
+  // over iets anders dan ze beweren.
+  const grens = uit.indexOf('<div class="body">');
+  assert.ok(grens > 0, "de body van de tegel is niet gevonden — is de markup gewijzigd?");
+  return uit.slice(0, grens);
+};
 // Alleen wat de LEZER ziet. De categorie zit ook in machinerie die moet blijven
 // staan: de klasse `cat-overheid` stuurt de kleur, en `data-tegel` het
 // openklappen. Zonder deze stap zou de test die twee aanzien voor het woord dat

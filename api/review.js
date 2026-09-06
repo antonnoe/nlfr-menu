@@ -47,7 +47,9 @@ import {
   bijnaVerlopen as ifBijnaVerlopen,
   categorieIdsVoorThema,
   artikelUitIndex,
+  binnenVenster,
 } from "../lib/ifindex.js";
+import { suggesties as ifSuggesties, SUGGESTIES_STANDAARD } from "../lib/ifsuggestie.js";
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
@@ -218,6 +220,10 @@ async function zoekBericht(id) {
       id,
       thema: overheid.thema || null,
       kop: overheid.kop || overheid.titelBron || "",
+      // Voor de woordoverlap in lib/ifsuggestie.js: een kop alleen is te weinig
+      // materiaal om een onderwerp uit af te leiden.
+      samenvatting: overheid.samenvatting || "",
+      url: overheid.url || null,
       bron: overheid.bron || null,
       datum: overheid.datum || overheid.gepubliceerdOp || null,
     };
@@ -232,6 +238,8 @@ async function zoekBericht(id) {
       // kandidaten horen bij de tegel waarin de lezer het artikel ziet staan.
       thema: persTegelVanPublicatie(publicatie),
       kop: publicatie.kop || "",
+      samenvatting: publicatie.tekst || "",
+      url: publicatie.url || null,
       bron: null,
       datum: publicatie.gepubliceerdOp || null,
     };
@@ -341,6 +349,27 @@ export default async function handler(req, res) {
       }
       const thema = bericht ? bericht.thema : null;
       const lijst = ifKandidaten({ index, thema, zoek, nu: nuMs });
+      // DE SUGGESTIES. Alleen bij het openen: tikt de redacteur zelf een
+      // zoekterm in, dan is dat een betere vraag dan onze gok en zou een
+      // suggestieblok erboven alleen in de weg staan.
+      //
+      // Ze worden gezocht over de HELE index binnen het datumvenster, niet
+      // binnen de themacategorieën. Het thema van een bericht en de categorie
+      // van een IF-artikel zijn twee losse indelingen; het passendste artikel
+      // valt geregeld buiten de gekoppelde categorieën. Het venster van twaalf
+      // maanden geldt wél, want naar iets ouders verwijs je niet, hoe goed het
+      // ook past.
+      //
+      // Levert de overlap niets op, dan blijft dit leeg en toont de tool de
+      // themalijst zoals voorheen. Dat is bij ruwweg negen van de tien
+      // berichten het geval; zie de meting in lib/ifsuggestie.js.
+      const voorstellen = zoek
+        ? []
+        : ifSuggesties({
+            bericht,
+            artikelen: (index.artikelen || []).filter((a) => binnenVenster(a, nuMs)),
+            max: SUGGESTIES_STANDAARD,
+          });
       const catIds = categorieIdsVoorThema(thema);
       const bestaand = artikelId ? await getJSON(KEY_VERWIJZING(artikelId)) : null;
       const gekozen = new Set(((bestaand && bestaand.items) || []).map((x) => Number(x.ifId)));
@@ -357,6 +386,8 @@ export default async function handler(req, res) {
         maanden: IF_MAX_LEEFTIJD_MAANDEN,
         standaardAantal: IF_KANDIDATEN_STANDAARD,
         totaal: lijst.length,
+        suggestiesStandaard: SUGGESTIES_STANDAARD,
+        suggesties: voorstellen.map((a) => ({ ...a, gekozen: gekozen.has(Number(a.ifId)) })),
         kandidaten: lijst.map((a) => ({ ...a, gekozen: gekozen.has(Number(a.ifId)) })),
       });
     }

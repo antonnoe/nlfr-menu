@@ -177,3 +177,14 @@ test("de vingerafdruk verraadt het token niet", () => {
   assert.notEqual(tokenVorm(TOKEN).vinger, tokenVorm(TOKEN + "x").vinger);
   assert.equal(tokenVorm("").vinger, "leeg");
 });
+
+test("de melding draagt de vorm van bij het laden, niet die van na het herstel", () => {
+  // Op een mislukt bezoek vertrekt de melding pas nadat de redacteur zijn token
+  // opnieuw heeft ingetikt — de GET moet immers slagen. Zou de vorm dan pas
+  // worden berekend, dan meldt hij het NIEUWE token en is de storing waarvoor
+  // hij bestaat uit de meting verdwenen.
+  const blok = review.slice(review.indexOf("function meldOpslagAanServer"), review.indexOf("function tekenMeldingen"));
+  assert.match(blok, /vormVerstuurd: vormTeruggelezen\.len \+ ":" \+ vormTeruggelezen\.vinger/);
+  assert.doesNotMatch(blok, /tokenVorm\(token\)/, "niet opnieuw uitrekenen op verzendmoment");
+  assert.match(blok, /vormBijOpslaan: vormBijOpslaan/, "en de tegenhanger komt ook van bij het laden");
+});

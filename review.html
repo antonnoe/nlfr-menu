@@ -1608,7 +1608,12 @@
       // wordt verstuurd. Verschillen ze, dan is het token tussen twee bezoeken
       // door veranderd; dat is met alleen een lengte niet te zien.
       vormBijOpslaan: vormBijOpslaan ? vormBijOpslaan.len + ":" + vormBijOpslaan.vinger : null,
-      vormVerstuurd: (function(){ var v = tokenVorm(token); return v.len + ":" + v.vinger; })(),
+      // DE VORM ZOALS HIJ BIJ HET LADEN UIT DE OPSLAG KWAM, niet die van nu.
+      // Deze melding vertrekt pas ná een geslaagde GET, en op een mislukt
+      // bezoek is dat pas nadat de redacteur zijn token opnieuw heeft ingetikt.
+      // `token` draagt dan het NIEUWE token, en dat is precies niet wat we
+      // willen weten: de vraag is wat er bij binnenkomst in de opslag stond.
+      vormVerstuurd: vormTeruggelezen.len + ":" + vormTeruggelezen.vinger,
       tokenGewijzigd: tokenGewijzigd,
       uitUrl: Boolean(uitUrl),
       getekend: opslagGetekend,

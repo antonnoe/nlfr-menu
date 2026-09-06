@@ -755,18 +755,34 @@ lezen, te snel voor een schermafdruk. Twee dingen zijn daarom veranderd.
    betekende dat een 401 op de één het antwoord van de ander als verouderd
    weggooide.
 
-**Het oordeel** (`lib/opslagmelding.js`) scheidt de twee storingen die op het
-scherm hetzelfde ogen:
+**Het oordeel** (`lib/opslagmelding.js`) staat **per toestel**. De ring bevat de
+meldingen van elke browser die `/review` opent: de telefoon die onderzocht wordt
+én de desktop waarop het resultaat wordt gelezen. Die op één hoop beoordelen
+keek naar de nieuwste melding, en dat is bijna altijd de desktop waarop je zit
+te lezen.
 
 | code | wat het betekent | wat helpt |
 | --- | --- | --- |
-| `schrijven-mislukt` | De browser weigert weg te schrijven (`opslag` staat niet op `local`). | Een servercookie lost dit **niet** op; er is geen plek om iets te bewaren. |
-| `gewist-tussen-bezoeken` | Het token wordt weggeschreven én teruggelezen, maar bij een volgend bezoek is álles weg — token én baken — terwijl de opslag dan gewoon werkt. | Dit is een opruiming achteraf: de instelling die sitegegevens wist bij het afsluiten. In Samsung Internet: Instellingen → Persoonlijke browsegegevens → Persoonlijke gegevens verwijderen bij afsluiten. |
-| `onbekend` | Nog te weinig bezoeken om die twee te scheiden. | Nog een keer `/review` openen op hetzelfde toestel. |
+| `opslag-werkt` | De browser schrijft weg én vindt het bij een volgend bezoek terug. | Niets. Dit toestel mankeert niets — al zegt het niets over een browser die tussendoor helemaal wordt afgesloten. |
+| `schrijven-mislukt` | De browser weigert weg te schrijven. | Een servercookie lost dit **niet** op; er is geen plek om iets te bewaren. |
+| `gewist-tussen-bezoeken` | Het token wordt weggeschreven **én teruggelezen**, maar bij elk volgend bezoek is álles weg. | Een opruiming achteraf: de instelling die sitegegevens wist bij het afsluiten. In Samsung Internet: Instellingen → Persoonlijke browsegegevens → Persoonlijke gegevens verwijderen bij afsluiten. |
+| `eerste-bezoek` | Deze browser is hier één keer geweest. | Nog een keer `/review` openen op ditzelfde toestel. |
 
-Het oordeel hangt aan het **gemeten gedrag over twee bezoeken**, niet aan de
-naam van de browser: een user-agent is een zelfverklaring en kan liegen. Die
-naam komt er alleen bij te staan om te kunnen zeggen wáár de instelling zit.
+`opslag-werkt` ontbrak aanvankelijk, en dat was de ergste omissie: een toestel
+waar alles goed ging viel door naar "onbekend", en dan stond er *"open /review
+nog een keer"* tegen iemand die het al zes keer had gedaan.
+
+Het oordeel hangt aan het **gemeten gedrag**, niet aan de naam van de browser:
+een user-agent is een zelfverklaring en kan liegen. Die naam noemt wél het
+toestel erbij (`Chrome op Android`, `Chrome op Windows`) — zonder platform heten
+een telefoon en een desktop allebei "Chrome", en dan staan er twee identieke
+regels boven twee heel verschillende metingen.
+
+**Waar het staat.** Onderaan `/review`, ónder het redactiewerk, achter één regel
+`Opslagmeldingen (n)` die je zelf openklapt. Het oordeel per toestel staat
+meteen zichtbaar; de kaarten met user-agent-strings zitten erachter. Ze stonden
+eerst pal boven Concepten, en dat is ontwikkelaarsgereedschap in een
+productiegereedschap.
 
 **Welke vorm blijft op mobiel wél staan.** Voor het geval dat het schrijven
 *slaagt* maar de waarde later verdwijnt, is de duurzamere vorm een cookie die de

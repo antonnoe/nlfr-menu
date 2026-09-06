@@ -218,10 +218,17 @@
     text-decoration:underline; cursor:pointer; }
   .opslagstand .opslagsluit:hover, .opslagstand .opslagsluit:focus-visible { color:var(--brand); }
   /* De meldingen zoals ze op een groot scherm te lezen zijn. */
-  .meldingen { max-width:760px; margin:0 0 14px; }
-  .meldingen h2 { margin:0 0 8px; }
-  .meldingen .oordeel { padding:10px 12px; border-left:3px solid var(--brand); background:#fdf5f4; color:#6b3630;
-    font-size:13px; line-height:1.55; border-radius:0 8px 8px 0; margin-bottom:10px; }
+  .meldingen { max-width:760px; margin:28px 0 0; }
+  .meldingen[hidden] { display:none; }
+  .meldknop { display:inline-flex; align-items:center; min-height:44px; font-family:'Mulish',sans-serif;
+    font-size:12.5px; color:#666; background:none; border:0; padding:0 2px; text-decoration:underline; cursor:pointer; }
+  .meldknop:hover, .meldknop:focus-visible { color:var(--brand); }
+  /* Een oordeel dat zegt dat alles werkt, hoort niet als waarschuwing te ogen. */
+  .meldingen .oordeel { padding:8px 12px; border-left:3px solid #cdbfb8; background:#faf7f5; color:#5c5148;
+    font-size:13px; line-height:1.55; border-radius:0 8px 8px 0; margin-top:8px; }
+  .meldingen .oordeel.fout { border-left-color:#8a2b2b; background:#fdf5f4; color:#6b3630; }
+  .meldingen .meldlade { margin-top:10px; }
+  .meldingen .meldlade[hidden] { display:none; }
   .meldingen ol { margin:0; padding:0; list-style:none; display:grid; gap:8px; }
   .meldingen li { border:1px solid rgba(128,0,0,.12); border-radius:10px; padding:8px 10px; background:#fff; }
   .meldingen .wanneer { font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:var(--brand); }
@@ -291,9 +298,6 @@
        is. Bedoeld om op de telefoon zelf te kunnen lezen waaraan het ligt,
        zonder ontwikkelaarsgereedschap dat daar niet bestaat. -->
   <div class="opslagstand" id="opslagstand" hidden></div>
-  <!-- DE MELDINGEN VAN DE TELEFOONS, op een scherm waar ze blijven staan. Op
-       Android knipperde de diagnose voorbij; hier is hij rustig na te lezen. -->
-  <div class="meldingen" id="meldingen" hidden></div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
 
   <!-- VOETTEKST. "Token vergeten" stond pal boven de inhoud, één duimbreedte
@@ -304,6 +308,14 @@
        voor wie hem zoekt — dat was de reden dat hij ooit uit het invoervak werd
        gehaald — maar niet meer te raken voor wie hem mijdt. De standregel blijft
        staan waar hij stond: die moet je zien zonder te scrollen. -->
+  <!-- DE MELDINGEN VAN DE TELEFOONS. Stonden eerst pal boven Concepten: zes
+       kaarten met user-agent-strings dwars door het redactiewerk heen. Dat is
+       ontwikkelaarsgereedschap in een productiegereedschap, en het is zelden
+       nodig ook. Nu onderaan, dicht, achter één regel die je zelf openklapt —
+       zoals de opruimlade. Het OORDEEL staat wél meteen zichtbaar, want dat is
+       het enige wat je normaal wilt weten. -->
+  <div class="meldingen" id="meldingen" hidden></div>
+
   <footer class="voet" id="voet" hidden>
     <button type="button" class="tokenweg" id="tokenweg">Token vergeten</button>
   </footer>
@@ -1544,8 +1556,20 @@
   function tekenMeldingen(){
     if (!meldingenEl) return;
     var lijst = state.opslagmeldingen || [];
-    var oordeel = state.opslagoordeel;
+    var oordelen = state.opslagoordeel || [];
     if (!lijst.length){ meldingenEl.hidden = true; meldingenEl.innerHTML = ""; return; }
+
+    // Eén regel per TOESTEL. De ring bevat de meldingen van elke browser die
+    // hier komt: de telefoon die onderzocht wordt én de desktop waarop je dit
+    // leest. Die op één hoop beoordelen gaf een oordeel over het verkeerde
+    // apparaat. Een oordeel dat zegt dat alles werkt, oogt bovendien niet als
+    // waarschuwing; alleen een echte storing krijgt de rode rand.
+    var stuk = oordelen.map(function(o){
+      var kwaad = (o.code === "schrijven-mislukt" || o.code === "gewist-tussen-bezoeken");
+      return '<div class="oordeel'+(kwaad?" fout":"")+'"><b>'+esc(o.browser || "onbekend toestel")+
+        "</b> · "+o.aantal+" bezoek"+(o.aantal===1?"":"en")+"<div>"+esc(o.tekst)+"</div></div>";
+    }).join("");
+
     var rijen = lijst.map(function(m){
       var regels = [
         "opslag=" + esc(m.waar),
@@ -1555,8 +1579,6 @@
         "vorig bezoek=" + (m.vorigBaken ? esc(m.vorigBaken) : "geen spoor"),
         "baken geschreven=" + (m.bakenGeschreven ? "ja" : "nee"),
         "token geschreven=" + (m.tokenGeschreven ? "ja" : "nee"),
-        // Het knipperen zelf, als getal: hoe vaak de diagnose opnieuw werd
-        // getekend en hoe vaak hij daarbij zou zijn verborgen.
         "getekend=" + (m.getekend == null ? "?" : m.getekend) +
           " · zou verbergen=" + (m.zouVerbergen == null ? "?" : m.zouVerbergen)
       ].filter(Boolean);
@@ -1564,10 +1586,20 @@
         '<div class="rij">' + regels.join(" · ") + "</div>" +
         (m.ua ? '<div class="rij">' + esc(m.ua) + "</div>" : "") + "</li>";
     }).join("");
-    meldingenEl.innerHTML = "<h2>Opslagmeldingen</h2>" +
-      (oordeel ? '<div class="oordeel">' + esc(oordeel.tekst) + "</div>" : "") +
-      "<ol>" + rijen + "</ol>";
+
+    meldingenEl.innerHTML =
+      '<button type="button" class="meldknop" id="meldknop" aria-expanded="false" aria-controls="meldlade">' +
+        "Opslagmeldingen (" + lijst.length + ")</button>" + stuk +
+      '<div class="meldlade" id="meldlade" hidden><ol>' + rijen + "</ol></div>";
     meldingenEl.hidden = false;
+
+    var knop = document.getElementById("meldknop");
+    var lade = document.getElementById("meldlade");
+    if (knop && lade) knop.addEventListener("click", function(){
+      var open = lade.hasAttribute("hidden");
+      if (open) lade.removeAttribute("hidden"); else lade.setAttribute("hidden", "");
+      knop.setAttribute("aria-expanded", open ? "true" : "false");
+    });
   }
 
   function tekenToken(){

@@ -59,41 +59,97 @@ test("de ring groeit niet oneindig, nieuwste vooraan", () => {
 });
 
 // ---- Het oordeel ------------------------------------------------------------
+// PER TOESTEL. De ring bevat de meldingen van élke browser die /review opent: de
+// telefoon die onderzocht wordt én de desktop waarop het resultaat wordt
+// gelezen. Eén oordeel over die hoop keek naar de NIEUWSTE melding — bijna
+// altijd de desktop waarop je zit te lezen — en telde "geen spoor" over alle
+// toestellen samen, terwijl elke browser die hier voor het eerst komt er per
+// definitie één oplevert.
+
+const ANDROID = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36";
+const WINDOWS = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36";
 
 const melding = (over = {}) =>
-  normaliseerMelding({ waar: "local", ingebed: false, bakenGeschreven: true, tokenGeschreven: true, ua: SAMSUNG, ...over },
-    over.op || "2026-09-06T12:00:00.000Z");
+  normaliseerMelding(
+    { waar: "local", ingebed: false, bakenGeschreven: true, tokenGeschreven: true, ua: SAMSUNG, ...over },
+    over.op || "2026-09-06T12:00:00.000Z"
+  );
+
+// Eén oordeel eruit halen op browsernaam, zodat een toets over de telefoon niet
+// per ongeluk de desktop beoordeelt.
+const voor = (oordelen, deel) => oordelen.filter((o) => (o.browser || "").includes(deel))[0];
 
 test("zonder meldingen wordt er niets beweerd", () => {
-  assert.equal(beoordeelMeldingen([]).code, "geen-meldingen");
-  assert.equal(beoordeelMeldingen(null).code, "geen-meldingen");
+  assert.deepEqual(beoordeelMeldingen([]), []);
+  assert.deepEqual(beoordeelMeldingen(null), []);
 });
 
-test("één bezoek is niet genoeg om een oorzaak aan te wijzen", () => {
+test("een toestel waar alles werkt, krijgt dat te horen en geen huiswerk", () => {
+  // DIT ONTBRAK, en het was de ergste. Een toestel waar niets mis was viel door
+  // naar "onbekend", en dan stond er "open /review nog een keer" tegen iemand
+  // die het al zes keer had gedaan.
+  const uit = beoordeelMeldingen([
+    melding({ ua: ANDROID, vorigBaken: "2026-09-06T11:54:25.837Z", op: "2026-09-06T11:57:00.000Z" }),
+    melding({ ua: ANDROID, vorigBaken: "2026-09-06T11:50:37.078Z", op: "2026-09-06T11:54:00.000Z" }),
+  ]);
+  assert.equal(uit.length, 1);
+  assert.equal(uit[0].code, "opslag-werkt");
+  assert.match(uit[0].tekst, /niets te repareren/);
+  assert.doesNotMatch(uit[0].tekst, /nog een keer/, "geen huiswerk voor wie klaar is");
+  assert.match(uit[0].tekst, /AFGESLOTEN/, "maar wel wat dit NIET aantoont");
+});
+
+test("de desktop waarop je leest, beoordeelt de telefoon niet", () => {
+  // De zes meldingen van 6 september 13:49-13:58, in de volgorde waarin ze
+  // binnenkwamen: vier van de telefoon, twee van de desktop ertussendoor.
+  const uit = beoordeelMeldingen([
+    melding({ ua: WINDOWS, vorigBaken: "2026-09-06T11:51:30.656Z", op: "2026-09-06T11:58:00.000Z" }),
+    melding({ ua: ANDROID, vorigBaken: "2026-09-06T11:54:25.837Z", op: "2026-09-06T11:57:00.000Z" }),
+    melding({ ua: ANDROID, vorigBaken: "2026-09-06T11:50:37.078Z", op: "2026-09-06T11:54:00.000Z" }),
+    melding({ ua: WINDOWS, vorigBaken: null, op: "2026-09-06T11:51:00.000Z" }),
+    melding({ ua: ANDROID, vorigBaken: "2026-09-06T11:49:42.221Z", op: "2026-09-06T11:50:00.000Z" }),
+    melding({ ua: ANDROID, vorigBaken: "2026-09-06T11:48:22.804Z", op: "2026-09-06T11:49:00.000Z" }),
+  ]);
+  assert.equal(uit.length, 2, "twee toestellen, twee oordelen");
+  assert.equal(voor(uit, "Android").aantal, 4);
+  assert.equal(voor(uit, "Windows").aantal, 2);
+  assert.equal(voor(uit, "Android").code, "opslag-werkt", "deze telefoon bewaart het token gewoon");
+  assert.equal(voor(uit, "Windows").code, "opslag-werkt");
+});
+
+test("twee verse desktops wijzen samen geen telefoon aan", () => {
+  // De oude telling deed dat wel: "geen spoor" werd over alle toestellen samen
+  // opgeteld, en elke browser die hier voor het eerst komt levert er één op.
+  const uit = beoordeelMeldingen([
+    melding({ ua: WINDOWS, vorigBaken: null, op: "2026-09-06T12:00:00.000Z" }),
+    melding({ ua: ANDROID, vorigBaken: null, op: "2026-09-06T11:00:00.000Z" }),
+  ]);
+  assert.equal(voor(uit, "Android").code, "eerste-bezoek");
+  assert.equal(voor(uit, "Windows").code, "eerste-bezoek");
+});
+
+test("één bezoek zegt dat het er één is, en wat je dan doet", () => {
   const uit = beoordeelMeldingen([melding({ vorigBaken: null })]);
-  assert.equal(uit.code, "onbekend");
-  assert.match(uit.tekst, /nog een keer/, "en het zegt wat je moet doen om verder te komen");
+  assert.equal(uit[0].code, "eerste-bezoek");
+  assert.match(uit[0].tekst, /nog een keer/);
 });
 
 test("een browser die niets bewaart, is een andere storing dan een die opruimt", () => {
   const uit = beoordeelMeldingen([melding({ waar: "session", localReden: "QuotaExceededError: quota" })]);
-  assert.equal(uit.code, "schrijven-mislukt");
-  assert.match(uit.tekst, /QuotaExceededError/);
-  assert.match(uit.tekst, /cookie van de server lost dit niet op/,
+  assert.equal(uit[0].code, "schrijven-mislukt");
+  assert.match(uit[0].tekst, /QuotaExceededError/);
+  assert.match(uit[0].tekst, /cookie van de server lost dit niet op/,
     "dat onderscheid bepaalt of een servercookie zin heeft");
 });
 
 test("wél wegschrijven en toch elk bezoek niets: sitegegevens worden gewist", () => {
-  // Twee bezoeken, allebei: opslag werkt, token weggeschreven en teruggelezen,
-  // en tóch geen spoor van het vorige bezoek. Dat kan alleen als er tussen de
-  // bezoeken door is opgeruimd.
   const uit = beoordeelMeldingen([
     melding({ vorigBaken: null, op: "2026-09-06T12:00:00.000Z" }),
     melding({ vorigBaken: null, op: "2026-09-05T12:00:00.000Z" }),
   ]);
-  assert.equal(uit.code, "gewist-tussen-bezoeken");
-  assert.match(uit.tekst, /opruiming achteraf/);
-  assert.match(uit.tekst, /afsluiten/);
+  assert.equal(uit[0].code, "gewist-tussen-bezoeken");
+  assert.match(uit[0].tekst, /opruiming achteraf/);
+  assert.match(uit[0].tekst, /afsluiten/);
 });
 
 test("bij Samsung Internet staat erbij wáár die instelling zit", () => {
@@ -101,36 +157,29 @@ test("bij Samsung Internet staat erbij wáár die instelling zit", () => {
     melding({ vorigBaken: null, op: "2026-09-06T12:00:00.000Z" }),
     melding({ vorigBaken: null, op: "2026-09-05T12:00:00.000Z" }),
   ]);
-  assert.equal(uit.browser, "Samsung Internet");
-  assert.match(uit.tekst, /Persoonlijke browsegegevens/,
+  assert.equal(uit[0].browser, "Samsung Internet op Android");
+  assert.match(uit[0].tekst, /Persoonlijke browsegegevens/,
     "een oorzaak zonder de weg ernaartoe kost dezelfde zoektijd als geen oorzaak");
 });
 
-test("een browser die het spoor wél terugvindt, levert geen beschuldiging op", () => {
-  const uit = beoordeelMeldingen([
-    melding({ vorigBaken: "2026-09-05T12:00:00.000Z", op: "2026-09-06T12:00:00.000Z" }),
-    melding({ vorigBaken: "2026-09-04T12:00:00.000Z", op: "2026-09-05T12:00:00.000Z" }),
-  ]);
-  assert.equal(uit.code, "onbekend", "hier is niets mis, dus wordt er niets aangewezen");
-});
-
 test("het oordeel hangt aan het gemeten gedrag, niet aan de naam van de browser", () => {
-  // Dezelfde twee bezoeken, maar dan met een Chrome-UA: zelfde uitkomst, want
-  // een UA is een zelfverklaring en kan liegen.
-  const chrome = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36";
   const uit = beoordeelMeldingen([
-    melding({ vorigBaken: null, ua: chrome, op: "2026-09-06T12:00:00.000Z" }),
-    melding({ vorigBaken: null, ua: chrome, op: "2026-09-05T12:00:00.000Z" }),
+    melding({ vorigBaken: null, ua: ANDROID, op: "2026-09-06T12:00:00.000Z" }),
+    melding({ vorigBaken: null, ua: ANDROID, op: "2026-09-05T12:00:00.000Z" }),
   ]);
-  assert.equal(uit.code, "gewist-tussen-bezoeken");
-  assert.equal(uit.browser, "Chrome");
-  assert.doesNotMatch(uit.tekst, /Samsung/, "de weg naar de instelling verschilt per browser");
+  assert.equal(uit[0].code, "gewist-tussen-bezoeken");
+  assert.equal(uit[0].browser, "Chrome op Android");
+  assert.doesNotMatch(uit[0].tekst, /Samsung/, "de weg naar de instelling verschilt per browser");
 });
 
-test("browserNaam herkent de gevallen die er in deze storing toe doen", () => {
-  assert.equal(browserNaam(SAMSUNG), "Samsung Internet");
-  assert.equal(browserNaam("Mozilla/5.0 ... FBAN/FBIOS ..."), "Facebook-app");
-  assert.equal(browserNaam("iets onherkenbaars"), null);
+test("browserNaam noemt het toestel erbij, niet alleen de browser", () => {
+  // Zonder platform heten een telefoon en een desktop allebei "Chrome", en dan
+  // staan er twee identieke regels boven twee verschillende metingen.
+  assert.equal(browserNaam(ANDROID), "Chrome op Android");
+  assert.equal(browserNaam(WINDOWS), "Chrome op Windows");
+  assert.equal(browserNaam(SAMSUNG), "Samsung Internet op Android");
+  assert.equal(browserNaam("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) ... FBAN/FBIOS ..."), "Facebook-app op iOS");
+  assert.equal(browserNaam(""), null);
 });
 
 // ---- De pagina --------------------------------------------------------------
@@ -177,13 +226,29 @@ test("de melding vertrekt pas na een geslaagde GET, niet ernaast", () => {
   assert.match(laad, /meldOpslagAanServer\(\);/);
 });
 
-test("de meldingen zijn op een groot scherm na te lezen, met het oordeel erboven", () => {
+test("de meldingen zijn op een groot scherm na te lezen, achter één regel", () => {
   assert.match(review, /id="meldingen"/);
   const blok = review.slice(review.indexOf("function tekenMeldingen"), review.indexOf("function tekenToken"));
   for (const veld of ["waar", "localReden", "vorigBaken", "bakenGeschreven", "tokenGeschreven", "zouVerbergen", "ua"]) {
     assert.ok(blok.includes(veld), `de melding toont ${veld} niet`);
   }
-  assert.match(blok, /oordeel\.tekst/, "het oordeel hoort erboven te staan");
+  assert.match(blok, /o\.tekst/, "het oordeel per toestel staat er meteen");
+  assert.match(blok, /id="meldknop"/, "de kaarten zelf zitten achter een regel die je openklapt");
+  assert.match(blok, /aria-expanded/);
+});
+
+test("het paneel staat onder het redactiewerk, niet erboven", () => {
+  // Zes kaarten met user-agent-strings pal boven Concepten is
+  // ontwikkelaarsgereedschap in een productiegereedschap.
+  const meldingen = review.indexOf('id="meldingen"');
+  const inhoud = review.indexOf('<div id="inhoud"');
+  assert.ok(meldingen > inhoud, "de meldingen horen ná de inhoud te staan");
+});
+
+test("een oordeel dat zegt dat alles werkt, oogt niet als waarschuwing", () => {
+  const blok = review.slice(review.indexOf("function tekenMeldingen"), review.indexOf("function tekenToken"));
+  assert.match(blok, /o\.code === "schrijven-mislukt" \|\| o\.code === "gewist-tussen-bezoeken"/,
+    "alleen een echte storing krijgt de rode rand");
 });
 
 // ---- De route ---------------------------------------------------------------
@@ -209,7 +274,7 @@ test("POST opslagmelding bewaart hem en geeft het oordeel terug", async () => {
   assert.equal(res.body.ok, true);
   assert.equal(res.body.bewaard.waar, "local");
   assert.ok(res.body.bewaard.op, "de server zet het tijdstip erop");
-  assert.equal(res.body.oordeel.code, "onbekend", "één bezoek wijst nog niets aan");
+  assert.equal(res.body.oordeel[0].code, "eerste-bezoek", "één bezoek wijst nog niets aan");
   assert.equal(JSON.parse(db.get(C.KEY_OPSLAGMELDING)).length, 1);
 });
 
@@ -221,8 +286,8 @@ test("twee bezoeken zonder spoor leveren het oordeel op dat we zoeken", async ()
   };
   await roep("POST", melding);
   const res = await roep("POST", melding);
-  assert.equal(res.body.oordeel.code, "gewist-tussen-bezoeken");
-  assert.match(res.body.oordeel.tekst, /Samsung Internet/);
+  assert.equal(res.body.oordeel[0].code, "gewist-tussen-bezoeken");
+  assert.match(res.body.oordeel[0].tekst, /Samsung Internet/);
 });
 
 test("GET levert de meldingen en het oordeel mee aan de reviewtool", async () => {
@@ -230,7 +295,8 @@ test("GET levert de meldingen en het oordeel mee aan de reviewtool", async () =>
   assert.equal(res.code, 200);
   assert.ok(Array.isArray(res.body.opslagmeldingen));
   assert.equal(res.body.opslagmeldingen.length, 2, "nieuwste eerst, ring van twee");
-  assert.equal(res.body.opslagoordeel.code, "gewist-tussen-bezoeken");
+  assert.equal(res.body.opslagoordeel[0].code, "gewist-tussen-bezoeken");
+  assert.equal(res.body.opslagoordeel[0].aantal, 2, "één oordeel per toestel, niet per melding");
 });
 
 test("zonder token komt er niets binnen", async () => {

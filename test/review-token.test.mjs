@@ -333,8 +333,15 @@ test("een geweigerd token zegt hoeveel tekens er meegingen", async () => {
   // verschil meetbaar.
   const t = await start({ zoek: "?token=twaalftekens", status: 401, body: { ok: false, fout: "Ongeldig of ontbrekend token." } });
   assert.match(t.haal("melding").innerHTML, /Ongeldig of ontbrekend token/);
-  assert.match(t.haal("melding").innerHTML, /token van 12 tekens/,
-    `de lengte hoort in de melding te staan: ${t.haal("melding").innerHTML}`);
+  // BEIDE waarden: wat er meeging én wat er bij het opslaan is weggeschreven.
+  // Een verstuurd token dat afwijkt van het opgeslagene wijst naar de opslag;
+  // komen ze overeen maar klopt de lengte niet met wat je hebt geplakt, dan
+  // stond er bij het OPSLAAN al iets anders in het veld. Twee storingen, twee
+  // zoektochten, en met alleen "er ging 32 mee" zijn ze niet te scheiden.
+  assert.match(t.haal("melding").innerHTML, /Verstuurd: 12 tekens/,
+    `de verstuurde lengte hoort in de melding te staan: ${t.haal("melding").innerHTML}`);
+  assert.match(t.haal("melding").innerHTML, /Bij het opslaan weggeschreven:/,
+    "en waarmee je dat moet vergelijken");
 });
 
 test("Enter in het tokenveld werkt ook zonder de knop ernaast", async () => {

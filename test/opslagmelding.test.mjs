@@ -229,7 +229,8 @@ test("de melding vertrekt pas na een geslaagde GET, niet ernaast", () => {
 test("de meldingen zijn op een groot scherm na te lezen, achter één regel", () => {
   assert.match(review, /id="meldingen"/);
   const blok = review.slice(review.indexOf("function tekenMeldingen"), review.indexOf("function tekenToken"));
-  for (const veld of ["waar", "localReden", "vorigBaken", "bakenGeschreven", "tokenGeschreven", "zouVerbergen", "ua"]) {
+  for (const veld of ["waar", "localReden", "vorigBaken", "bakenGeschreven", "tokenGeschreven",
+                      "vormBijOpslaan", "vormVerstuurd", "tokenGewijzigd", "zouVerbergen", "ua"]) {
     assert.ok(blok.includes(veld), `de melding toont ${veld} niet`);
   }
   assert.match(blok, /o\.tekst/, "het oordeel per toestel staat er meteen");
@@ -310,4 +311,31 @@ test("zonder token komt er niets binnen", async () => {
     res
   );
   assert.equal(res.code, 401, "een open schrijfroute zou een vreemde de ring laten volduwen");
+});
+
+test("een token dat veranderde gaat vóór het opslagoordeel", () => {
+  // Er wordt keurig bewaard en teruggelezen; alleen staat er iets anders op die
+  // plek dan wat erin ging. Dat onder "opslag werkt" laten vallen zou de
+  // storing wegpoetsen, want dan lijkt er niets aan de hand.
+  const uit = beoordeelMeldingen([
+    normaliseerMelding(
+      { waar: "local", vorigBaken: "2026-09-06T11:50:00Z", bakenGeschreven: true, tokenGeschreven: true,
+        vormBijOpslaan: "22:1ts0rki", vormVerstuurd: "32:s3zdcl", tokenGewijzigd: true, ua: SAMSUNG },
+      "2026-09-06T12:00:00.000Z"
+    ),
+  ]);
+  assert.equal(uit[0].code, "token-veranderd");
+  assert.match(uit[0].tekst, /22:1ts0rki/, "wat er is weggeschreven");
+  assert.match(uit[0].tekst, /32:s3zdcl/, "en wat eruit kwam");
+  assert.match(uit[0].tekst, /snelkoppeling|autovullen/, "en waar je dan zoekt");
+});
+
+test("de melding draagt geen token, alleen zijn vorm", () => {
+  const m = normaliseerMelding(
+    { waar: "local", vormBijOpslaan: "22:1ts0rki", vormVerstuurd: "22:1ts0rki", ua: SAMSUNG },
+    "2026-09-06T12:00:00.000Z"
+  );
+  const alles = JSON.stringify(m);
+  assert.doesNotMatch(alles, /aBcDeF/, "een beheertoken hoort niet in deze ring terecht te komen");
+  assert.equal(m.vormBijOpslaan, "22:1ts0rki");
 });

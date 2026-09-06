@@ -738,6 +738,36 @@ geen zichtbaar verschil tussen bewaard en weggegooid.
    zichzelf, of weigeren hem. De pagina herkent dat (`window.top !==
    window.self`) en zegt het.
 
+**De melding blijft staan, en gaat ook naar de server.** Op Android verscheen de
+diagnose en verdween hij binnen een fractie van een seconde: te snel om te
+lezen, te snel voor een schermafdruk. Twee dingen zijn daarom veranderd.
+
+1. **Hij verdwijnt niet meer vanzelf.** Wat er eenmaal stond, blijft staan tot de
+   lezer op **Sluiten** tikt. Een poging tot verbergen wordt geteld
+   (`zouVerbergen`) en gaat mee in de melding — het gedrag wegnemen zonder het
+   te tellen zou de vraag *waarom* hij knipperde onbeantwoord laten.
+2. **Elke melding gaat mee met het beheertoken naar KV** (`KEY_OPSLAGMELDING`,
+   een ring van twaalf, TTL dertig dagen) en is in `/review` na te lezen op een
+   groot scherm. Mét het token en niet zonder: dat token wordt tóch elk bezoek
+   ingetikt, en een open schrijfroute zou een vreemde in staat stellen de ring
+   vol te duwen en de metingen eruit te drukken. De melding vertrekt pas ná een
+   geslaagde `GET`, niet ernaast — twee verzoeken tegelijk met hetzelfde token
+   betekende dat een 401 op de één het antwoord van de ander als verouderd
+   weggooide.
+
+**Het oordeel** (`lib/opslagmelding.js`) scheidt de twee storingen die op het
+scherm hetzelfde ogen:
+
+| code | wat het betekent | wat helpt |
+| --- | --- | --- |
+| `schrijven-mislukt` | De browser weigert weg te schrijven (`opslag` staat niet op `local`). | Een servercookie lost dit **niet** op; er is geen plek om iets te bewaren. |
+| `gewist-tussen-bezoeken` | Het token wordt weggeschreven én teruggelezen, maar bij een volgend bezoek is álles weg — token én baken — terwijl de opslag dan gewoon werkt. | Dit is een opruiming achteraf: de instelling die sitegegevens wist bij het afsluiten. In Samsung Internet: Instellingen → Persoonlijke browsegegevens → Persoonlijke gegevens verwijderen bij afsluiten. |
+| `onbekend` | Nog te weinig bezoeken om die twee te scheiden. | Nog een keer `/review` openen op hetzelfde toestel. |
+
+Het oordeel hangt aan het **gemeten gedrag over twee bezoeken**, niet aan de
+naam van de browser: een user-agent is een zelfverklaring en kan liegen. Die
+naam komt er alleen bij te staan om te kunnen zeggen wáár de instelling zit.
+
 **Welke vorm blijft op mobiel wél staan.** Voor het geval dat het schrijven
 *slaagt* maar de waarde later verdwijnt, is de duurzamere vorm een cookie die de
 **server** zet (`Set-Cookie`, `HttpOnly; Secure; SameSite=Lax`): iOS Safari kapt

@@ -31,6 +31,7 @@
 
 import crypto from "node:crypto";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
+import { normaliseerMelding, beoordeelMeldingen, voegToe } from "../lib/opslagmelding.js";
 import { buitenlandDoorlaatNL } from "../lib/feeds.js";
 import {
   beoordeelPublicatie,
@@ -59,6 +60,8 @@ import {
   OVERHEID_TTL_S,
   SCAN_CONCEPT,
   KEY_CRON_RONDE,
+  KEY_OPSLAGMELDING,
+  OPSLAGMELDING_TTL_S,
   SCAN_PUBLICATIE,
   SCAN_OVERHEID,
   SCAN_REGISTER,
@@ -479,6 +482,7 @@ export default async function handler(req, res) {
     // melden viel of dat de keten stilstond. Ontbreekt het journaal, dan blijft
     // het null — de tool zegt dan dat het onbekend is, en verzint niets.
     const journaal = await getJSON(KEY_CRON_RONDE);
+    const opslagmeldingen = (await getJSON(KEY_OPSLAGMELDING)) || [];
     const ifIndex = await leesIfIndex();
     const bijnaVerlopen = ifIndex ? ifBijnaVerlopen({ index: ifIndex, nu: nuMs }) : [];
 
@@ -492,6 +496,11 @@ export default async function handler(req, res) {
         ? { opgehaaldOp: ifIndex.opgehaaldOp, aantal: ifIndex.artikelen.length }
         : null,
       journaal, // stand van de persketen; zie KEY_CRON_RONDE in lib/config.js
+      // Wat de browsers van de redactie over hun eigen opslag melden, plus het
+      // oordeel daarover. Op een telefoon is die diagnose niet te lezen — hij
+      // knipperde voorbij — dus staat hij hier, op een scherm waar hij blijft.
+      opslagmeldingen,
+      opslagoordeel: beoordeelMeldingen(opslagmeldingen),
       concepten: besten,
       totaalConcepten: concepten.length,
       duplicatenAantal: duplicaten.length,
@@ -537,6 +546,23 @@ export default async function handler(req, res) {
       return res
         .status(200)
         .json({ ok: true, verwijderd: duplicaten.length, over: alle.length - duplicaten.length });
+    }
+
+    // ---- Melding over de browseropslag ------------------------------------
+    // Komt binnen MET het beheertoken, want dat tikt de redacteur toch al in —
+    // en dat hij dat elke keer opnieuw moet doen is precies wat hier wordt
+    // onderzocht. Een route zonder token zou een vreemde in staat stellen de
+    // ring vol te duwen en de metingen eruit te drukken.
+    //
+    // Het tijdstip komt van de SERVER en niet uit de browser: een klok die
+    // verkeerd staat mag de volgorde van de ring niet bepalen. Verder wordt
+    // geen enkel veld ongezien overgenomen; zie normaliseerMelding().
+    if (actie === "opslagmelding") {
+      const ring = (await getJSON(KEY_OPSLAGMELDING)) || [];
+      const melding = normaliseerMelding(body.melding, new Date().toISOString());
+      const nieuw = voegToe(ring, melding);
+      await setJSON(KEY_OPSLAGMELDING, nieuw, OPSLAGMELDING_TTL_S);
+      return res.status(200).json({ ok: true, bewaard: melding, oordeel: beoordeelMeldingen(nieuw) });
     }
 
     if (!actie || !id) {

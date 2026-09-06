@@ -652,6 +652,56 @@ Een sonde die permanent rood staat bewaakt niets: de volgende echte bevinding
 verdwijnt in de ruis die er elke dag al stond. Dat gold meteen voor I14 en I15,
 die er juist zijn omdat de persketen veertig uur onzichtbaar stil kon liggen.
 
+### Het beheertoken bewaren, en wat er op mobiel misging
+
+**Opslagvorm.** Het token staat als kale tekenreeks in `localStorage` onder
+`nlfr_review_token`, weggeschreven door een script op de pagina zelf.
+`/banner-beheer` doet hetzelfde met een eigen sleutel.
+
+**Wat er misging.** Op desktop werkte het; op mobiel moest het token bij elk
+bezoek opnieuw worden ingevoerd, terwijl het scherm zei *"Het beheertoken is in
+deze browser bewaard."* Die zin stond er zodra het token in het **geheugen**
+zat. Het wegschrijven zag er zo uit:
+
+```js
+try { localStorage.setItem(TOKENSLEUTEL, t); } catch(e){}
+```
+
+Een lege catch. Weigert de browser te schrijven, dan gebeurde er niets en zei de
+pagina dat het gelukt was. Juist die onwaarheid maakte het onvindbaar: er was
+geen zichtbaar verschil tussen bewaard en weggegooid.
+
+**Wat er nu gebeurt.** De opslaglaag controleert zichzelf:
+
+1. **Terugleen.** Een schrijfactie geldt pas als geslaagd wanneer hetzelfde
+   eruit komt als erin ging. Dat vangt ook de browsers die niet gooien maar de
+   waarde stil laten vallen.
+2. **Terugval op `sessionStorage`** als `localStorage` niet werkt — die
+   overleeft het sluiten van het tabblad niet, maar wel het navigeren binnen het
+   bezoek. De pagina zegt dat er dan ook bij.
+3. **De fout bij naam.** `QuotaExceededError` (privémodus op iOS),
+   `SecurityError` (geblokkeerde site-gegevens), of "schrijft niets weg". Op een
+   telefoon is er geen ontwikkelaarsgereedschap; de diagnose staat daarom op de
+   pagina zelf, in overtikbare vorm.
+4. **Een baken.** Bij elk bezoek wordt `nlfr_review_baken` weggeschreven. Dat
+   beantwoordt de vraag die het token alleen niet kan beantwoorden: staat het
+   baken er nog maar het token niet, dan is het token gericht verdwenen; is
+   alles weg terwijl de opslag verder werkt, dan heeft de browser de
+   site-gegevens opgeruimd.
+5. **De ingebedde context.** Staat `/review` in een kader binnen een andere
+   pagina, dan houden mobiele browsers die opslag apart van dezelfde site op
+   zichzelf, of weigeren hem. De pagina herkent dat (`window.top !==
+   window.self`) en zegt het.
+
+**Welke vorm blijft op mobiel wél staan.** Voor het geval dat het schrijven
+*slaagt* maar de waarde later verdwijnt, is de duurzamere vorm een cookie die de
+**server** zet (`Set-Cookie`, `HttpOnly; Secure; SameSite=Lax`): iOS Safari kapt
+opslag die door een script is gezet — `localStorage` én `document.cookie` — af na
+zeven dagen zonder interactie met de site, en die grens geldt niet voor een
+door de server gezette cookie. Dat is nog niet gebouwd: eerst moet de diagnose
+hierboven uitwijzen of het schrijven mislukt (dan helpt een cookie niet) of pas
+later wordt opgeruimd (dan wel).
+
 ### De webhook-secret `SONDE_WEBHOOK_URL`
 
 Aan het eind van elke sonderun gaat er één POST naar de URL in de repo-secret

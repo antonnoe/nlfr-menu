@@ -252,6 +252,51 @@ momentopname, en de overheidsstroom blijft buiten schot. Het antwoord bevat
 `meting`, `eersteNul`, `duiding` en per kandidaat de koppen, de outlets en de
 blokkade.
 
+### Het vijfde tabblad: Uitgelegd
+
+Verzamelt alle **live** artikelen met een redactionele Infofrankrijk-verwijzing,
+dwars door tegels en regimes heen. Nieuwste bovenaan, met kop, herkomst, bron en
+datum, en de verwijzing als het onderwerp van de kaart in plaats van als
+voetnoot.
+
+**Waarom.** Zo'n verwijzing staat in een tegel *onder* de bronnen van een
+artikel, dus pas zichtbaar nadat de lezer eerst het artikel en dan de bronnen
+heeft uitgeklapt. Gemeten op productie op 5 september 2026: van de 74 lopende
+berichten had er **nul** een zichtbare verwijzing, en de enige twee die
+bestonden hingen aan archiefberichten. Werk dat met de hand wordt gekozen en dat
+vervolgens niemand ziet.
+
+Vier dingen liggen vast in `test/uitgelegd-tab.test.mjs`:
+
+- **Bij nul verwijzingen verdwijnt het tabblad volledig.** Niet grijs, niet leeg
+  met een uitleg erin: weg. Een tabblad dat er altijd staat en meestal niets
+  toont, leert de lezer het over te slaan.
+- **Het archief doet niet mee.** "Live" is de eis, en de archieftegel draagt zijn
+  artikelen bovendien in een derde levering die pas wordt opgehaald als de lezer
+  hem opent.
+- **Artikelen blijven ook in hun eigen tegel staan.** Dit is een tweede ingang,
+  geen verhuizing.
+- **Geen tegel eromheen.** Op elk ander tabblad is de tegel de groepering; hier
+  is het tabblad zelf de groep, en een tegel zou een dichtgeklapte laag
+  toevoegen aan precies datgene wat dit tabblad uit de klapjes moest halen.
+
+Kleuren: bordeaux `#800000` als hoofdkleur, flessengroen `#2f6b3a` voor de
+verwijzing zelf. De pijltjestoetsen op de tabbalk lezen hun volgorde sindsdien
+uit de tabbalk in plaats van uit een vaste lijst — anders zou een tabblad dat
+verschijnt en verdwijnt er stilzwijgend buiten vallen.
+
+### De bronnenregel op een telefoon
+
+Zeventien bronnen achter elkaar vullen op een telefoon ongeveer de halve
+schermhoogte, pal onder de lijst die de lezer juist wil zien. Onder 600px staat
+er daarom één knop, `Bronnen (17)`; daarboven blijft de regel zoals hij was.
+
+Het in- en uitklappen gebeurt in **CSS op de breedte**, niet met een meting in
+JavaScript: een gemeten breedte klopt niet meer zodra het venster draait of het
+paneel in het iframe van hoogte verandert. De stand wordt niet bewaard — een
+bewaarde open stand zou bij het volgende bezoek meteen weer de halve
+schermhoogte opeisen.
+
 ### De drie leveringen
 
 De pagina wordt in **drie stukken** geserveerd, elk met een eigen route. Twee

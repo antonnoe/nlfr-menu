@@ -37,6 +37,11 @@
   .cat-nieuws,.cat-nlers{ --c-main:#2f6b3a; --c-dark:#22522c; --c-tint:#eef4ef; --c-rand:#d5e4d9; --c-meta:#4b5c4f; --c-chip:#f6faf7; }
   .cat-overheid{ --c-main:#800000; --c-dark:#5f0000; --c-tint:#fbf0ee; --c-rand:#ecd9d5; --c-meta:#6b4a46; --c-chip:#fdf6f5; }
   .cat-archief{ --c-main:#5c5f5c; --c-dark:#4a4d4a; --c-tint:#f3f2f0; --c-rand:#e2e0dc; --c-meta:#6f6663; --c-chip:#f8f8f6; }
+  /* Uitgelegd draagt de twee huiskleuren samen: bordeaux als hoofdkleur, zoals
+     de overheidstegels, met flessengroen als tweede accent voor de verwijzing
+     zelf. Dat is het enige wat op dit tabblad echt telt, en het mag opvallen. */
+  .cat-uitgelegd{ --c-main:#800000; --c-dark:#5f0000; --c-tint:#fbf0ee; --c-rand:#ecd9d5; --c-meta:#6b4a46; --c-chip:#fdf6f5;
+                  --c-tweede:#2f6b3a; --c-tweede-tint:#eef4ef; --c-tweede-rand:#cfe1d4; }
 
   *{ box-sizing:border-box; }
   html,body{ height:100%; margin:0; padding:0; background:var(--bg); -webkit-text-size-adjust:100%; }
@@ -133,6 +138,26 @@
   .platblok{ font-size:15px; line-height:24px; color:var(--ink-body2); display:grid; gap:8px; }
   .platlink a, .agendalink a{ font-family:var(--disp); font-weight:600; font-size:13px; color:var(--c-main); text-decoration:none; }
   .platlink a:hover, .agendalink a:hover{ text-decoration:underline; }
+
+  /* ---- Uitgelegd -------------------------------------------------------------
+     Eén kaart per artikel dat een redactionele verwijzing naar Infofrankrijk
+     heeft. Op de andere tabbladen staat die verwijzing onder de bronnen, en dus
+     pas zichtbaar na twee keer uitklappen; hier is zij het onderwerp en staat
+     zij vooraan. De bordeaux linkerrand bindt de kaart aan de huisstijl, het
+     groene vlak eronder is de verwijzing zelf. */
+  .uitleglijst{ display:grid; gap:12px; }
+  .uitlegkaart{ background:#fff; border:1px solid var(--c-rand); border-left:3px solid var(--c-main);
+                border-radius:12px; padding:12px 14px; box-shadow:var(--sh-rust); }
+  .uitlegkaart h4{ margin:0 0 4px; font-family:var(--disp); font-weight:600; font-size:15px; line-height:21px; color:var(--ink); }
+  .uitlegkaart .herkomst{ font-family:var(--body); font-size:12.5px; color:var(--c-meta); margin-bottom:10px; }
+  .uitlegkaart .herkomst .tegelnaam{ font-weight:600; }
+  .uitlegverwijzing{ background:var(--c-tweede-tint); border:1px solid var(--c-tweede-rand); border-radius:10px; padding:10px 12px; }
+  .uitlegverwijzing .kopje{ display:block; font-family:var(--disp); font-weight:600; font-size:11.5px;
+                            letter-spacing:.04em; text-transform:uppercase; color:var(--c-tweede); margin-bottom:6px; }
+  .uitlegverwijzing ul{ margin:0; padding:0; list-style:none; display:grid; gap:6px; }
+  .uitlegverwijzing a{ font-family:var(--disp); font-weight:600; font-size:14px; line-height:20px;
+                       color:var(--c-tweede); text-decoration:none; display:inline-flex; align-items:baseline; gap:6px; }
+  .uitlegverwijzing a:hover, .uitlegverwijzing a:focus-visible{ text-decoration:underline; }
   .agrij{ display:flex; gap:12px; padding:6px 0; border-bottom:1px solid var(--hair); }
   .agrij:last-child{ border-bottom:none; }
   .agrij .dat{ flex:0 0 108px; font-family:var(--disp); font-weight:600; font-size:12px; color:var(--c-main); }
@@ -219,6 +244,26 @@
   .status .b{ display:inline-flex; align-items:center; gap:6px; }
   .status .sd{ width:6px; height:6px; border-radius:999px; flex:none; }
   .status .ok .sd{ background:var(--groen); } .status .nok .sd{ background:var(--brand); }
+  /* ---- Bronnenregel: op een telefoon ingeklapt --------------------------------
+     Zeventien bronnen achter elkaar vullen op een telefoon ongeveer de halve
+     schermhoogte, onder een lijst die de lezer juist wil zien. Op mobiel staat
+     er daarom één knop; op een breed scherm blijft de regel zoals hij was, want
+     daar is de ruimte er wel en is de volledige stand in één oogopslag nuttig.
+     De grens is dezelfde 600px die de tabs en de scroller al gebruiken. */
+  .status .statusknop{ display:none; align-items:center; gap:8px; min-height:44px; padding:0;
+    font-family:var(--body); font-weight:600; font-size:12.5px; color:var(--ink-meta);
+    background:none; border:0; cursor:pointer; }
+  .status .statusknop .pijl{ transition:transform .18s ease; }
+  .status .statusknop[aria-expanded="true"] .pijl{ transform:rotate(180deg); }
+  .status .bronnenlijst{ display:contents; }
+  @media (max-width:599.98px){
+    .status{ display:block; }
+    .status .statusknop{ display:inline-flex; }
+    /* display:contents zou de kinderen laten staan; hier moet het blok echt weg. */
+    .status .bronnenlijst{ display:none; margin-top:8px; }
+    .status .bronnenlijst.open{ display:flex; flex-wrap:wrap; gap:6px 14px; }
+  }
+  @media (prefers-reduced-motion:reduce){ .status .statusknop .pijl{ transition:none; } }
 
   /* ---- Compacte stand voor de startpagina: /actueel?stand=kort ----
      Eén smalle kolom met de tien jongste berichten. Geen tabs, geen tegels,
@@ -266,6 +311,7 @@
   <symbol id="ic-natuur" viewBox="0 0 24 24"><path d="M12 20.5V11"></path><path d="M12 13.5c-3.4 0-6.2-2.6-6.2-6 2.1-.6 4-.3 5.4.8 1 .8 1.6 1.9 1.9 3.1"></path><path d="M12.6 11.4c.3-1.2.9-2.3 1.9-3.1 1.4-1.1 3.3-1.4 5.4-.8 0 3.4-2.8 6-6.2 6"></path></symbol>
   <symbol id="ic-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></symbol>
   <symbol id="ic-leeg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"></circle><path d="M8.4 13.8h7.2"></path></symbol>
+  <symbol id="ic-uitgelegd" viewBox="0 0 24 24"><path d="M12 7.2C10.4 6 8.4 5.4 6 5.4H3.5v12H6c2.4 0 4.4.6 6 1.8"></path><path d="M12 7.2c1.6-1.2 3.6-1.8 6-1.8h2.5v12H18c-2.4 0-4.4.6-6 1.8"></path><path d="M12 7.2V19"></path></symbol>
 </svg>
 
 <div class="panel">
@@ -319,10 +365,14 @@
 
   // Categorieën (vaste volgorde) + iconen + labels.
   var CATS = [
-    { key:"nieuws",   label:"Nieuws",       ic:"ic-nieuws" },
-    { key:"overheid", label:"Overheid",     ic:"ic-overheid" },
-    { key:"nlers",    label:"NL'ers in FR", ic:"ic-nlers" },
-    { key:"archief",  label:"Archief",      ic:"ic-archief" }
+    { key:"nieuws",    label:"Nieuws",       ic:"ic-nieuws" },
+    { key:"overheid",  label:"Overheid",     ic:"ic-overheid" },
+    { key:"nlers",     label:"NL'ers in FR", ic:"ic-nlers" },
+    // Uitgelegd verzamelt de artikelen met een redactionele verwijzing naar
+    // Infofrankrijk, dwars door tegels en regimes heen. Geen eigen voorraad: de
+    // artikelen blijven ook gewoon in hun eigen tegel staan.
+    { key:"uitgelegd", label:"Uitgelegd",    ic:"ic-uitgelegd" },
+    { key:"archief",   label:"Archief",      ic:"ic-archief" }
   ];
   var THEMA_IC = {
     "geld-belasting":"ic-geld", economie:"ic-geld", ondernemen:"ic-geld", douane:"ic-overheid", praktisch:"ic-praktisch",
@@ -452,7 +502,11 @@
 
   // Bouw per-categorie lijst van "tegels" (incl. agenda/schoolvakanties als platte tegels).
   function bouwCats(data, vak){
-    var perCat = { nieuws:[], overheid:[], nlers:[], archief:[] };
+    // `uitgelegd` blijft hier LEEG. Hij wordt niet uit `data.tegels` gevuld maar
+    // afgeleid van de verwijzingen, en die komen pas met de tweede levering
+    // binnen (/api/actueel-tekst). Vullen gebeurt daarom in render(), bij elke
+    // hertekening — zie verzamelUitgelegd().
+    var perCat = { nieuws:[], overheid:[], nlers:[], uitgelegd:[], archief:[] };
     (data.tegels||[]).forEach(function(t){ perCat[catVan(t.soort)].push(t); });
     if (data.agenda && data.agenda.length){
       perCat.nlers.push({ soort:"agenda", id:"agenda", thema:"agenda", label:"Agenda — komende twee weken",
@@ -655,6 +709,71 @@
     '</article>';
   }
 
+  // ---- Uitgelegd -------------------------------------------------------------
+  // ALLE LIVE ARTIKELEN MET EEN REDACTIONELE VERWIJZING, dwars door tegels en
+  // regimes heen. Op de andere tabbladen staat zo'n verwijzing onder de bronnen
+  // van een artikel, dus pas zichtbaar na twee keer uitklappen; gemeten op
+  // productie stonden de enige twee die er waren zelfs onder ARCHIEFberichten.
+  // Hier is de verwijzing het onderwerp en staat ze vooraan.
+  //
+  // HET ARCHIEF DOET NIET MEE. "Live" is de eis: een artikel dat zijn tijd op de
+  // pagina heeft gehad, hoort hier niet alsnog bovenaan te komen. De
+  // archieftegel draagt zijn artikelen bovendien in een derde levering die pas
+  // wordt opgehaald als de lezer hem opent — meetellen zou het tabblad laten
+  // verspringen zodra iemand het archief aanraakt.
+  //
+  // Artikelen blijven ook in hun eigen tegel staan; dit is een tweede ingang,
+  // geen verhuizing.
+  function verzamelUitgelegd(perCat){
+    var uit = [];
+    ["nieuws","overheid","nlers"].forEach(function(k){
+      (perCat[k]||[]).forEach(function(t){
+        if (!t || !Array.isArray(t.artikelen)) return;
+        t.artikelen.forEach(function(a){
+          var extra = tekstVoor(t.id+"/"+a.id, a);
+          var vw = (extra && extra.verwijzingen) || a.verwijzingen || [];
+          if (!vw.length) return;
+          // Sorteersleutel: de datum van het artikel, met de bron-datum als
+          // terugval. Een perssynthese draagt `datum` (publicatiemoment), een
+          // overheids- of verenigingsbericht heeft die in bronMeta.
+          var t0 = Date.parse(a.datum || (a.bronMeta && a.bronMeta.datum) || "") || 0;
+          uit.push({ tegel:t, art:a, verwijzingen:vw, t:t0 });
+        });
+      });
+    });
+    uit.sort(function(a,b){ return b.t - a.t; }); // nieuwste bovenaan
+    return uit;
+  }
+
+  function uitgelegdKaart(r){
+    var a = r.art;
+    // De herkomst: uit welke tegel komt dit, en van wie is het. Een
+    // perssynthese is eigen redactioneel werk op meerdere bronnen en draagt
+    // daarom de redactie, precies zoals in de tegel zelf — de bronnenlijst is
+    // daar de attributie, niet de eerste krant.
+    var wie;
+    if (a.soort === "pers") wie = "Redactie NLFR";
+    else {
+      var bm = a.bronMeta || null;
+      wie = bm && bm.naam ? bm.naam : "";
+    }
+    var wanneer = a.datum || (a.bronMeta && a.bronMeta.datum) || "";
+    var herkomst = ['<span class="tegelnaam">'+esc(r.tegel.label||"")+"</span>", wie ? esc(wie) : "", wanneer ? esc(datum(wanneer)) : ""]
+      .filter(Boolean).join(" · ");
+    var links = r.verwijzingen.map(function(v){
+      return '<li><a href="'+esc(v.url)+'" target="_blank" rel="noopener">'+esc(v.titel||v.url)+' →</a></li>';
+    }).join("");
+    return '<article class="uitlegkaart">'+
+      "<h4>"+esc(a.titel||"")+"</h4>"+
+      '<div class="herkomst">'+herkomst+"</div>"+
+      '<div class="uitlegverwijzing"><span class="kopje">'+esc(VERWIJS_KOP)+"</span><ul>"+links+"</ul></div>"+
+    "</article>";
+  }
+
+  function uitgelegdBody(rijen){
+    return '<div class="uitleglijst">'+rijen.map(uitgelegdKaart).join("")+"</div>";
+  }
+
   function leegHTML(){
     return '<div class="leeg"><span class="rond">'+ico("ic-leeg")+'</span>'+
       '<h3>Geen nieuwe berichten</h3>'+
@@ -662,17 +781,39 @@
       '<span class="gecheckt">Laatst gecontroleerd '+esc(bijwerkEl.textContent)+'</span></div>';
   }
 
-  function renderTabs(perCat){
-    var g1 = ["nieuws","overheid","nlers"].map(function(k){
-      var c = CATS.filter(function(x){return x.key===k;})[0];
-      return '<button type="button" role="tab" class="tab cat-'+k+'" data-tab="'+k+'" aria-selected="'+(actief===k?"true":"false")+'">'+ico(c.ic)+esc(c.label)+'</button>';
+  function tabHTML(k, label){
+    var c = CATS.filter(function(x){return x.key===k;})[0] || {};
+    return '<button type="button" role="tab" class="tab cat-'+k+'" data-tab="'+k+
+      '" aria-selected="'+(actief===k?"true":"false")+'">'+ico(c.ic)+esc(label||c.label)+'</button>';
+  }
+
+  function renderTabs(perCat, aantalUitgelegd){
+    var keys = ["nieuws","overheid","nlers"];
+    // BIJ NUL VERWIJZINGEN VERDWIJNT HET TABBLAD HELEMAAL. Niet grijs, niet leeg
+    // met een uitleg erin: weg. Een tabblad dat er altijd staat en meestal niets
+    // toont, leert de lezer het over te slaan — en dan mist hij het juist op de
+    // dag dat er wél iets in staat. Het aantal in het label is om diezelfde
+    // reden geen versiering: het is de enige reden om erop te tikken.
+    if (aantalUitgelegd > 0) keys.push("uitgelegd");
+    var g1 = keys.map(function(k){
+      return tabHTML(k, k === "uitgelegd" ? "Uitgelegd (" + aantalUitgelegd + ")" : null);
     }).join("");
-    var arch = '<button type="button" role="tab" class="tab cat-archief" data-tab="archief" aria-selected="'+(actief==="archief"?"true":"false")+'">'+ico("ic-archief")+'Archief</button>';
+    var arch = tabHTML("archief");
     tabsEl.innerHTML = '<span class="tabgroep">'+g1+'</span><span class="tabsplit"></span><span class="tabgroep archiefgroep">'+arch+'</span>';
   }
 
   function renderScroller(perCat){
     var lijst = perCat[actief] || [];
+    // UITGELEGD KRIJGT GEEN TEGEL OMHEEN. Op elk ander tabblad is de tegel de
+    // groepering — Douane, Landelijk nieuws, Agenda — en dat klopt daar. Hier is
+    // het tabblad zelf de groep, en een tegel eromheen zou een dichtgeklapte
+    // laag toevoegen aan precies datgene wat dit tabblad uit de klapjes moest
+    // halen. Een lezer die hierop tikt heeft de kaarten meteen voor zich.
+    if (actief === "uitgelegd"){
+      scrollerEl.innerHTML = lijst.length ? lijst[0].plat : leegHTML();
+      werkAllesLabelBij();
+      return;
+    }
     if (!lijst.length){ scrollerEl.innerHTML = leegHTML(); }
     else { scrollerEl.innerHTML = lijst.map(function(t){ return tegelHTML(actief, t); }).join(""); }
     werkAllesLabelBij();
@@ -680,16 +821,69 @@
 
   function render(){
     if(!laatste){ return; }
-    renderTabs(laatste);
+    // Uitgelegd wordt bij ELKE hertekening opnieuw afgeleid. Dat moet ook: de
+    // verwijzingen komen met de tweede levering binnen, dus bij de eerste
+    // weergave zijn het er nog nul en verschijnt het tabblad pas daarna.
+    var rijen = verzamelUitgelegd(laatste);
+    laatste.uitgelegd = rijen.length
+      ? [{ soort:"uitgelegd", id:"uitgelegd", thema:"infofrankrijk",
+           label:"Uitgelegd op Infofrankrijk",
+           meta:meerv(rijen.length), plat:uitgelegdBody(rijen) }]
+      : [];
+    // Verdwijnt het tabblad terwijl de lezer erop staat (de laatste verwijzing
+    // is net weggehaald in de reviewtool), dan valt hij terug op Nieuws in
+    // plaats van naar een leeg scherm te kijken.
+    if (actief === "uitgelegd" && !rijen.length) actief = "nieuws";
+    renderTabs(laatste, rijen.length);
+    // De kleurtokens zitten normaal op de TEGEL (class cat-…). Uitgelegd heeft
+    // geen tegel, dus draagt de scroller ze daar zelf.
+    scrollerEl.className = "scroller" + (actief === "uitgelegd" ? " cat-uitgelegd" : "");
+    // "Alles uitklappen" heeft op dit tabblad niets om uit te klappen; een knop
+    // die niets doet is erger dan geen knop.
+    if (allesBtn) allesBtn.hidden = (actief === "uitgelegd");
     renderScroller(laatste);
     meldHoogte();
   }
 
+  // ---- De bronnenregel ------------------------------------------------------
+  // Zeventien bronnen achter elkaar zijn op een telefoon ongeveer de halve
+  // schermhoogte, pal onder de lijst die de lezer juist wil zien. Op mobiel
+  // staat er daarom één knop, "Bronnen (17)", met de stippen erachter; op een
+  // breed scherm blijft de regel ongewijzigd — daar is de ruimte er wel.
+  //
+  // HET INKLAPPEN GEBEURT IN CSS, niet met een breedtemeting in JavaScript. Een
+  // gemeten breedte klopt niet meer zodra het venster draait of het paneel in
+  // het iframe van hoogte verandert, en dan staat de regel op een telefoon in
+  // liggende stand alsnog open of op een desktop dicht. De mediaquery volgt de
+  // werkelijke breedte, altijd. De knop staat er dus in beide standen; hij is
+  // op breed scherm simpelweg niet zichtbaar.
+  //
+  // De stand wordt NIET bewaard: dit is een randregel, geen keuze die je per
+  // bezoek terug wilt zien, en een bewaarde open stand zou de helft van het
+  // scherm opeisen bij het eerstvolgende bezoek.
+  var statusOpen = false;
   function renderStatus(lijst){
     if(!lijst || !lijst.length){ statusEl.innerHTML=""; return; }
-    statusEl.innerHTML = '<span class="b" style="font-weight:600">Bronnen:</span>' + lijst.map(function(b){
+    var stippen = lijst.map(function(b){
       return '<span class="b '+(b.ok?"ok":"nok")+'"><span class="sd"></span>'+esc(b.naam)+' ('+(b.aantal||0)+')</span>';
     }).join("");
+    statusEl.innerHTML =
+      '<button type="button" class="statusknop" id="statusknop" aria-expanded="'+(statusOpen?"true":"false")+
+        '" aria-controls="bronnenlijst">Bronnen ('+lijst.length+')'+ico("ic-chevron","pijl")+'</button>' +
+      '<div class="bronnenlijst'+(statusOpen?" open":"")+'" id="bronnenlijst">' +
+        '<span class="b" style="font-weight:600">Bronnen:</span>' + stippen +
+      '</div>';
+    var knop = document.getElementById("statusknop");
+    if (knop) knop.addEventListener("click", function(){
+      statusOpen = !statusOpen;
+      var lijstEl = document.getElementById("bronnenlijst");
+      knop.setAttribute("aria-expanded", statusOpen ? "true" : "false");
+      if (lijstEl) lijstEl.classList.toggle("open", statusOpen);
+      // Het paneel staat in een iframe met hoogte-synchronisatie; zonder deze
+      // melding blijft de omhullende pagina op de oude hoogte staan en valt de
+      // uitgeklapte lijst achter de rand.
+      meldHoogte();
+    });
   }
 
   // ---- Scroll-zichtbaarheid ---------------------------------------------
@@ -736,8 +930,18 @@
   });
   tabsEl.addEventListener("keydown", function(e){
     if(e.key!=="ArrowRight" && e.key!=="ArrowLeft") return;
-    var order = ["nieuws","overheid","nlers","archief"];
+    // DE VOLGORDE KOMT UIT DE TABBALK ZELF, niet uit een lijst hiernaast. Die
+    // lijst stond hier hardgecodeerd op vier namen, en het vijfde tabblad
+    // (Uitgelegd) zou er stilzwijgend buiten vallen: wel aanklikbaar, niet
+    // bereikbaar met de pijltjes, terwijl role="tablist" dat wél belooft.
+    // Bovendien verschijnt en verdwijnt dat tabblad met het aantal
+    // verwijzingen — een vaste lijst zou dan naar een knop wijzen die er niet
+    // is. Wat er staat, is wat er is.
+    var order = Array.prototype.map.call(tabsEl.querySelectorAll(".tab"), function(t){
+      return t.getAttribute("data-tab");
+    });
     var i = order.indexOf(actief);
+    if (i < 0) return;
     i = e.key==="ArrowRight" ? Math.min(order.length-1,i+1) : Math.max(0,i-1);
     actief = order[i]; save("nlfr_tab", actief); render();
     var t = tabsEl.querySelector('[data-tab="'+actief+'"]'); if(t) t.focus();

@@ -210,6 +210,22 @@
   .opslagstand.fout { border-left-color:#8a2b2b; background:#fdf5f4; color:#6b3630; }
   .opslagstand b { font-weight:600; }
   .opslagstand .details { margin-top:6px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:#8a7f7c; word-break:break-word; }
+  /* De sluitknop is de ENIGE manier waarop deze melding weggaat. Vandaar een
+     echt tikdoel van 44px: op een telefoon is dit het knopje dat je raakt
+     nadat je de tekst hebt gelezen, niet iets waar je per ongeluk langs veegt. */
+  .opslagstand .opslagsluit { display:inline-flex; align-items:center; min-height:44px; margin-top:6px;
+    font-family:'Mulish',sans-serif; font-size:12.5px; color:#6b3630; background:none; border:0; padding:0 2px;
+    text-decoration:underline; cursor:pointer; }
+  .opslagstand .opslagsluit:hover, .opslagstand .opslagsluit:focus-visible { color:var(--brand); }
+  /* De meldingen zoals ze op een groot scherm te lezen zijn. */
+  .meldingen { max-width:760px; margin:0 0 14px; }
+  .meldingen h2 { margin:0 0 8px; }
+  .meldingen .oordeel { padding:10px 12px; border-left:3px solid var(--brand); background:#fdf5f4; color:#6b3630;
+    font-size:13px; line-height:1.55; border-radius:0 8px 8px 0; margin-bottom:10px; }
+  .meldingen ol { margin:0; padding:0; list-style:none; display:grid; gap:8px; }
+  .meldingen li { border:1px solid rgba(128,0,0,.12); border-radius:10px; padding:8px 10px; background:#fff; }
+  .meldingen .wanneer { font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:var(--brand); }
+  .meldingen .rij { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:#6b625f; word-break:break-word; }
   /* De gemeten stand van de persketen onder een lege conceptlijst. Bewust
      nuchter opgemaakt: het is diagnose, geen waarschuwing — nul concepten kan
      een rustige nieuwsdag zijn. Wat de regels doen is dat verschil zichtbaar
@@ -275,6 +291,9 @@
        is. Bedoeld om op de telefoon zelf te kunnen lezen waaraan het ligt,
        zonder ontwikkelaarsgereedschap dat daar niet bestaat. -->
   <div class="opslagstand" id="opslagstand" hidden></div>
+  <!-- DE MELDINGEN VAN DE TELEFOONS, op een scherm waar ze blijven staan. Op
+       Android knipperde de diagnose voorbij; hier is hij rustig na te lezen. -->
+  <div class="meldingen" id="meldingen" hidden></div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
 
   <!-- VOETTEKST. "Token vergeten" stond pal boven de inhoud, één duimbreedte
@@ -414,7 +433,10 @@
 
   // Het baken van het VORIGE bezoek, opgehaald vóór we dat van nu wegschrijven.
   var vorigBaken = opslag.lees(BAKENSLEUTEL);
-  opslag.schrijf(BAKENSLEUTEL, new Date().toISOString());
+  // De uitslag van díe schrijfactie telt mee in de melding: een baken dat niet
+  // eens weg te schrijven is, zegt iets anders dan een baken dat wél wordt
+  // weggeschreven en bij het volgende bezoek verdwenen blijkt.
+  var bakenGeschreven = opslag.schrijf(BAKENSLEUTEL, new Date().toISOString()).ok;
 
   // De uitslag van de laatste schrijfpoging. Hierop draait wat het scherm zegt:
   // niet op "er staat een token in het geheugen", maar op "is hij bewaard".
@@ -457,7 +479,7 @@
     // het Infofrankrijk-paneel). Eén zo'n aanroep zou de zojuist gewiste
     // redactionele inhoud zo weer terugzetten. Een tokenwissel is een nieuwe
     // sessie; wat bij de vorige hoorde gaat mee.
-    state.concepten = []; state.index = 0; state.duplicaten = 0; state.totaal = 0; state.journaal = null;
+    state.concepten = []; state.index = 0; state.duplicaten = 0; state.totaal = 0; state.journaal = null; state.opslagmeldingen = []; state.opslagoordeel = null;
     state.publicaties = []; state.overheid = []; state.bronUrlWeigeringen = [];
     state.verwijzingen = {}; state.nakijken = []; state.bijnaVerlopen = [];
     state.ifIndex = null; state.ifPaneel = null;
@@ -1400,8 +1422,21 @@
   // bewaard tot je dit tabblad sluit, of niet bewaard. Alleen de eerste is wat
   // iemand verwacht als er "bewaard" staat; de andere twee horen dat te zeggen,
   // want anders zoekt hij de oorzaak bij zichzelf.
+  // TELLERS VOOR HET KNIPPEREN. Op Android verscheen de diagnose en verdween hij
+  // binnen een fractie van een seconde: te snel om te lezen, te snel voor een
+  // schermafdruk. Sinds deze versie verdwijnt hij niet meer vanzelf — maar wát
+  // hem eerder liet verdwijnen is nog steeds de vraag, en die beantwoordt zich
+  // niet als we het gedrag alleen maar wegnemen. Elke poging tot verbergen
+  // wordt daarom geteld en gaat mee in de melding naar de server.
+  var opslagGetekend = 0;
+  var opslagZouVerbergen = 0;
+  var opslagGetoond = false;   // heeft hij ooit iets getoond dit bezoek?
+  var opslagWeggeklikt = false; // heeft de lezer hem zelf gesloten?
+
   function tekenOpslagstand(){
     if (!opslagstandEl) return;
+    opslagGetekend += 1;
+    if (opslagWeggeklikt){ opslagstandEl.hidden = true; return; }
     var d = opslag.diagnose;
     var regels = [];
     var fout = false;
@@ -1431,7 +1466,16 @@
         "(privémodus, weinig opslagruimte, of een tijdslimiet op wat een script bewaart).");
     }
 
-    if (!regels.length){ opslagstandEl.hidden = true; opslagstandEl.innerHTML = ""; return; }
+    if (!regels.length){
+      opslagZouVerbergen += 1;
+      // BLIJFT STAAN. Wat er eenmaal stond, verdwijnt niet meer vanzelf: de
+      // lezer moet hem kunnen lezen en desnoods fotograferen, en op een telefoon
+      // is een melding die zichzelf opruimt hetzelfde als geen melding. Alleen
+      // de sluitknop haalt hem weg.
+      if (opslagGetoond) return;
+      opslagstandEl.hidden = true; opslagstandEl.innerHTML = "";
+      return;
+    }
 
     // De onderregel is bewust technisch: dit is wat je overtikt of doorstuurt
     // als het hiermee niet is opgelost. Zonder ontwikkelaarsgereedschap op een
@@ -1444,8 +1488,86 @@
 
     opslagstandEl.className = "opslagstand" + (fout ? " fout" : "");
     opslagstandEl.innerHTML = "<div>" + regels.join("</div><div>") + "</div>" +
-      '<div class="details">' + details + "</div>";
+      '<div class="details">' + details + "</div>" +
+      '<button type="button" class="opslagsluit" id="opslagsluit">Sluiten</button>';
     opslagstandEl.hidden = false;
+    opslagGetoond = true;
+    var sluit = document.getElementById("opslagsluit");
+    if (sluit) sluit.addEventListener("click", function(){
+      opslagWeggeklikt = true;
+      opslagstandEl.hidden = true;
+    });
+  }
+
+  // ---- De melding naar de server ---------------------------------------------
+  // WAAROM DIT NAAR DE SERVER GAAT. De diagnose stond alleen op het scherm van
+  // de telefoon, en juist daar was hij onleesbaar. Hij gaat daarom ook naar KV,
+  // te lezen met het beheertoken op een scherm waar hij blijft staan.
+  //
+  // MET het token, niet zonder. Dat token tikt de redacteur toch al elk bezoek
+  // in — dat is precies het probleem dat hier wordt onderzocht — en een route
+  // zonder token zou een vreemde in staat stellen de ring vol te duwen en deze
+  // metingen eruit te drukken.
+  //
+  // Eén keer per bezoek. Een mislukte verzending is geen melding waard: dan is
+  // er iets veel groters aan de hand en staat dat al op het scherm.
+  var opslagGemeld = false;
+  function meldOpslagAanServer(){
+    if (opslagGemeld || !token) return;
+    opslagGemeld = true;
+    var d = opslag.diagnose;
+    api("POST", { actie: "opslagmelding", melding: {
+      waar: d.waar,
+      localReden: d.local && !d.local.ok ? d.local.reden : null,
+      sessionReden: d.session && !d.session.ok ? d.session.reden : null,
+      ingebed: d.ingebed,
+      vorigBaken: vorigBaken || null,
+      bakenGeschreven: bakenGeschreven,
+      tokenGeschreven: opslagUitslag.ok,
+      getekend: opslagGetekend,
+      zouVerbergen: opslagZouVerbergen,
+      ua: navigator.userAgent
+    }}).catch(function(){});
+  }
+
+  // ---- De opslagmeldingen van de telefoons -----------------------------------
+  // WAAROM ZE HIER STAAN. De diagnose op /review knipperde op Android voorbij:
+  // te snel om te lezen, te snel voor een schermafdruk. Elke melding gaat
+  // daarom mee met het beheertoken naar de server, en komt hier terug op een
+  // scherm waar hij blijft staan.
+  //
+  // Het OORDEEL erboven is de reden dat dit meer is dan een logboek: het
+  // scheidt "de browser weigert weg te schrijven" van "de browser ruimt het
+  // achteraf op", en dat zijn twee verschillende oplossingen. Zie
+  // lib/opslagmelding.js.
+  var meldingenEl = document.getElementById("meldingen");
+  function tekenMeldingen(){
+    if (!meldingenEl) return;
+    var lijst = state.opslagmeldingen || [];
+    var oordeel = state.opslagoordeel;
+    if (!lijst.length){ meldingenEl.hidden = true; meldingenEl.innerHTML = ""; return; }
+    var rijen = lijst.map(function(m){
+      var regels = [
+        "opslag=" + esc(m.waar),
+        m.localReden ? "local: " + esc(m.localReden) : "",
+        m.sessionReden ? "session: " + esc(m.sessionReden) : "",
+        "ingebed=" + (m.ingebed ? "ja" : "nee"),
+        "vorig bezoek=" + (m.vorigBaken ? esc(m.vorigBaken) : "geen spoor"),
+        "baken geschreven=" + (m.bakenGeschreven ? "ja" : "nee"),
+        "token geschreven=" + (m.tokenGeschreven ? "ja" : "nee"),
+        // Het knipperen zelf, als getal: hoe vaak de diagnose opnieuw werd
+        // getekend en hoe vaak hij daarbij zou zijn verborgen.
+        "getekend=" + (m.getekend == null ? "?" : m.getekend) +
+          " · zou verbergen=" + (m.zouVerbergen == null ? "?" : m.zouVerbergen)
+      ].filter(Boolean);
+      return "<li><div class=\"wanneer\">" + esc(datum(m.op)) + "</div>" +
+        '<div class="rij">' + regels.join(" · ") + "</div>" +
+        (m.ua ? '<div class="rij">' + esc(m.ua) + "</div>" : "") + "</li>";
+    }).join("");
+    meldingenEl.innerHTML = "<h2>Opslagmeldingen</h2>" +
+      (oordeel ? '<div class="oordeel">' + esc(oordeel.tekst) + "</div>" : "") +
+      "<ol>" + rijen + "</ol>";
+    meldingenEl.hidden = false;
   }
 
   function tekenToken(){
@@ -1551,8 +1673,18 @@
         state.bijnaVerlopen = res.data.bijnaVerlopen || [];
         state.ifIndex = res.data.ifIndex || null;
         state.journaal = res.data.journaal || null;
+        state.opslagmeldingen = res.data.opslagmeldingen || [];
+        state.opslagoordeel = res.data.opslagoordeel || null;
+        tekenMeldingen();
         if (state.index >= state.concepten.length) state.index = 0;
         render();
+        // PAS HIER. Eerder stond deze aanroep náást het laden, en dan liepen
+        // twee verzoeken met hetzelfde token tegelijk: kwam er op één van de
+        // twee een 401, dan wiste die het token en werd het antwoord van de
+        // ander als verouderd weggegooid — het scherm bleef leeg zonder dat
+        // ergens stond waarom. Na een geslaagde GET is er geen race meer, en is
+        // bewezen dat het token deugt.
+        meldOpslagAanServer();
       } else {
         // Bij 401 heeft verwerkAntwoord het tokenvak al geopend en de inhoud
         // al leeggemaakt; hier blijft alleen de reden van de server over.

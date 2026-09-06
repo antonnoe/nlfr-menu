@@ -242,8 +242,11 @@
          /banner-beheer gebruikt al jaren type=text en heeft dit nooit gehad. -->
     <input type="text" id="tokenveld" autocomplete="off" spellcheck="false" autocapitalize="off"
            autocorrect="off" placeholder="het REVIEW_TOKEN uit Vercel">
-    <p class="hint">Wordt alleen in deze browser bewaard en als header meegestuurd, nooit in de URL — een URL komt in de
-      browsergeschiedenis en in serverlogs terecht. Daarna kun je hier komen via Beheer in het menu, zonder token in de link.</p>
+    <!-- ÉÉN REGEL. Hier stond ook waarom een token niet in een URL hoort (die
+         komt in de browsergeschiedenis en in serverlogs terecht) en hoe je hier
+         later terugkomt. Dat is uitleg voor wie de code onderhoudt, niet voor
+         wie een token plakt; de reden staat bij TOKENSLEUTEL hieronder. -->
+    <p class="hint">Wordt alleen in deze browser bewaard en als header meegestuurd, nooit in de URL.</p>
     <div class="knoppen">
       <button type="button" class="actie pubbtn" id="tokenok">Bewaren</button>
     </div>

@@ -92,6 +92,11 @@
     font-size:12.5px; color:#666; background:none; border:0; padding:0 2px;
     text-decoration:underline; cursor:pointer; }
   .tokenweg:hover, .tokenweg:focus-visible { color:var(--brand); }
+  /* De voettekst staat na alle inhoud en houdt afstand: de ruimte erboven is
+     wat de knop onbereikbaar maakt voor een duim die op de laatste kaart mikt. */
+  .voet { margin-top:40px; padding-top:14px; border-top:1px solid rgba(128,0,0,.12);
+    display:flex; justify-content:flex-end; }
+  .voet[hidden] { display:none; }
 
   .kaart { background:#fff; border:1px solid rgba(128,0,0,.14); border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 10px 30px -24px rgba(90,0,0,.5); }
   .kaart.pub { border-color:rgba(47,107,58,.4); background:rgba(47,107,58,.05); }
@@ -261,15 +266,28 @@
          zat, ook als het wegschrijven zojuist stil was mislukt — en dat is
          precies wat er op mobiel gebeurde: elk bezoek opnieuw intikken, terwijl
          het scherm volhield dat hij bewaard was. Wat er nu staat, komt uit de
-         uitslag van de schrijfpoging. Zie opslag.schrijf() hieronder. -->
+         uitslag van de schrijfpoging. Zie opslag.schrijf() hieronder.
+
+         DE WEGHAALKNOP STAAT HIER NIET MEER. Zie de voettekst onderaan. -->
     <span id="tokenstandtekst">Het beheertoken is in deze browser bewaard.</span>
-    <button type="button" class="tokenweg" id="tokenweg">Token vergeten</button>
   </div>
   <!-- WAT DE BROWSER MET OPSLAG DOET. Alleen zichtbaar als er iets te melden
        is. Bedoeld om op de telefoon zelf te kunnen lezen waaraan het ligt,
        zonder ontwikkelaarsgereedschap dat daar niet bestaat. -->
   <div class="opslagstand" id="opslagstand" hidden></div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
+
+  <!-- VOETTEKST. "Token vergeten" stond pal boven de inhoud, één duimbreedte
+       van de knoppen die je de hele dag gebruikt. Op een telefoon is dat twee
+       keer misgegaan, en de prijs is elke keer dezelfde: geen toegang meer tot
+       de redactie tot het REVIEW_TOKEN weer is opgezocht.
+       Onderaan de pagina, achter alle inhoud langs, is hij nog steeds te vinden
+       voor wie hem zoekt — dat was de reden dat hij ooit uit het invoervak werd
+       gehaald — maar niet meer te raken voor wie hem mijdt. De standregel blijft
+       staan waar hij stond: die moet je zien zonder te scrollen. -->
+  <footer class="voet" id="voet" hidden>
+    <button type="button" class="tokenweg" id="tokenweg">Token vergeten</button>
+  </footer>
 
 <script>
 (function(){
@@ -1368,6 +1386,7 @@
   // te heffen onbereikbaar.
   var tokenvakEl = document.getElementById("tokenvak");
   var tokenstandEl = document.getElementById("tokenstand");
+  var voetEl = document.getElementById("voet");
   var tabsEl = document.querySelector(".tabs");
   function zetVerborgen(el, verborgen){
     if (!el) return;
@@ -1433,6 +1452,9 @@
     var heeft = Boolean(token);
     zetVerborgen(tokenvakEl, heeft);
     zetVerborgen(tokenstandEl, !heeft);
+    // De voettekst draagt de weghaalknop en volgt dezelfde stand: zonder token
+    // valt er niets weg te halen.
+    zetVerborgen(voetEl, !heeft);
     // De tabbladen zeggen niets zolang er geen toegang is.
     if (tabsEl) tabsEl.hidden = !heeft;
     // DE STANDREGEL VOLGT DE UITSLAG, niet het geheugen. Stond hier eerder

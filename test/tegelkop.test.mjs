@@ -98,9 +98,17 @@ test("de tegelnaam staat er, de naam van het tabblad niet", () => {
 });
 
 test("geen enkel tabblad zet zijn eigen naam boven de tegelnaam", () => {
-  // Nieuws, Overheid, NL'ers in FR en Archief, alle vier langs dezelfde meetlat.
+  // Alle tabbladen langs dezelfde meetlat. Op de SET getoetst en niet op een
+  // aantal: dat vangt een tabblad dat stilletjes verdwijnt én een dat erbij
+  // komt zonder deze meetlat te passeren. Een kaal getal deed alleen het
+  // eerste, en ging rood bij elke uitbreiding zonder iets te zeggen over wat er
+  // veranderde.
   const tegelHTML = maakTegelHTML();
-  assert.equal(CATS.length, 4, "er horen vier tabbladen te zijn");
+  assert.deepEqual(
+    CATS.map((c) => c.key),
+    ["nieuws", "overheid", "nlers", "uitgelegd", "archief"],
+    "de tabbladen en hun volgorde"
+  );
   for (const cat of CATS) {
     const kop = kopVan(tegelHTML(cat.key, tegel({ label: "Tegelnaam" })));
     assert.ok(kop.includes("<h3>Tegelnaam</h3>"), `${cat.key}: de tegelnaam ontbreekt`);

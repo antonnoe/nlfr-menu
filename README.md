@@ -578,7 +578,8 @@ schending eindigt de stap met code 1, de run wordt rood en GitHub mailt zelf.
 
 Getoetst wordt onder meer: elke bronlink hoort bij zijn bron en heeft een
 niet-leeg pad, geen asset-hosts, elk artikel heeft minstens één bron, geen twee
-live artikelen over hetzelfde verhaal, datums binnen een plausibel venster,
+live artikelen over hetzelfde verhaal (I5, **buiten de verenigingentegel** —
+zie hieronder), datums binnen een plausibel venster,
 `actueel.json` geldige JSON, geen uitgezette bron die tóch items levert, en
 artikel-id's aanwezig en uniek. Wat bewust *niet* getoetst wordt (en waarom)
 staat in `scripts/sonde.mjs` zelf.
@@ -605,6 +606,29 @@ overheidstegels hielden dat getal ruim boven nul.
 Handmatig draaien met de gevonden links erbij: *Run workflow* → vink
 **toon_links** aan, en vul eventueel **toon_filter** met een stuk van een titel
 om één item na te trekken.
+
+#### Waarom de verenigingentegel buiten I5 valt
+
+Van 3 tot en met 6 september 2026 was de sonde elke dag rood, en elke dag op
+dezelfde bevinding: *"Zondag 1 november – Kerkdienst (Kerk+YouTube)" ≈ "Zondag
+18 oktober – Kerkdienst (Kerk+YouTube)"*. Beide uit de verenigingenagenda, beide
+terecht op de pagina.
+
+Dat is geen bevinding maar een eigenschap van de bron. Een agenda bestaat uit
+**terugkerende** activiteiten: dezelfde kerkdienst, dezelfde koffieochtend,
+dezelfde taalles, met alleen een andere datum. Die lijken per definitie op
+elkaar. I5 bestaat om te voorkomen dat de **redactie** hetzelfde nieuws twee
+keer publiceert, en die vraag speelt niet bij een feed die buiten de
+publicatiepoort om rechtstreeks op de pagina komt.
+
+De tegel valt aan **beide** kanten van een paar weg, niet alleen als eerste van
+de twee. Overheidsberichten blijven wél meedoen: twee bijna gelijke berichten
+uit die stroom horen door `dedupOverheid()` te zijn opgevangen, dus daar ís een
+treffer een bevinding.
+
+Een sonde die permanent rood staat bewaakt niets: de volgende echte bevinding
+verdwijnt in de ruis die er elke dag al stond. Dat gold meteen voor I14 en I15,
+die er juist zijn omdat de persketen veertig uur onzichtbaar stil kon liggen.
 
 ### De webhook-secret `SONDE_WEBHOOK_URL`
 

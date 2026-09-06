@@ -444,7 +444,7 @@ async function main() {
   // DEDUP_JACCARD_MIN uit lib/config.js — de drempel waarop de cron BESLIST,
   // niet de ruimere waarschuwingsdrempel van de reviewtool.
   //
-  // Twee afbakeningen, allebei nodig om echte bevindingen over te houden:
+  // Drie afbakeningen, alle drie nodig om echte bevindingen over te houden:
   //   1. Alleen LIVE tegels. De archieftegel bevat per definitie de oudere
   //      versie van verhalen die live een vervolg kregen; die twee naast
   //      elkaar leggen levert structureel valse treffers op.
@@ -454,8 +454,27 @@ async function main() {
   //      drempel. Formuleachtige koppen ("Zeven departementen … oranje voor
   //      onweer" vs "Zestien departementen … oranje voor onweer") zijn dan
   //      bijna gelijk terwijl het twee verschillende waarschuwingen zijn.
+  //   3. DE VERENIGINGENTEGEL HELEMAAL ERBUITEN, aan beide kanten van het paar.
+  //      Die tegel is een agenda, en een agenda bestaat uit TERUGKERENDE
+  //      activiteiten: "Zondag 18 oktober – Kerkdienst (Kerk+YouTube)" en
+  //      "Zondag 1 november – Kerkdienst (Kerk+YouTube)" delen alles behalve de
+  //      datum. Ze lijken per definitie op elkaar en horen er allebei te staan;
+  //      een lezer die de kerkdienst van november zoekt heeft niets aan de
+  //      constatering dat die op die van oktober lijkt.
+  //
+  //      Deze invariant bestaat om te voorkomen dat de REDACTIE hetzelfde
+  //      nieuws twee keer publiceert, en die vraag speelt niet bij een feed die
+  //      buiten de publicatiepoort om rechtstreeks op de pagina komt.
+  //
+  //      Gemeten aanleiding: van 3 tot en met 6 september 2026 was de sonde elke
+  //      dag rood op precies deze twee kerkdiensten. Vier dagen dezelfde
+  //      onvermijdelijke bevinding is geen bewaking maar ruis, en ruis verbergt
+  //      wat er wél toe doet — in dit geval de twee nieuwe invarianten I14 en
+  //      I15, die er juist zijn omdat een storing eerder onzichtbaar bleef.
+  //      Een invariant die niet groen KAN worden, bewaakt niets.
   const kernen = artikelen
     .filter(({ tegel }) => tegel.soort !== "archief" && tegel.id !== "archief")
+    .filter(({ tegel }) => tegel.soort !== "verenigingen" && tegel.id !== "verenigingen")
     .map(({ tegel, art }) => ({
       tegel, art, kern: kernUitTekst(`${art.titel || ""} ${art.tekst || art.summary || ""}`),
     }));

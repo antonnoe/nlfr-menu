@@ -197,6 +197,14 @@
   .nakijklijst .rij { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .nakijklijst .rij a { flex:1; min-width:180px; color:var(--brand); text-decoration:none; font-weight:600; }
   .leeg { color:#8a7f7c; font-size:14px; }
+  /* De opslagdiagnose. Zandkleurig als het alleen een beperking is, rood als de
+     browser niets bewaart — dan is er een handeling nodig. */
+  .opslagstand { max-width:640px; margin:0 0 14px; padding:10px 12px; border-left:3px solid #cdbfb8;
+                 background:#faf7f5; color:#5c5148; font-size:13px; line-height:1.55; border-radius:0 8px 8px 0; }
+  .opslagstand[hidden] { display:none; }
+  .opslagstand.fout { border-left-color:#8a2b2b; background:#fdf5f4; color:#6b3630; }
+  .opslagstand b { font-weight:600; }
+  .opslagstand .details { margin-top:6px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:#8a7f7c; word-break:break-word; }
   /* De gemeten stand van de persketen onder een lege conceptlijst. Bewust
      nuchter opgemaakt: het is diagnose, geen waarschuwing — nul concepten kan
      een rustige nieuwsdag zijn. Wat de regels doen is dat verschil zichtbaar
@@ -234,8 +242,11 @@
          /banner-beheer gebruikt al jaren type=text en heeft dit nooit gehad. -->
     <input type="text" id="tokenveld" autocomplete="off" spellcheck="false" autocapitalize="off"
            autocorrect="off" placeholder="het REVIEW_TOKEN uit Vercel">
-    <p class="hint">Wordt alleen in deze browser bewaard en als header meegestuurd, nooit in de URL — een URL komt in de
-      browsergeschiedenis en in serverlogs terecht. Daarna kun je hier komen via Beheer in het menu, zonder token in de link.</p>
+    <!-- ÉÉN REGEL. Hier stond ook waarom een token niet in een URL hoort (die
+         komt in de browsergeschiedenis en in serverlogs terecht) en hoe je hier
+         later terugkomt. Dat is uitleg voor wie de code onderhoudt, niet voor
+         wie een token plakt; de reden staat bij TOKENSLEUTEL hieronder. -->
+    <p class="hint">Wordt alleen in deze browser bewaard en als header meegestuurd, nooit in de URL.</p>
     <div class="knoppen">
       <button type="button" class="actie pubbtn" id="tokenok">Bewaren</button>
     </div>
@@ -246,9 +257,18 @@
        een geleende of gedeelde computer blijft het token dan achter, ook nadat
        je op Ning uitlogt. Eén regel, altijd zichtbaar, is de prijs daarvoor. -->
   <div class="tokenstand" id="tokenstand" hidden>
-    <span>Het beheertoken is in deze browser bewaard.</span>
+    <!-- DEZE ZIN WAS EEN AANNAME. Hij stond er zodra `token` in het geheugen
+         zat, ook als het wegschrijven zojuist stil was mislukt — en dat is
+         precies wat er op mobiel gebeurde: elk bezoek opnieuw intikken, terwijl
+         het scherm volhield dat hij bewaard was. Wat er nu staat, komt uit de
+         uitslag van de schrijfpoging. Zie opslag.schrijf() hieronder. -->
+    <span id="tokenstandtekst">Het beheertoken is in deze browser bewaard.</span>
     <button type="button" class="tokenweg" id="tokenweg">Token vergeten</button>
   </div>
+  <!-- WAT DE BROWSER MET OPSLAG DOET. Alleen zichtbaar als er iets te melden
+       is. Bedoeld om op de telefoon zelf te kunnen lezen waaraan het ligt,
+       zonder ontwikkelaarsgereedschap dat daar niet bestaat. -->
+  <div class="opslagstand" id="opslagstand" hidden></div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
 
 <script>
@@ -270,11 +290,129 @@
   // adresbalk gehaald. Daarna komt hij uit deze browser en gaat hij alleen nog
   // als header mee. Zelfde aanpak als /banner-beheer, met een eigen sleutel.
   var TOKENSLEUTEL = "nlfr_review_token";
+  // BAKEN. Wordt bij elk bezoek weggeschreven, náást het token. Hij beantwoordt
+  // de vraag die je met het token alleen niet kunt beantwoorden: is er sinds het
+  // vorige bezoek iets gewist? Staat het baken er nog maar het token niet, dan
+  // is het token gericht verdwenen. Is ALLES weg terwijl de opslag verder werkt,
+  // dan heeft de browser de site-gegevens opgeruimd — op mobiel gebeurt dat
+  // stilletjes bij privémodus, weinig ruimte, of een tijdslimiet op opslag die
+  // door een script is gezet. Zonder dit baken zien die gevallen er alle drie
+  // uit als "hij heeft het nooit bewaard".
+  var BAKENSLEUTEL = "nlfr_review_baken";
+
+  // ---- Opslag die zichzelf controleert ---------------------------------------
+  // WAAROM DIT MEER IS DAN localStorage.setItem. De vorige versie was:
+  //
+  //     try { localStorage.setItem(TOKENSLEUTEL, t); } catch(e){}
+  //
+  // Een lege catch. Weigert de browser te schrijven — privémodus op iOS gooit
+  // een QuotaExceededError bij de eerste setItem, een ingebedde pagina krijgt
+  // in Safari helemaal geen opslag — dan gebeurde er niets, en zei het scherm
+  // vervolgens "Het beheertoken is in deze browser bewaard." Dat was niet waar,
+  // en juist de onwaarheid maakte het onvindbaar: op desktop werkte het, op
+  // mobiel moest je elk bezoek opnieuw intikken, en niets wees een oorzaak aan.
+  //
+  // Er wordt nu TERUGGELEZEN. Een schrijfactie geldt pas als geslaagd wanneer
+  // hetzelfde eruit komt als erin ging. Dat vangt ook de browsers die niet
+  // gooien maar de waarde stil laten vallen.
+  //
+  // TWEE PLEKKEN, in deze volgorde. localStorage blijft na het sluiten staan en
+  // is wat je wilt. Lukt dat niet, dan sessionStorage: die overleeft het
+  // sluiten van het tabblad niet, maar wel het navigeren binnen dit bezoek —
+  // beter dan niets, mits de pagina er eerlijk over is. Lukt ook dat niet, dan
+  // leeft het token alleen in het geheugen van deze pagina en zegt het scherm
+  // dat met zoveel woorden.
+  var opslag = (function(){
+    var diagnose = { ingebed: null, local: null, session: null, waar: "geheugen" };
+
+    // Staat deze pagina in een iframe? Dan is de opslag in mobiele browsers
+    // vaak gescheiden van dezelfde site op het hoogste niveau, of geweigerd.
+    // Wat je in het ene verband bewaart, bestaat in het andere niet.
+    try { diagnose.ingebed = (window.top !== window.self); } catch(e){ diagnose.ingebed = true; }
+
+    // Werkt deze opslag écht? Schrijven, terugleen, opruimen. Een browser die
+    // wel een object aanbiedt maar niets bewaart, valt hier door de mand.
+    function toets(maak){
+      var proef = "nlfr_proef_" + Math.random().toString(36).slice(2);
+      try {
+        var bak = maak();
+        if (!bak) return { ok:false, reden:"niet beschikbaar" };
+        bak.setItem(proef, "1");
+        var terug = bak.getItem(proef);
+        bak.removeItem(proef);
+        if (terug !== "1") return { ok:false, reden:"schrijft niets weg (teruglezen gaf iets anders)" };
+        return { ok:true, reden:null };
+      } catch(e){
+        // De NAAM van de fout is het bruikbare deel: QuotaExceededError bij een
+        // volle of geweigerde opslag, SecurityError bij een geblokkeerde
+        // ingebedde context. "Er ging iets mis" helpt niemand verder.
+        return { ok:false, reden:(e && e.name ? e.name : "onbekende fout") + (e && e.message ? ": " + e.message : "") };
+      }
+    }
+
+    diagnose.local = toets(function(){ return window.localStorage; });
+    if (diagnose.local.ok) diagnose.waar = "local";
+    else {
+      diagnose.session = toets(function(){ return window.sessionStorage; });
+      if (diagnose.session.ok) diagnose.waar = "session";
+    }
+
+    function bak(){
+      if (diagnose.waar === "local") return window.localStorage;
+      if (diagnose.waar === "session") return window.sessionStorage;
+      return null;
+    }
+
+    return {
+      diagnose: diagnose,
+      // Blijft wat hier wordt bewaard staan als je de browser sluit?
+      blijvend: function(){ return diagnose.waar === "local"; },
+      lees: function(sleutel){
+        var b = bak();
+        if (!b) return "";
+        try { return b.getItem(sleutel) || ""; } catch(e){ return ""; }
+      },
+      // Geeft { ok, reden } terug in plaats van niets. De aanroeper MOET er iets
+      // mee doen; dat is het hele punt.
+      schrijf: function(sleutel, waarde){
+        var b = bak();
+        if (!b) return { ok:false, reden:"deze browser biedt geen opslag aan die iets bewaart" };
+        try {
+          if (waarde) {
+            b.setItem(sleutel, waarde);
+            if (b.getItem(sleutel) !== waarde) {
+              return { ok:false, reden:"de browser accepteerde de waarde maar bewaarde hem niet" };
+            }
+          } else {
+            b.removeItem(sleutel);
+          }
+          return { ok:true, reden:null };
+        } catch(e){
+          return { ok:false, reden:(e && e.name ? e.name : "onbekende fout") + (e && e.message ? ": " + e.message : "") };
+        }
+      }
+    };
+  })();
+
+  // Het baken van het VORIGE bezoek, opgehaald vóór we dat van nu wegschrijven.
+  var vorigBaken = opslag.lees(BAKENSLEUTEL);
+  opslag.schrijf(BAKENSLEUTEL, new Date().toISOString());
+
+  // De uitslag van de laatste schrijfpoging. Hierop draait wat het scherm zegt:
+  // niet op "er staat een token in het geheugen", maar op "is hij bewaard".
+  //
+  // Beginwaarde is "is er überhaupt een plek", niet "is die plek blijvend": met
+  // de sessionStorage-terugval IS er weggeschreven, alleen niet voor na het
+  // sluiten van het tabblad. Dat onderscheid maakt tekenToken() hieronder; hier
+  // op blijvend() beginnen zou een geslaagde terugval als mislukking tonen.
+  var opslagUitslag = { ok: opslag.diagnose.waar !== "geheugen", reden: null };
+
   function bewaardToken(){
-    try { return localStorage.getItem(TOKENSLEUTEL) || ""; } catch(e){ return ""; }
+    return opslag.lees(TOKENSLEUTEL);
   }
   function bewaarToken(t){
-    try { if (t) localStorage.setItem(TOKENSLEUTEL, t); else localStorage.removeItem(TOKENSLEUTEL); } catch(e){}
+    opslagUitslag = opslag.schrijf(TOKENSLEUTEL, t);
+    return opslagUitslag;
   }
   // GENERATIETELLER. Elk verzoek onthoudt onder welke generatie het de deur uit
   // ging; wisselt het token intussen, dan is het antwoord verouderd en wordt het
@@ -1235,12 +1373,83 @@
     if (!el) return;
     if (verborgen) el.setAttribute("hidden", ""); else el.removeAttribute("hidden");
   }
+  var tokenstandtekstEl = document.getElementById("tokenstandtekst");
+  var opslagstandEl = document.getElementById("opslagstand");
+
+  // ---- Wat het scherm over de opslag zegt -----------------------------------
+  // DRIE UITKOMSTEN, en ze zijn niet uitwisselbaar. Bewaard tot je terugkomt,
+  // bewaard tot je dit tabblad sluit, of niet bewaard. Alleen de eerste is wat
+  // iemand verwacht als er "bewaard" staat; de andere twee horen dat te zeggen,
+  // want anders zoekt hij de oorzaak bij zichzelf.
+  function tekenOpslagstand(){
+    if (!opslagstandEl) return;
+    var d = opslag.diagnose;
+    var regels = [];
+    var fout = false;
+
+    if (d.waar === "geheugen"){
+      fout = true;
+      regels.push("<b>Deze browser bewaart het beheertoken niet.</b> Je moet het bij elk bezoek " +
+        "opnieuw invoeren zolang dat zo is.");
+    } else if (d.waar === "session"){
+      regels.push("<b>Het token blijft alleen in dit tabblad.</b> Zodra je het sluit, is het weg — " +
+        "deze browser weigert blijvende opslag.");
+    }
+
+    // De ingebedde context is een eigen oorzaak, ook als de opslag verder werkt:
+    // wat je hier bewaart, bestaat niet meer als je de pagina rechtstreeks
+    // opent, en andersom.
+    if (d.ingebed){
+      regels.push("Deze pagina staat in een <b>kader binnen een andere pagina</b>. Mobiele browsers " +
+        "houden opslag in zo'n kader apart van dezelfde site op zichzelf, of weigeren hem. " +
+        "Open <code>/review</code> als eigen pagina — via Beheer in het menu, of rechtstreeks.");
+    }
+
+    // Het baken beantwoordt de vraag die het token alleen niet kan beantwoorden.
+    if (!fout && !vorigBaken && d.waar === "local"){
+      regels.push("Er is geen spoor van een vorig bezoek in deze browser. Als je hier eerder wél " +
+        "een token hebt bewaard, heeft de browser de gegevens van deze site sindsdien opgeruimd " +
+        "(privémodus, weinig opslagruimte, of een tijdslimiet op wat een script bewaart).");
+    }
+
+    if (!regels.length){ opslagstandEl.hidden = true; opslagstandEl.innerHTML = ""; return; }
+
+    // De onderregel is bewust technisch: dit is wat je overtikt of doorstuurt
+    // als het hiermee niet is opgelost. Zonder ontwikkelaarsgereedschap op een
+    // telefoon is dit de enige plek waar die namen te zien zijn.
+    var details = "opslag=" + d.waar +
+      (d.local && !d.local.ok ? " · local: " + d.local.reden : "") +
+      (d.session && !d.session.ok ? " · session: " + d.session.reden : "") +
+      " · ingebed=" + (d.ingebed ? "ja" : "nee") +
+      " · vorig bezoek=" + (vorigBaken ? esc(vorigBaken) : "geen spoor");
+
+    opslagstandEl.className = "opslagstand" + (fout ? " fout" : "");
+    opslagstandEl.innerHTML = "<div>" + regels.join("</div><div>") + "</div>" +
+      '<div class="details">' + details + "</div>";
+    opslagstandEl.hidden = false;
+  }
+
   function tekenToken(){
     var heeft = Boolean(token);
     zetVerborgen(tokenvakEl, heeft);
     zetVerborgen(tokenstandEl, !heeft);
     // De tabbladen zeggen niets zolang er geen toegang is.
     if (tabsEl) tabsEl.hidden = !heeft;
+    // DE STANDREGEL VOLGT DE UITSLAG, niet het geheugen. Stond hier eerder
+    // altijd "in deze browser bewaard", ook wanneer het wegschrijven zojuist
+    // was mislukt.
+    if (heeft && tokenstandtekstEl){
+      if (!opslagUitslag.ok){
+        tokenstandtekstEl.textContent =
+          "Het beheertoken is NIET bewaard — het geldt alleen zolang deze pagina open blijft.";
+      } else if (!opslag.blijvend()){
+        tokenstandtekstEl.textContent =
+          "Het beheertoken geldt tot je dit tabblad sluit; blijvend bewaren lukt in deze browser niet.";
+      } else {
+        tokenstandtekstEl.textContent = "Het beheertoken is in deze browser bewaard.";
+      }
+    }
+    tekenOpslagstand();
     if (!heeft){
       inhoudEl.innerHTML = "";
       var v = document.getElementById("tokenveld");
@@ -1254,6 +1463,15 @@
     if (!t){ melding("Vul eerst het token in.", "fout"); return; }
     if (v) v.value = "";
     zetToken(t);
+    // NIET DOEN ALSOF HET GELUKT IS. zetToken() heeft zojuist geprobeerd te
+    // schrijven; ging dat mis, dan hoort dat hier te staan en niet pas bij het
+    // volgende bezoek, wanneer het token weg blijkt en niemand meer weet waarom.
+    if (!opslagUitslag.ok){
+      melding("Het token werkt nu wel, maar is NIET bewaard: " + opslagUitslag.reden +
+        ". Bij een volgend bezoek moet je hem opnieuw invoeren.", "fout");
+      laad(true);
+      return;
+    }
     laad();
   }
   var tokenokEl = document.getElementById("tokenok");

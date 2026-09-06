@@ -89,11 +89,24 @@ test("een token uit de URL wordt bewaard en meteen uit de adresbalk gehaald", ()
 test("alles rond localStorage staat in een try/catch", () => {
   // Een browser met site-data uit gooit bij localStorage een uitzondering. Die
   // mag de tool niet neerhalen; hij hoort dan gewoon om het token te vragen.
+  //
+  // Commentaarregels tellen niet mee: die noemen localStorage juist om uit te
+  // leggen waarom er meer omheen staat dan een aanroep. Een toets die op
+  // proza afgaat, gaat rood op de uitleg van zijn eigen onderwerp.
   const blok = review.slice(review.indexOf("var TOKENSLEUTEL"), review.indexOf("var params = new URLSearchParams"));
-  const regels = blok.split("\n").filter((r) => /localStorage/.test(r));
-  assert.ok(regels.length >= 2, "beide functies horen localStorage aan te raken");
+  const regels = blok
+    .split("\n")
+    .filter((r) => !/^\s*\/\//.test(r))
+    .filter((r) => /localStorage|sessionStorage/.test(r));
+  assert.ok(regels.length >= 2, "de opslaglaag hoort beide plekken aan te raken");
   for (const r of regels) {
-    assert.match(r, /try \{/, `localStorage zonder vangnet: ${r.trim()}`);
+    // Ofwel de aanroep staat zelf in een try, ofwel hij levert alleen het
+    // opslagobject aan een functie die dat wél doet (zie toets()/bak()).
+    assert.match(
+      r,
+      /try \{|return window\.(local|session)Storage/,
+      `opslag zonder vangnet: ${r.trim()}`
+    );
   }
 });
 

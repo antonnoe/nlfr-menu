@@ -215,6 +215,28 @@ test("stopwoorden, getallen en het woord Frankrijk vallen weg", () => {
   assert.deepEqual(tokens("2027 2026 5 12"), [], "getallen dragen geen onderwerp");
 });
 
+test("ligaturen worden woorden, geen brokstukken", () => {
+  // Uit de ECHTE index: "main d\u2019\u0153uvre" en "\u0153uf". Zonder deze
+  // omzetting werd het eerste ["main","uvre","nodig"] — niet leeg, maar een
+  // onzinwoord dat aan een ander verminkt woord kan blijven haken.
+  //
+  // NFKD alleen is niet genoeg en dat is het addertje: Unicode kent voor
+  // \u0153 en \u00e6 geen compatibiliteitsdecompositie, dus die blijven staan.
+  // Voor \ufb01 en \ufb02 doet NFKD het werk wél.
+  assert.deepEqual(tokens("main d\u2019\u0153uvre nodig"), ["main", "oeuvre", "nodig"]);
+  assert.deepEqual(tokens("\u0152uvre collective"), ["oeuvre", "collective"]);
+  assert.deepEqual(tokens("\ufb01che pratique"), ["fiche", "pratique"]);
+  // En de woorden uit de fixture komen er ook echt doorheen.
+  const metLigatuur = ARTIKELEN.filter((a) => /[\u0153\u0152\u00e6\u00c6]/.test(`${a.titel} ${a.samenvatting}`));
+  assert.ok(metLigatuur.length > 0, "de fixture hoort ligaturen te bevatten; anders toetst dit niets");
+  for (const a of metLigatuur) {
+    assert.ok(
+      !tokens(`${a.titel} ${a.samenvatting}`).some((w) => w === "uvre" || w === "ther"),
+      `brokstuk in de tokens van: ${a.titel}`
+    );
+  }
+});
+
 test("zonder index of zonder bericht komt er een lege lijst, geen fout", () => {
   assert.deepEqual(suggesties({ bericht: { kop: "x" }, artikelen: [] }), []);
   assert.deepEqual(suggesties({ bericht: null, artikelen: ARTIKELEN, idfTabel: IDF }), []);

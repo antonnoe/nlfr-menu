@@ -218,6 +218,28 @@ gezond stilstond of vastliep.
 - **`/api/actueel`** — het blok `bewaking` (tellingen en tijdstempels, geen
   inhoud), zodat de sonde er zonder token bij kan.
 
+#### Het tokenplafond deelt hij met het denkwerk
+
+`AI_CONFIG.maxTokens` is het plafond voor **denken én antwoord samen**. De
+SDK-typen zeggen het met zoveel woorden: adaptief denken *"counts towards your
+`max_tokens` limit"*. Op `claude-opus-5` staat adaptief denken **aan** zodra het
+veld `thinking` wordt weggelaten; op de vorige generatie betekende weglaten juist
+niet denken.
+
+Met `maxTokens: 2000` kreeg het model dus 2000 tokens voor denkwerk plus 150-250
+Nederlandse woorden. Gaat dat plafond op een lastig cluster volledig op aan
+denken, dan komt er een antwoord terug met `stop_reason: "max_tokens"` en **nul
+tekstblokken** — en dat is in `lib/synthese.js` een harde fout. De fout werd in
+`api/cron.js` opgevangen en belandde in het antwoord dat niemand leest.
+
+Twee dingen zijn daarom veranderd. Het plafond staat op **8000** (ruim boven
+denkwerk op effort `medium` plus de ~400 tokens die 250 Nederlandse woorden
+kosten, en laag genoeg om binnen de `maxDuration` van 60 s twee syntheses te
+halen — het is een plafond, wat niet gebruikt wordt kost niets). En de fout
+noemt zichzelf: welke `stop_reason`, hoeveel outputtokens, of het denkwerk was,
+en welke constante je aanpast. `thinking: {type: "adaptive"}` staat nu expliciet
+in het verzoek, zodat een latere modelwissel het gedrag niet ongemerkt omdraait.
+
 **Gericht meten op productie:**
 
 ```

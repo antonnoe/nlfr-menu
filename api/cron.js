@@ -492,6 +492,11 @@ export default async function handler(req, res) {
         bronnen: synth.bronnen,
         bronnenTerugval: !!synth.bronnenTerugval,
         model: synth.model,
+        // De reviewtool toont hier al jaren "mogelijk afgekapt" bij, maar het
+        // veld werd nooit meegeschreven: c.afgekapt was altijd undefined. Een
+        // synthese die op het tokenplafond eindigt, houdt midden in een zin op,
+        // en dat hoort de redacteur te zien vóór hij publiceert.
+        afgekapt: !!synth.afgekapt,
         aantalBronnen: synth.bronnen.length, // daadwerkelijk gebruikte bronlinks
         // Onafhankelijke OUTLETS achter de gebruikte bronlinks — niet het aantal
         // links. Twee artikelen van dezelfde krant leveren twee links maar één

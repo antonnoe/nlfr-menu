@@ -2,6 +2,12 @@
   "_uitleg": "Inhoud van de knop 'Nu actueel' in de onderbalk van het hoofdmenu. Pas de items hieronder aan; het menu haalt dit bestand live op (er hoeft niets aan index.html te veranderen) en toont ze als één compacte rij linkjes. Velden per item: titel (de zichtbare linktekst), tekst (verschijnt als tooltip/title, niet zichtbaar), href (de link), accent (behouden veld) en live (true = pulserend stipje op de balkknop). Alle items worden getoond.",
   "kaarten": [
     {
+      "titel": "Recente activiteiten",
+      "tekst": "Wat er nu op de site gebeurt: nieuwe berichten, reacties en discussies.",
+      "href": "https://www.nederlanders.fr/#recente-activiteiten",
+      "live": true
+    },
+    {
       "titel": "Laatste nieuwsbrief",
       "tekst": "Lees de meest recente nieuwsbrief van Nederlanders.fr online.",
       "href": "https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief",

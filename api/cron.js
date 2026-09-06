@@ -23,9 +23,38 @@
 // limiet: de faits-divers-zeef en de eis van >= 2 onafhankelijke outlets gelden
 // onverkort. Elke ronde ruimt bovendien concepten op die de huidige huisregels
 // niet meer doorstaan (zie lib/poort.js).
+//
+// `?diagnose=1` draait de persketen tot en met de kandidaten en STOPT vóór de
+// eerste modelaanroep. Er wordt niets weggeschreven en de overheidsstroom blijft
+// buiten schot; het antwoord bevat de telling per stap plus per kandidaat de
+// reden dat hij zou blijven liggen. Bedoeld om op productie in één verzoek te
+// zien waar de keten stilvalt, zonder de stand van zaken te veranderen.
+//
+// ---- WAAROM DEZE RONDE ZICHZELF TELT ---------------------------------------
+// Op 6 september 2026 was er sinds 4 september 16:12 geen persconcept meer
+// aangemaakt. De cron gaf status 200 in 9,39 seconden, alle feeds kwamen binnen,
+// en het draailog bevatte twintig regels — allemaal `[feeds]` — en daarna niets.
+// Alles ná de inname deed zijn werk zwijgend: clusteren, de tweebronnendrempel,
+// de synthese-aanroep, het wegschrijven. Een ronde die nul concepten opleverde
+// zag er identiek uit aan een ronde die er twee maakte.
+//
+// Sindsdien telt elke stap zichzelf (lib/persmeting.js), gaat elke telling naar
+// het log — juist ook op nul — en laat de ronde een journaal in KV achter
+// (KEY_CRON_RONDE). Dat journaal is het geheugen van de keten: wanneer er voor
+// het laatst een concept is gemaakt en welke tegels wanneer gevuld waren. De
+// reviewtool toont het onder een lege conceptlijst en scripts/sonde.mjs toetst
+// het (I14, I15). Een stap die niets logt, kan niet bewaakt worden.
 
-import { haalAlleItems, faitsDiversDoorlaat, sportDoorlaat, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
-import { clusterItems, zelfdeVerhaal, outletNamen } from "../lib/cluster.js";
+import { haalAlleItems, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
+import { outletNamen } from "../lib/cluster.js";
+import {
+  nieuweMeting,
+  weegPersInvoer,
+  logRegels,
+  eersteNul,
+  duiding,
+  blokkadeVoor,
+} from "../lib/persmeting.js";
 import { structureelGeldig } from "../lib/poort.js";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { synthetiseer, samenvatOverheid, overheidUitFeed } from "../lib/synthese.js";
@@ -51,6 +80,7 @@ import {
   KEY_ACTUEEL_TEKST_SNAPSHOT,
   KEY_ACTUEEL_ARCHIEF_SNAPSHOT,
   SNAPSHOT_TTL_S,
+  KEY_CRON_RONDE,
 } from "../lib/config.js";
 import { dedupOverheid, alBekend, overheidSleutel } from "../lib/overheid.js";
 import { maakRegisterRecord, zoekKeten } from "../lib/register.js";
@@ -58,16 +88,43 @@ import { bouwAntwoord } from "../lib/antwoord.js";
 import { verversIfIndex } from "../lib/ifindex.js";
 import { splitsAntwoord } from "../lib/levering.js";
 
-function leesForce(req) {
-  let f = req && req.query ? req.query.force : undefined;
+function leesVlag(req, naam) {
+  let f = req && req.query ? req.query[naam] : undefined;
   if (!f && req && req.url) {
     try {
-      f = new URL(req.url, "http://localhost").searchParams.get("force");
+      f = new URL(req.url, "http://localhost").searchParams.get(naam);
     } catch {
       f = null;
     }
   }
   return /^(1|true|ja|yes)$/i.test(String(f || "").trim());
+}
+
+function leesForce(req) {
+  return leesVlag(req, "force");
+}
+
+// DIAGNOSESTAND (`?diagnose=1`). Draait de persketen tot en met de kandidaten,
+// telt elke stap, en STOPT vóór de eerste modelaanroep. Er wordt niets
+// weggeschreven: geen concept, geen afwijzing, geen momentopname, en de
+// overheidsstroom wordt overgeslagen. Bedoeld om op productie in één verzoek te
+// zien wáár de keten stilvalt, zonder de stand van zaken te veranderen — een
+// diagnose die de patiënt bijwerkt meet zichzelf.
+function leesDiagnose(req) {
+  return leesVlag(req, "diagnose");
+}
+
+// Elke regel van de meting gaat naar het draailog. Dat log was tot nu toe leeg
+// na de `[feeds]`-regels; hierdoor staat er per ronde wat de keten deed, ook
+// als het antwoord nooit gelezen wordt.
+// De diagnosestand krijgt een eigen voorvoegsel. Hij roept het model per
+// definitie niet aan, dus "synthese-aanroepen: 0" is daar geen bevinding maar
+// de opzet; zonder dat onderscheid zou een diagnoselog als storing gelezen
+// kunnen worden.
+function drukMeting(meting, diagnose = false) {
+  for (const regel of logRegels(meting, diagnose ? "[pers·diagnose]" : "[pers]")) {
+    console.log(regel);
+  }
 }
 
 export default async function handler(req, res) {
@@ -88,7 +145,65 @@ export default async function handler(req, res) {
 
   const nu = Date.now();
   const force = leesForce(req);
+  const diagnose = leesDiagnose(req);
   const { items, bronStatus } = await haalAlleItems(nu);
+
+  // De meting van de persketen loopt vanaf hier mee. Zij is de reden dat een
+  // ronde die nul concepten oplevert voortaan te onderscheiden is van een ronde
+  // die niet eens aan de persstap toekwam.
+  const meting = nieuweMeting(nu);
+
+  // ---- DIAGNOSESTAND: alleen meten, niets veranderen ----------------------
+  // Vóór de overheidsstroom, want die schrijft. Levert dezelfde trechter als de
+  // echte ronde (zelfde weegfunctie), plus per kandidaat waarom hij zou worden
+  // overgeslagen — maar zonder modelaanroep en zonder één KV-schrijf.
+  if (diagnose) {
+    const { geschikt } = weegPersInvoer(items, nu, meting);
+    const bestaandeDiag = await listJSON(SCAN_CONCEPT);
+    meting.openstaandeConcepten = bestaandeDiag.length;
+    meting.ruimte = Math.max(0, MAX_OPENSTAANDE_CONCEPTEN - bestaandeDiag.length);
+    meting.limiet = Math.min(MAX_SYNTHESE_PER_RONDE, meting.ruimte);
+    meting.kandidaten = geschikt.length;
+    const kernenDiag = bestaandeDiag.map((c) => c.kernTokens).filter(Boolean);
+    const kandidaatUitleg = [];
+    for (const cluster of geschikt) {
+      const id = cluster.sleutel;
+      const [c1, c2, c3] = await Promise.all([
+        getJSON(KEY_CONCEPT(id)),
+        getJSON(KEY_PUBLICATIE(id)),
+        getJSON(KEY_AFGEWEZEN(id)),
+      ]);
+      const blok = blokkadeVoor({
+        cluster,
+        concept: c1,
+        publicatie: c2,
+        afgewezen: c3,
+        kernen: kernenDiag,
+      });
+      if (blok) meting.overgeslagen[blok.teller] += 1;
+      else meting.beoordeeld += 1;
+      kandidaatUitleg.push({
+        sleutel: id,
+        outlets: cluster.outlets,
+        onafhankelijkeBronnen: cluster.onafhankelijkeBronnen,
+        score: Number(cluster.score.toFixed(3)),
+        koppen: cluster.items.map((i) => i.titel),
+        // null = dit cluster zou nu de synthese in gaan.
+        blokkade: blok ? { reden: blok.reden, uitleg: blok.uitleg, sinds: blok.sinds } : null,
+      });
+    }
+    drukMeting(meting, true);
+    return res.status(200).json({
+      ok: true,
+      modus: "diagnose (leest alleen)",
+      tijdstip: new Date(nu).toISOString(),
+      meting,
+      eersteNul: eersteNul(meting),
+      duiding: duiding(meting),
+      kandidaten: kandidaatUitleg,
+      bronStatus,
+    });
+  }
 
   // ---- 1) OVERHEID: nieuwe items -> NL-samenvatting, direct live -----------
   // Eerst de bestaande voorraad ontdubbelen. Service-Public publiceert dezelfde
@@ -214,10 +329,10 @@ export default async function handler(req, res) {
   }
 
   // ---- 2) PERS: faits-divers-zeef -> clusteren -> concept bij >= 2 bronnen --
-  const persItems = items.filter(
-    (i) => i.regime === "pers" && faitsDiversDoorlaat(i.titel) && sportDoorlaat(i.titel)
-  );
-  const clusters = clusterItems(persItems, nu);
+  // ELKE STAP HIERONDER WORDT GETELD, ook als hij nul oplevert. De trechter
+  // zelf (zeven, clusteren, drempel) staat in lib/persmeting.js, zodat de
+  // diagnosestand hierboven exact dezelfde keten meet als deze ronde draait.
+  //
   // Synthese-drempel (auteursrechtelijk hard): een verhaal moet door minstens
   // SYNTHESE_MIN_BRONNEN VERSCHILLENDE kranten zijn gebracht (aantalBronnen), én
   // door evenveel ONAFHANKELIJKE (niet-wire-copy) berichten (onafhankelijkeBronnen).
@@ -226,18 +341,16 @@ export default async function handler(req, res) {
   //     twee rubrieksfeeds van diezelfde krant komen — zie outletId).
   //   - onafhankelijkeBronnen >= 2 -> twee kranten die exact dezelfde wire
   //     overnemen tellen samen als één (geen schijnbevestiging).
-  const geschiktVoorSynthese = (c) =>
-    c.aantalBronnen >= SYNTHESE_MIN_BRONNEN &&
-    c.onafhankelijkeBronnen >= SYNTHESE_MIN_BRONNEN;
   // Prioriteit zit al in cluster.score verwerkt (boost), dus sorteren op score
   // brengt belangrijk nieuws vanzelf bovenaan.
   // FORCE: mag alleen de SORTERING/limiet beïnvloeden (één cluster, het best
-  // scorende), nooit de inhoudelijke drempels. De faits-divers-zeef (hierboven,
-  // op persItems) en de eis van >= 2 onafhankelijke outlets gelden dus ook in
-  // force-modus. Levert de selectie niets op, dan maakt force géén concept —
-  // beter geen testconcept dan een concept dat de huisregels breekt.
-  const geschikt = clusters.filter(geschiktVoorSynthese).sort((a, b) => b.score - a.score);
+  // scorende), nooit de inhoudelijke drempels. De faits-divers-zeef en de eis
+  // van >= 2 onafhankelijke outlets gelden dus ook in force-modus. Levert de
+  // selectie niets op, dan maakt force géén concept — beter geen testconcept dan
+  // een concept dat de huisregels breekt.
+  const { persItems, clusters, geschikt } = weegPersInvoer(items, nu, meting);
   const kandidaten = force ? geschikt.slice(0, 1) : geschikt;
+  meting.kandidaten = kandidaten.length;
 
   // Auto-prune: snoei de conceptenberg elke ronde terug tot MAX_OPENSTAANDE_
   // CONCEPTEN. Behoud de BESTE (score = bronnen × recency × prioriteitsboost) en
@@ -272,6 +385,8 @@ export default async function handler(req, res) {
     opgeruimdeRedenen[oordeel.code] = (opgeruimdeRedenen[oordeel.code] || 0) + 1;
   }
   bestaande = schoon;
+  meting.opgeruimd = opgeruimd;
+  meting.opgeruimdeRedenen = opgeruimdeRedenen;
 
   let gesnoeid = 0;
   if (!force && bestaande.length > MAX_OPENSTAANDE_CONCEPTEN) {
@@ -293,6 +408,10 @@ export default async function handler(req, res) {
   const openstaand = bestaande.length;
   const ruimte = Math.max(0, MAX_OPENSTAANDE_CONCEPTEN - openstaand);
   const limiet = force ? 1 : Math.min(MAX_SYNTHESE_PER_RONDE, ruimte);
+  meting.gesnoeid = gesnoeid;
+  meting.openstaandeConcepten = openstaand;
+  meting.ruimte = ruimte;
+  meting.limiet = limiet;
 
   const persVerwerkt = [];
   let nieuwConcept = 0;
@@ -304,30 +423,43 @@ export default async function handler(req, res) {
       getJSON(KEY_PUBLICATIE(id)),
       getJSON(KEY_AFGEWEZEN(id)),
     ]);
-    if (c1 || c2 || c3) {
-      persVerwerkt.push({ id, status: "overgeslagen" });
+    // WELKE van de drie sleutels raakte, hoort in de uitvoer te staan. "Al
+    // bekend" is geen diagnose: een cluster dat wordt overgeslagen omdat er al
+    // een concept ligt is gezond gedrag, terwijl een cluster dat wordt
+    // overgeslagen omdat het uren geleden is AFGEWEZEN de reden kan zijn dat de
+    // keten stilstaat. Op één noemer gooien maakte dat verschil onzichtbaar.
+    // WELKE reden het cluster tegenhoudt, hoort in de uitvoer te staan. "Al
+    // bekend" is geen diagnose: een cluster dat blijft liggen omdat er al een
+    // concept over is, is gezond gedrag, terwijl een cluster dat blijft liggen
+    // omdat het uren eerder is AFGEWEZEN de reden kan zijn dat de keten
+    // stilstaat. Op één noemer gooien maakte dat verschil onzichtbaar. Dezelfde
+    // functie beslist dit in de diagnosestand hierboven — zie lib/persmeting.js.
+    const blok = blokkadeVoor({
+      cluster,
+      concept: c1,
+      publicatie: c2,
+      afgewezen: c3,
+      kernen: bestaandeKernen,
+    });
+    if (blok) {
+      meting.overgeslagen[blok.teller] += 1;
+      // De buitenlandpoort is de enige blokkade die zelf iets vastlegt: zonder
+      // die afwijzing zou elke volgende ronde opnieuw hetzelfde cluster wegen.
+      if (blok.teller === "buitenland") {
+        await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "buitenland" }, CONCEPT_TTL_S);
+      }
+      persVerwerkt.push({ id, status: `overgeslagen (${blok.reden})`, uitleg: blok.uitleg, sinds: blok.sinds });
       continue;
     }
-    // "Laatste productie wint": betreft dit cluster hetzelfde verhaal als een
-    // bestaand concept (ook al is de sleutel gedrift)? Dan geen tweede concept.
-    if (bestaandeKernen.some((k) => zelfdeVerhaal(cluster.kernTokens, k))) {
-      persVerwerkt.push({ id, status: "duplicaat-overgeslagen" });
-      continue;
-    }
-    // Buitenland-zeef vóór de synthese (bespaart een API-call): clusters waarvan
-    // de gezamenlijke brontitels het buitenland betreffen zonder Frankrijk-link.
-    const koppenBlob = cluster.items.map((i) => i.titel || "").join(" · ");
-    if (!buitenlandDoorlaatNL(koppenBlob)) {
-      await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "buitenland" }, CONCEPT_TTL_S);
-      persVerwerkt.push({ id, status: "buitenland-geweigerd" });
-      continue;
-    }
+    meting.beoordeeld += 1;
     try {
+      meting.syntheseAangeroepen += 1;
       const synth = await synthetiseer(cluster);
       // "GEEN": het model vond geen enkel onderwerp met >= 2 kranten in dit
       // (vervuilde) cluster. Geen concept, geen excuustekst.
       if (synth.geenVerhaal) {
         await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "geen-verhaal" }, CONCEPT_TTL_S);
+        meting.geweigerd.geenVerhaal += 1;
         persVerwerkt.push({ id, status: "geen-verhaal-geweigerd" });
         continue;
       }
@@ -335,6 +467,7 @@ export default async function handler(req, res) {
       // ontbrak. Dan geen concept, en onthouden als afwijzing (geen regeneratie).
       if (!buitenlandDoorlaatNL(`${synth.kop || ""} ${synth.tekst || ""}`)) {
         await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "buitenland" }, CONCEPT_TTL_S);
+        meting.geweigerd.buitenland += 1;
         persVerwerkt.push({ id, status: "buitenland-geweigerd" });
         continue;
       }
@@ -343,6 +476,7 @@ export default async function handler(req, res) {
       // vervuild/één-bron (bv. losse faits-divers) -> geen concept.
       if ((synth.onafhankelijkeGebruikt || 0) < SYNTHESE_MIN_BRONNEN) {
         await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "te-smal" }, CONCEPT_TTL_S);
+        meting.geweigerd.teSmal += 1;
         persVerwerkt.push({ id, status: "te-smal-geweigerd", gebruikt: synth.onafhankelijkeGebruikt || 0 });
         continue;
       }
@@ -376,15 +510,19 @@ export default async function handler(req, res) {
       await setJSON(KEY_CONCEPT(id), concept, CONCEPT_TTL_S);
       bestaandeKernen.push(cluster.kernTokens); // volgende kandidaten dedupen hiertegen
       nieuwConcept += 1;
+      meting.geschreven += 1;
       persVerwerkt.push({ id, status: "concept-aangemaakt", bronnen: cluster.aantalBronnen });
     } catch (e) {
-      persVerwerkt.push({
-        id,
-        status: "mislukt",
-        reden: e instanceof Error ? e.message : String(e),
-      });
+      // Een mislukte synthese is tot nu toe alleen in het (ongelezen) antwoord
+      // beland. Hij hoort ook in het log: dit is de enige uitgang waar een
+      // storing bij de modelaanroep zichtbaar wordt.
+      meting.geweigerd.mislukt += 1;
+      const reden = e instanceof Error ? e.message : String(e);
+      console.error(`[pers] synthese mislukt voor cluster ${id}: ${reden}`);
+      persVerwerkt.push({ id, status: "mislukt", reden });
     }
   }
+  drukMeting(meting);
 
   // ---- 3) INFOFRANKRIJK-INDEX bijwerken -----------------------------------
   // De artikellijst van infofrankrijk.com (titel, link, laatste wijziging,
@@ -405,10 +543,49 @@ export default async function handler(req, res) {
   // (`snapshot.reden`), zodat een structurele mislukking — bijvoorbeeld een
   // document dat de maximale requestgrootte van Upstash overschrijdt — zichtbaar
   // is in de cronuitvoer en niet stil blijft.
+  // ---- 3b) JOURNAAL VOORBEREIDEN, vóór het bakken --------------------------
+  // De momentopname moet de stand van DEZE ronde dragen, niet die van de
+  // vorige. Daarom wordt het bewakingsblok hier samengesteld en meegegeven aan
+  // bouwAntwoord(); het volledige journaal (inclusief de vullingsgeschiedenis
+  // per tegel, die pas ná het bakken bekend is) gaat verderop naar KV.
+  //
+  // De tegelgeschiedenis komt uit het VORIGE journaal en wordt bewust niet
+  // aangevuld met de telling van nu: de sonde ziet het huidige aantal in de
+  // levering zelf staan. Wat hij niet zelf kan weten is wanneer een tegel voor
+  // het laatst gevuld was, en dát is wat hier bewaard wordt.
+  const vorigJournaal = (await getJSON(KEY_CRON_RONDE)) || {};
+  const rondeIso = new Date().toISOString();
+  const laatsteConceptOp =
+    meting.geschreven > 0 ? rondeIso : vorigJournaal.laatsteConceptOp || null;
+  const bewakingNu = {
+    ronde: rondeIso,
+    laatsteConceptOp,
+    persItemsLaatsteRonde: meting.naZeef,
+    keten: meting,
+    eersteNul: eersteNul(meting),
+    duiding: duiding(meting),
+    tegels: vorigJournaal.tegels || {},
+  };
+
   let snapshot;
+  // Per tegel het aantal artikelen van deze bak. Gaat mee het journaal in, zodat
+  // "deze tegel is normaal gevuld en staat nu op nul" een gemeten uitspraak
+  // wordt in plaats van een aanname.
+  let tegelTellingen = [];
   try {
-    const antwoord = await bouwAntwoord({ nu: Date.now(), vooraf: { items, bronStatus } });
+    const antwoord = await bouwAntwoord({
+      nu: Date.now(),
+      vooraf: { items, bronStatus },
+      bewaking: bewakingNu,
+    });
     const { compact, tekst, archief } = splitsAntwoord(antwoord);
+    tegelTellingen = compact.tegels.map((t) => ({
+      id: t.id,
+      // De archieftegel draagt zijn artikelen in een aparte levering; zijn
+      // telling staat in artikelAantal. Zonder die tak zou het archief elke
+      // ronde als "leeg" worden geboekt.
+      aantal: Array.isArray(t.artikelen) ? t.artikelen.length : t.artikelAantal || 0,
+    }));
     await setJSON(KEY_ACTUEEL_SNAPSHOT, compact, SNAPSHOT_TTL_S);
     await setJSON(KEY_ACTUEEL_TEKST_SNAPSHOT, tekst, SNAPSHOT_TTL_S);
     await setJSON(KEY_ACTUEEL_ARCHIEF_SNAPSHOT, archief, SNAPSHOT_TTL_S);
@@ -439,6 +616,47 @@ export default async function handler(req, res) {
     snapshot = { ok: false, reden: e instanceof Error ? e.message : String(e) };
   }
 
+  // ---- 5) JOURNAAL: wat deze ronde deed, in KV ----------------------------
+  // Het antwoord hieronder leest niemand: Vercel Cron gooit de body weg. Zonder
+  // deze stap is de enige overgebleven bron het draailog, en dat is na een dag
+  // weg. Het journaal is het geheugen van de keten: wanneer er voor het laatst
+  // een concept is gemaakt, en welke tegels wanneer voor het laatst gevuld
+  // waren. Op die twee dingen staan de invarianten in scripts/sonde.mjs.
+  //
+  // Een mislukt journaal mag de ronde niet rood maken — het werk is al gedaan —
+  // maar de reden gaat wel naar het log en het antwoord.
+  let journaal = null;
+  try {
+    // Vullingsgeschiedenis per tegel bijwerken: het aantal van NU bepaalt of
+    // `laatstGevuld` opschuift. Dat tweede veld is wat "deze tegel is normaal
+    // gevuld en staat nu op nul" meetbaar maakt zonder dat iemand een lijst met
+    // verwachte tegels moet bijhouden die daarna veroudert.
+    const vorigeTegels = vorigJournaal.tegels || {};
+    const tegelStand = { ...vorigeTegels };
+    if (snapshot && snapshot.ok) {
+      for (const t of tegelTellingen) {
+        const eerder = vorigeTegels[t.id] || {};
+        tegelStand[t.id] = {
+          aantal: t.aantal,
+          laatstGevuld: t.aantal > 0 ? rondeIso : eerder.laatstGevuld || null,
+        };
+      }
+      // Een tegel die deze ronde helemaal niet meer wordt gebouwd, verdwijnt uit
+      // `tegels` van het antwoord. Zijn geschiedenis moet blijven staan: juist
+      // een tegel die WEG is, is het geval dat gemeld moet worden.
+      for (const [id, eerder] of Object.entries(vorigeTegels)) {
+        if (tegelTellingen.some((t) => t.id === id)) continue;
+        tegelStand[id] = { aantal: 0, laatstGevuld: eerder.laatstGevuld || null };
+      }
+    }
+    journaal = { ...bewakingNu, op: rondeIso, modus: force ? "force" : "cron", pers: meting, tegels: tegelStand };
+    await setJSON(KEY_CRON_RONDE, journaal); // GEEN TTL: zie lib/config.js
+  } catch (e) {
+    const reden = e instanceof Error ? e.message : String(e);
+    console.error(`[cron] journaal niet weggeschreven: ${reden}`);
+    journaal = { fout: reden };
+  }
+
   return res.status(200).json({
     ok: true,
     modus: force ? "force (test)" : "cron",
@@ -459,9 +677,12 @@ export default async function handler(req, res) {
       totaal: registerVoorraad.length,
     },
     pers: {
+      meting, // elke stap geteld, ook op nul — zie lib/persmeting.js
+      eersteNul: eersteNul(meting),
+      duiding: duiding(meting),
       naZeef: persItems.length,
       clusters: clusters.length,
-      geschiktVoorSynthese: clusters.filter(geschiktVoorSynthese).length,
+      geschiktVoorSynthese: geschikt.length,
       openstaandeConcepten: openstaand,
       opgeruimd, // concepten die de huidige huisregels niet meer doorstaan
       opgeruimdeRedenen,
@@ -472,5 +693,6 @@ export default async function handler(req, res) {
     },
     ifIndex, // voorraad voor de Infofrankrijk-verwijzingen (reviewtool)
     snapshot, // voorgebakken antwoord voor /api/actueel
+    journaal, // in KV bewaard; zie KEY_CRON_RONDE in lib/config.js
   });
 }

@@ -159,9 +159,76 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
   hot-clusters via de Anthropic API één NL-synthese schrijft en als **concept**
   opslaat. Nooit direct live. Model/max_tokens staan in één constante
   (`lib/config.js` → `AI_CONFIG`). Aan het eind van elke ronde **bakt de cron
-  beide leveringen voor** en zet ze in KV.
+  beide leveringen voor** en zet ze in KV, en laat hij een **journaal** achter
+  (`KEY_CRON_RONDE`) met de telling per stap van de persketen. Zie "De
+  persketen meet zichzelf" hieronder.
+  `?diagnose=1` meet de keten zonder iets te schrijven en zonder modelaanroep.
 - `/review?token=…` — mobielvriendelijke reviewtool. Publiceer / Weg / inline
   bewerken. Concepten verlopen automatisch na `CONCEPT_TTL_S` (nu 36 uur).
+
+### De persketen meet zichzelf
+
+**Aanleiding.** Op 6 september 2026 ontbraken alle perstegels op `/actueel`,
+stond de reviewtool op nul concepten en was er sinds **4 september 16:12** geen
+concept meer aangemaakt. De inname was gezond: alle feeds kwamen binnen, geen
+fouten, geen weigeringen. De cron gaf status 200 in 9,39 seconden. Het draailog
+bevatte twintig regels, allemaal `[feeds]`, en daarna niets.
+
+Dat laatste was geen toeval maar het hele probleem: **alle logging in de cron
+zat in `lib/feeds.js`**. Clusteren, de tweebronnendrempel, de synthese-aanroep
+en het wegschrijven van een concept deden hun werk zwijgend. Een ronde die nul
+concepten opleverde was in het log niet te onderscheiden van een ronde die er
+twee maakte, en de tellingen die de cron wél berekende stonden alleen in het
+HTTP-antwoord — dat Vercel Cron weggooit.
+
+**Wat er nu gebeurt.** `lib/persmeting.js` telt de keten stap voor stap:
+
+| stap | wat er geteld wordt |
+| --- | --- |
+| `itemsTotaal` | alle feeditems van de ronde |
+| `persRuw` | items met regime `pers` |
+| `naZeef` | over na de faits-divers- en de sportzeef |
+| `binnenVenster` | binnen `HOT_VENSTER_UREN` (het clustervenster) |
+| `clusters` | gevormde clusters |
+| `bovenDrempel` | clusters met ≥ 2 outlets én ≥ 2 onafhankelijke bronnen |
+| `kandidaten` | na de rondelimiet (`MAX_SYNTHESE_PER_RONDE`, ruimte) |
+| `beoordeeld` | kandidaten die niet op een blokkade stuitten |
+| `syntheseAangeroepen` | daadwerkelijke modelaanroepen |
+| `geschreven` | weggeschreven concepten |
+
+Elke teller gaat naar het log, **ook als hij nul is**, plus de regel
+`STAP OP NUL: "<stap>" — ervoor stond "<vorige stap>" op <aantal>`. Waar een
+kandidaat blijft liggen wordt bij naam genoemd — er ligt al een concept, het is
+al gepubliceerd, het is **eerder afgewezen** (met reden en moment), het is een
+duplicaat, of het is buitenland zonder Frankrijk-link. Die vijf op één noemer
+gooien ("overgeslagen") was precies waardoor niet te zien was of de keten
+gezond stilstond of vastliep.
+
+**Waar het terechtkomt.**
+
+- **Draailog** — één regel per stap, elke ronde.
+- **KV** (`KEY_CRON_RONDE`, geen TTL) — de tellingen, het moment van het laatste
+  concept en per tegel wanneer die voor het laatst gevuld was. Zonder TTL,
+  want een journaal dat verloopt maakt juist een gat op het moment dat de cron
+  stilvalt.
+- **`/review`** — onder een lege conceptlijst staat de gemeten stand. De oude
+  zin ("Nieuwe verschijnen zodra een verhaal door 2+ onafhankelijke bronnen
+  wordt gemeld") is weg: die beloofde dat het aan het nieuws lag, veertig uur
+  lang, terwijl de keten stillag.
+- **`/api/actueel`** — het blok `bewaking` (tellingen en tijdstempels, geen
+  inhoud), zodat de sonde er zonder token bij kan.
+
+**Gericht meten op productie:**
+
+```
+curl -H "Authorization: Bearer $CRON_SECRET" \
+     "https://nlfr-menu.vercel.app/api/cron?diagnose=1"
+```
+
+Leest alleen. Geen modelaanroep, geen concept, geen afwijzing, geen
+momentopname, en de overheidsstroom blijft buiten schot. Het antwoord bevat
+`meting`, `eersteNul`, `duiding` en per kandidaat de koppen, de outlets en de
+blokkade.
 
 ### De drie leveringen
 
@@ -515,6 +582,25 @@ live artikelen over hetzelfde verhaal, datums binnen een plausibel venster,
 `actueel.json` geldige JSON, geen uitgezette bron die tóch items levert, en
 artikel-id's aanwezig en uniek. Wat bewust *niet* getoetst wordt (en waarom)
 staat in `scripts/sonde.mjs` zelf.
+
+Sinds 6 september 2026 staan er twee invarianten bij die naar het **ontbreken**
+van inhoud kijken in plaats van naar de vorm ervan. Ze bestaan omdat de sonde
+groen was terwijl alle perstegels ontbraken: elke bestaande toets keek naar wat
+er stond, en `I1` gaat pas af als de héle pagina leeg is — zeven gevulde
+overheidstegels hielden dat getal ruim boven nul.
+
+- **I14 — lege tegel.** Een tegel die de afgelopen `TEGEL_VULLING_VENSTER_DAGEN`
+  (7) dagen nog gevuld was en nu op nul staat of helemaal uit de levering
+  verdwenen is. "Normaal gevuld" is hier **gemeten**, niet aangenomen: het
+  cronjournaal houdt per tegel bij wanneer die voor het laatst iets bevatte.
+  Een handmatige lijst met verwachte tegels zou verouderen zodra er een tegel
+  bijkomt of wegvalt; deze regel niet.
+- **I15 — persketen.** Meer dan `CONCEPT_STILTE_MAX_UREN` (24) uur geen concept
+  aangemaakt, **terwijl er persartikelen door de zeef komen**. Die tweede helft
+  maakt de toets bruikbaar: een nacht zonder Frans nieuws dat twee kranten
+  haalt is legitiem nul. De melding noemt de stap die op nul staat en het
+  aantal ervóór. Ontbreekt het bewakingsblok, dan is dát de bevinding — dan
+  schrijft de cron zijn journaal niet meer weg en is de bewaking blind.
 
 Handmatig draaien met de gevonden links erbij: *Run workflow* → vink
 **toon_links** aan, en vul eventueel **toon_filter** met een stuk van een titel

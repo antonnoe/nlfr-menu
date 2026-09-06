@@ -348,6 +348,35 @@
   // door een script is gezet. Zonder dit baken zien die gevallen er alle drie
   // uit als "hij heeft het nooit bewaard".
   var BAKENSLEUTEL = "nlfr_review_baken";
+  // VORMSLEUTEL. Bij het opslaan leggen we vast HOE het token eruitzag: zijn
+  // lengte en een korte vingerafdruk. Bij een volgend bezoek vergelijken we het
+  // teruggelezen token daarmee.
+  //
+  // Waarom dat nodig is: op 6 september bleek bij een tweede bezoek een token
+  // van 32 tekens te vertrekken terwijl er 22 was opgeslagen. Er wordt dus wél
+  // iets bewaard en meegestuurd, maar niet wat erin ging — en zonder deze twee
+  // waarden náást elkaar is niet te zien of de opslag iets anders teruggeeft,
+  // of dat er bij het opslaan al iets anders in het veld stond dan wat er is
+  // geplakt (autovullen op Android doet dat, ook bij een tekstveld met
+  // autocomplete="off").
+  var VORMSLEUTEL = "nlfr_review_tokenvorm";
+
+  // De vingerafdruk van een token: lengte plus een korte, niet-omkeerbare hash.
+  // BEWUST NIET HET TOKEN ZELF, en ook geen eerste-en-laatste-tekens. Deze
+  // waarde gaat het scherm op en de opslag van de server in; een beheertoken
+  // hoort daar niet terecht te komen, en van een verkeerd token weten we niet
+  // eens wat het is — het kan een wachtwoord uit een kluis zijn. Voor de vraag
+  // "is dit hetzelfde token als toen" is een hash genoeg, en meer is te veel.
+  function tokenVorm(t){
+    var s = String(t || "");
+    if (!s) return { len: 0, vinger: "leeg" };
+    var h = 5381;
+    for (var i = 0; i < s.length; i += 1) h = (h * 33) ^ s.charCodeAt(i);
+    return { len: s.length, vinger: (h >>> 0).toString(36) };
+  }
+  function vormTekst(v){
+    return v ? v.len + " tekens (" + v.vinger + ")" : "onbekend";
+  }
 
   // ---- Opslag die zichzelf controleert ---------------------------------------
   // WAAROM DIT MEER IS DAN localStorage.setItem. De vorige versie was:
@@ -464,7 +493,19 @@
   }
   function bewaarToken(t){
     opslagUitslag = opslag.schrijf(TOKENSLEUTEL, t);
+    // De vorm van wat er NU is weggeschreven, zodat een volgend bezoek kan
+    // vaststellen of het teruggelezen token nog hetzelfde is.
+    var vorm = tokenVorm(t);
+    opslag.schrijf(VORMSLEUTEL, t ? vorm.len + ":" + vorm.vinger : "");
     return opslagUitslag;
+  }
+  // Wat er bij het OPSLAAN is vastgelegd, uit een vorig bezoek.
+  function bewaardeVorm(){
+    var ruw = opslag.lees(VORMSLEUTEL);
+    var deel = String(ruw || "").split(":");
+    if (deel.length !== 2) return null;
+    var len = parseInt(deel[0], 10);
+    return Number.isFinite(len) ? { len: len, vinger: deel[1] } : null;
   }
   // GENERATIETELLER. Elk verzoek onthoudt onder welke generatie het de deur uit
   // ging; wisselt het token intussen, dan is het antwoord verouderd en wordt het
@@ -500,7 +541,19 @@
   }
   var params = new URLSearchParams(location.search);
   var uitUrl = (params.get("token") || "").trim();
-  var token = uitUrl || bewaardToken();
+  var bewaardRuw = bewaardToken();
+  var token = uitUrl || bewaardRuw;
+  // DE VERGELIJKING WAAR HET OM DRAAIT. Wat kwam er uit de opslag, en wat was
+  // er bij het opslaan weggeschreven? Lopen die uiteen, dan is het token tussen
+  // twee bezoeken door veranderd, en dát is een heel andere storing dan een
+  // token dat verlopen of ingetrokken is. Zonder deze twee naast elkaar zag je
+  // alleen "Ongeldig token" en had je geen idee welke kant je op moest zoeken.
+  var vormBijOpslaan = bewaardeVorm();
+  var vormTeruggelezen = tokenVorm(bewaardRuw);
+  var tokenGewijzigd = Boolean(
+    bewaardRuw && vormBijOpslaan &&
+    (vormBijOpslaan.len !== vormTeruggelezen.len || vormBijOpslaan.vinger !== vormTeruggelezen.vinger)
+  );
   if (uitUrl){
     bewaarToken(uitUrl);
     // Uit de adresbalk halen, zodat hij niet in de geschiedenis blijft staan en
@@ -1471,6 +1524,18 @@
         "Open <code>/review</code> als eigen pagina — via Beheer in het menu, of rechtstreeks.");
     }
 
+    // HET TOKEN IS VERANDERD SINDS HET WERD OPGESLAGEN. Dit is geen bijzaak en
+    // hoort bovenaan: het onderscheidt "mijn token is verlopen" van "er staat
+    // iets anders op de plek van mijn token", en dat zijn twee verschillende
+    // zoektochten.
+    if (tokenGewijzigd){
+      fout = true;
+      regels.unshift("<b>Het bewaarde beheertoken is veranderd sinds je het opsloeg.</b> " +
+        "Weggeschreven: " + esc(vormTekst(vormBijOpslaan)) + ". Nu teruggelezen: " +
+        esc(vormTekst(vormTeruggelezen)) + ". Sla je token opnieuw op; blijft dit terugkomen, " +
+        "dan schrijft iets anders op dit toestel over deze waarde heen.");
+    }
+
     // Het baken beantwoordt de vraag die het token alleen niet kan beantwoorden.
     if (!fout && !vorigBaken && d.waar === "local"){
       regels.push("Er is geen spoor van een vorig bezoek in deze browser. Als je hier eerder wél " +
@@ -1492,7 +1557,10 @@
     // De onderregel is bewust technisch: dit is wat je overtikt of doorstuurt
     // als het hiermee niet is opgelost. Zonder ontwikkelaarsgereedschap op een
     // telefoon is dit de enige plek waar die namen te zien zijn.
-    var details = "opslag=" + d.waar +
+    var details = "token bewaard=" + vormTekst(vormBijOpslaan) +
+      " · teruggelezen=" + vormTekst(vormTeruggelezen) +
+      (uitUrl ? " · uit de adresbalk" : "") +
+      " · opslag=" + d.waar +
       (d.local && !d.local.ok ? " · local: " + d.local.reden : "") +
       (d.session && !d.session.ok ? " · session: " + d.session.reden : "") +
       " · ingebed=" + (d.ingebed ? "ja" : "nee") +
@@ -1536,6 +1604,18 @@
       vorigBaken: vorigBaken || null,
       bakenGeschreven: bakenGeschreven,
       tokenGeschreven: opslagUitslag.ok,
+      // BEIDE VORMEN. Wat er bij het opslaan is weggeschreven, en wat er nu
+      // wordt verstuurd. Verschillen ze, dan is het token tussen twee bezoeken
+      // door veranderd; dat is met alleen een lengte niet te zien.
+      vormBijOpslaan: vormBijOpslaan ? vormBijOpslaan.len + ":" + vormBijOpslaan.vinger : null,
+      // DE VORM ZOALS HIJ BIJ HET LADEN UIT DE OPSLAG KWAM, niet die van nu.
+      // Deze melding vertrekt pas ná een geslaagde GET, en op een mislukt
+      // bezoek is dat pas nadat de redacteur zijn token opnieuw heeft ingetikt.
+      // `token` draagt dan het NIEUWE token, en dat is precies niet wat we
+      // willen weten: de vraag is wat er bij binnenkomst in de opslag stond.
+      vormVerstuurd: vormTeruggelezen.len + ":" + vormTeruggelezen.vinger,
+      tokenGewijzigd: tokenGewijzigd,
+      uitUrl: Boolean(uitUrl),
       getekend: opslagGetekend,
       zouVerbergen: opslagZouVerbergen,
       ua: navigator.userAgent
@@ -1579,6 +1659,9 @@
         "vorig bezoek=" + (m.vorigBaken ? esc(m.vorigBaken) : "geen spoor"),
         "baken geschreven=" + (m.bakenGeschreven ? "ja" : "nee"),
         "token geschreven=" + (m.tokenGeschreven ? "ja" : "nee"),
+        "token bij opslaan=" + (m.vormBijOpslaan ? esc(m.vormBijOpslaan) : "onbekend") +
+          " · verstuurd=" + (m.vormVerstuurd ? esc(m.vormVerstuurd) : "onbekend") +
+          (m.tokenGewijzigd ? " · VERANDERD" : "") + (m.uitUrl ? " · uit de adresbalk" : ""),
         "getekend=" + (m.getekend == null ? "?" : m.getekend) +
           " · zou verbergen=" + (m.zouVerbergen == null ? "?" : m.zouVerbergen)
       ].filter(Boolean);
@@ -1681,6 +1764,12 @@
     // het token in Vercel is veranderd. Het getal alleen verraadt niets en maakt
     // het verschil meetbaar in plaats van een gok.
     var lengteVerstuurd = token.length;
+    // DE VORM VAN WAT ER MEEGING, vastgelegd vóór het verzoek. Bij een 401 wist
+    // verwerkAntwoord() het token nog vóór deze melding wordt samengesteld;
+    // achteraf `token` uitlezen levert dan "0 tekens (leeg)" op en zegt niets
+    // over wat er werkelijk de deur uit ging. Dezelfde reden waarom
+    // lengteVerstuurd hier al stond.
+    var vormVerstuurd = tokenVorm(token);
     if (!token){
       melding("Deze browser kent het beheertoken nog niet. Vul het één keer in; daarna onthoudt hij het.", "info");
       tekenToken();
@@ -1722,9 +1811,24 @@
         // al leeggemaakt; hier blijft alleen de reden van de server over.
         var reden = (res.data && res.data.fout) || "Toegang geweigerd.";
         if (res.status === 401){
-          reden += " Er ging een token van " + lengteVerstuurd + " teken" +
-            (lengteVerstuurd === 1 ? "" : "s") + " mee. Klopt dat aantal niet met wat je hebt geplakt, " +
-            "dan stond er iets anders in het veld dan je dacht.";
+          // BEIDE WAARDEN, niet alleen wat er meeging. Een verstuurd token dat
+          // afwijkt van wat er bij het opslaan is weggeschreven, wijst naar de
+          // opslag; komen ze overeen maar klopt de lengte niet met wat je hebt
+          // geplakt, dan stond er bij het OPSLAAN al iets anders in het veld.
+          // Dat zijn twee verschillende storingen en ze verdienen twee
+          // verschillende zinnen.
+          reden += " Verstuurd: " + vormTekst(vormVerstuurd) +
+            ". Bij het opslaan weggeschreven: " + vormTekst(vormBijOpslaan) + ".";
+          if (tokenGewijzigd){
+            reden += " DIE TWEE VERSCHILLEN: het bewaarde token is tussen twee bezoeken door veranderd. " +
+              "Dat is niet je token dat verlopen is, maar een andere waarde die op zijn plek staat.";
+          } else if (uitUrl){
+            reden += " Dit token kwam uit de ADRESBALK (?token=…) en heeft het bewaarde token overschreven; " +
+              "een oude snelkoppeling met een verlopen token doet dat bij elk bezoek opnieuw.";
+          } else {
+            reden += " Klopt die lengte niet met wat je hebt geplakt, dan stond er bij het opslaan al iets " +
+              "anders in het veld dan je dacht — autovullen doet dat, ook bij een tekstveld.";
+          }
         } else {
           inhoudEl.innerHTML = "";
         }

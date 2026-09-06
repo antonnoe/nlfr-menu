@@ -738,6 +738,28 @@ geen zichtbaar verschil tussen bewaard en weggegooid.
    zichzelf, of weigeren hem. De pagina herkent dat (`window.top !==
    window.self`) en zegt het.
 
+**Wat er bewaard is, en wat er verstuurd wordt.** Op 6 september bleek bij een
+tweede bezoek een token van 32 tekens te vertrekken terwijl er 22 was
+opgeslagen. Er wordt dus wél iets bewaard en meegestuurd, maar niet wat erin
+ging — en met alleen *"er ging een token van 32 tekens mee"* is niet te zien
+welke kant je op moet zoeken.
+
+Bij het opslaan wordt daarom de **vorm** van het token vastgelegd onder
+`nlfr_review_tokenvorm`: lengte plus een korte, niet-omkeerbare vingerafdruk.
+Bij een volgend bezoek wordt het teruggelezen token daarmee vergeleken.
+
+- Verschillen ze → `token-veranderd`. Geen verlopen token maar een **andere
+  waarde op die plek**: een oude snelkoppeling met `?token=…` (die overschrijft
+  het bewaarde token bij élk bezoek), autovullen bij het opslaan, of iets anders
+  dat over deze sleutel heen schrijft.
+- Komen ze overeen maar klopt de lengte niet met wat je hebt geplakt → dan stond
+  er bij het **opslaan** al iets anders in het veld.
+
+**Nooit het token zelf.** Deze waarden gaan het scherm op en de KV-ring in, en
+een verkeerd token kan van alles zijn — een wachtwoord uit een kluis
+bijvoorbeeld. Voor de vraag *"is dit hetzelfde token als toen"* is een hash
+genoeg, en meer is te veel.
+
 **De melding blijft staan, en gaat ook naar de server.** Op Android verscheen de
 diagnose en verdween hij binnen een fractie van een seconde: te snel om te
 lezen, te snel voor een schermafdruk. Twee dingen zijn daarom veranderd.

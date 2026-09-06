@@ -25,6 +25,8 @@ import {
   VENSTER_VERENIGINGEN_DAGEN,
   OVERHEID_TTL_S,
   IF_VERWIJZING_MAX,
+  CONCEPT_STILTE_MAX_UREN,
+  TEGEL_VULLING_VENSTER_DAGEN,
 } from "../lib/config.js";
 
 const BASIS = (process.env.SONDE_URL || "https://nlfr-menu.vercel.app").replace(/\/+$/, "");
@@ -297,6 +299,92 @@ async function main() {
     }
   }
 
+  // ---- I14/I15. De persketen zelf --------------------------------------------
+  // WAAROM DEZE TWEE ER ZIJN. Op 6 september 2026 stonden alle perstegels leeg,
+  // stond de reviewtool op nul concepten en was er sinds 4 september geen
+  // concept meer aangemaakt — en de sonde was groen. Dat kon, omdat elke
+  // bestaande invariant naar de VORM van wat er staat kijkt (klopt de link,
+  // klopt de datum, klopt de koppeling tussen de leveringen) en I1 pas afgaat
+  // als de héle pagina leeg is. Zeven gevulde overheidstegels hielden dat getal
+  // ruim boven nul terwijl de persketen al veertig uur stil lag.
+  //
+  // Beide toetsen lezen `bewaking`, het blok dat de cron elke ronde in KV zet en
+  // dat via lib/antwoord.js meereist. Ontbreekt dat blok, dan is dat zelf de
+  // bevinding: dan schrijft de cron zijn journaal niet meer weg en is de
+  // bewaking blind, wat erger is dan een lege tegel.
+  const bewaking = data.bewaking;
+  if (!bewaking) {
+    meld(
+      "I15 persketen",
+      `de levering draagt geen bewakingsblok; de cron schrijft zijn journaal niet weg ` +
+        `(gebakken ${data.gebakkenOp || "onbekend"})`
+    );
+  } else {
+    // I14. Een tegel die de afgelopen TEGEL_VULLING_VENSTER_DAGEN artikelen
+    // had, hoort ze nu ook te hebben. "Normaal gevuld" is hier GEMETEN, niet
+    // aangenomen: het journaal houdt per tegel bij wanneer hij voor het laatst
+    // iets bevatte. Een lijst met verwachte tegels zou verouderen zodra er een
+    // tegel bijkomt of wegvalt; deze regel niet.
+    // Het HUIDIGE aantal komt uit de levering zelf — die staat hier voor ons
+    // open, en een getal dat de cron over zichzelf heeft opgeschreven is een
+    // zwakkere waarneming dan wat de lezer werkelijk krijgt. Uit het journaal
+    // komt alleen wat we niet zelf kunnen zien: wanneer de tegel voor het
+    // laatst gevuld was. Een tegel die deze ronde helemaal niet meer gebouwd
+    // wordt, staat niet in `data.tegels` en telt daarom als nul — dat is
+    // precies het geval van 6 september, waarop alle vier de perstegels
+    // ontbraken in plaats van leeg te zijn.
+    const venster = TEGEL_VULLING_VENSTER_DAGEN * DAG;
+    const nuPerTegel = new Map(
+      (data.tegels || []).map((t) => [
+        t.id,
+        typeof t.artikelAantal === "number"
+          ? t.artikelAantal
+          : Array.isArray(t.artikelen)
+          ? t.artikelen.length
+          : 0,
+      ])
+    );
+    for (const [id, stand] of Object.entries(bewaking.tegels || {})) {
+      if ((nuPerTegel.get(id) || 0) > 0) continue;
+      const laatst = Date.parse((stand && stand.laatstGevuld) || "");
+      if (Number.isNaN(laatst)) continue; // nooit gevuld geweest: niets beloofd
+      if (nu - laatst > venster) continue; // al langer leeg dan het venster
+      meld(
+        "I14 lege tegel",
+        `tegel ${id} ${nuPerTegel.has(id) ? "staat op 0 artikelen" : "ontbreekt in de levering"}, ` +
+          `terwijl hij ${uren(nu - laatst)} geleden nog gevuld was`
+      );
+    }
+
+    // I15. Meer dan een etmaal geen concept, terwijl er wél persartikelen
+    // binnenkomen. De tweede helft van die zin is wat de toets bruikbaar maakt:
+    // een nacht zonder Frans nieuws dat twee kranten haalt is legitiem nul, een
+    // etmaal nul terwijl er elke ronde tientallen persartikelen door de zeef
+    // komen is dat niet.
+    const persBinnen = bewaking.persItemsLaatsteRonde;
+    const laatsteConcept = Date.parse(bewaking.laatsteConceptOp || "");
+    const stilteGrens = CONCEPT_STILTE_MAX_UREN * 60 * 60 * 1000;
+    if (persBinnen === null || persBinnen === undefined) {
+      meld("I15 persketen", "het bewakingsblok telt geen persartikelen; de meting is stuk");
+    } else if (persBinnen > 0 && Number.isNaN(laatsteConcept)) {
+      meld(
+        "I15 persketen",
+        `er is nog nooit een concept aangemaakt, terwijl er ${persBinnen} persartikel(en) door de zeef komen` +
+          (bewaking.duiding ? ` — ${bewaking.duiding}` : "")
+      );
+    } else if (persBinnen > 0 && nu - laatsteConcept > stilteGrens) {
+      meld(
+        "I15 persketen",
+        `${uren(nu - laatsteConcept)} geen concept aangemaakt (laatste ${bewaking.laatsteConceptOp}), ` +
+          `terwijl er ${persBinnen} persartikel(en) door de zeef komen` +
+          (bewaking.eersteNul
+            ? ` — stap op nul: "${bewaking.eersteNul.stap}", ervoor ${bewaking.eersteNul.ervoor || "niets"} op ${bewaking.eersteNul.aantalErvoor}`
+            : "") +
+          (bewaking.duiding ? ` — ${bewaking.duiding}` : "")
+      );
+    }
+  }
+
   // ---- I2. actueel.json is geldige JSON ------------------------------------
   try {
     const stat = await haalJson(STATISCH);
@@ -455,6 +543,14 @@ async function main() {
 function hostVan(u) {
   try { return new URL(u).hostname; } catch { return ""; }
 }
+// Een tijdsduur zoals een mens hem leest. Uren tot een etmaal, daarna dagen —
+// "40 uur" zegt bij een storing meer dan "1,7 dag", en "9 dagen" meer dan
+// "216 uur".
+function uren(ms) {
+  const u = Math.round(ms / 3600e3);
+  return u < 48 ? `${u} uur` : `${Math.round(u / 24)} dagen`;
+}
+
 function kort(s, n = 70) {
   const t = String(s || "");
   return t.length > n ? `${t.slice(0, n - 1)}…` : t;

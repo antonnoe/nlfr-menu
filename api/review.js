@@ -58,6 +58,7 @@ import {
   KEY_REGISTER,
   OVERHEID_TTL_S,
   SCAN_CONCEPT,
+  KEY_CRON_RONDE,
   SCAN_PUBLICATIE,
   SCAN_OVERHEID,
   SCAN_REGISTER,
@@ -473,6 +474,11 @@ export default async function handler(req, res) {
     // De index en wat er bijna uit de verwijzingen valt. De 12-maandengrens is
     // stil: zonder deze lijst merk je pas dat een artikel niet meer verwijsbaar
     // is als je het mist.
+    // Het journaal van de laatste cronronde. Zonder dit is "geen concepten" een
+    // mededeling zonder oorzaak: de redactie kon niet zien of er niets te
+    // melden viel of dat de keten stilstond. Ontbreekt het journaal, dan blijft
+    // het null — de tool zegt dan dat het onbekend is, en verzint niets.
+    const journaal = await getJSON(KEY_CRON_RONDE);
     const ifIndex = await leesIfIndex();
     const bijnaVerlopen = ifIndex ? ifBijnaVerlopen({ index: ifIndex, nu: nuMs }) : [];
 
@@ -485,6 +491,7 @@ export default async function handler(req, res) {
       ifIndex: ifIndex
         ? { opgehaaldOp: ifIndex.opgehaaldOp, aantal: ifIndex.artikelen.length }
         : null,
+      journaal, // stand van de persketen; zie KEY_CRON_RONDE in lib/config.js
       concepten: besten,
       totaalConcepten: concepten.length,
       duplicatenAantal: duplicaten.length,

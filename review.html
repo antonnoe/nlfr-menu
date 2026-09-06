@@ -197,6 +197,12 @@
   .nakijklijst .rij { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .nakijklijst .rij a { flex:1; min-width:180px; color:var(--brand); text-decoration:none; font-weight:600; }
   .leeg { color:#8a7f7c; font-size:14px; }
+  /* De gemeten stand van de persketen onder een lege conceptlijst. Bewust
+     nuchter opgemaakt: het is diagnose, geen waarschuwing — nul concepten kan
+     een rustige nieuwsdag zijn. Wat de regels doen is dat verschil zichtbaar
+     maken. */
+  .ketenstand { margin-top:10px; padding:10px 12px; border-left:3px solid #cdbfb8; background:#faf7f5; color:#5c5148; font-size:13px; line-height:1.55; }
+  .ketenstand div + div { margin-top:4px; }
 </style>
 </head>
 <body>
@@ -295,7 +301,7 @@
     // het Infofrankrijk-paneel). Eén zo'n aanroep zou de zojuist gewiste
     // redactionele inhoud zo weer terugzetten. Een tokenwissel is een nieuwe
     // sessie; wat bij de vorige hoorde gaat mee.
-    state.concepten = []; state.index = 0; state.duplicaten = 0; state.totaal = 0;
+    state.concepten = []; state.index = 0; state.duplicaten = 0; state.totaal = 0; state.journaal = null;
     state.publicaties = []; state.overheid = []; state.bronUrlWeigeringen = [];
     state.verwijzingen = {}; state.nakijken = []; state.bijnaVerlopen = [];
     state.ifIndex = null; state.ifPaneel = null;
@@ -646,6 +652,41 @@
       (lijst.length > top.length ? '<div class="ifuitleg">… en nog '+(lijst.length-top.length)+'.</div>' : "");
   }
 
+  // ---- Stand van de persketen ------------------------------------------------
+  // Waarom hier een gemeten stand staat en geen geruststellende zin: op
+  // 6 september 2026 stond deze lijst op nul terwijl er elke ronde tientallen
+  // persartikelen binnenkwamen, en niets op dit scherm liet zien waar de keten
+  // afbrak. De cron legt sindsdien per ronde vast hoeveel clusters er waren,
+  // hoeveel er boven de tweebronnendrempel uitkwamen en waarom de kandidaten
+  // eventueel bleven liggen (lib/persmeting.js). Dat is wat hier verschijnt.
+  //
+  // Ontbreekt het journaal, dan staat er dat het onbekend is. Onbekend en nul
+  // zijn twee verschillende uitspraken; ze door elkaar halen is hoe deze
+  // storing veertig uur onzichtbaar bleef.
+  function ketenStandHtml(){
+    var j = state.journaal;
+    if (!j) {
+      return '<div class="ketenstand">De cron heeft nog geen journaal weggeschreven, ' +
+        'dus de stand van de persketen is <b>onbekend</b>.</div>';
+    }
+    var k = j.pers || {};
+    var uit = '<div class="ketenstand">';
+    uit += '<div>Laatste ronde ' + esc(datum(j.op)) + ': ' +
+      (k.naZeef || 0) + ' persartikel' + ((k.naZeef || 0) === 1 ? "" : "en") + ' na de zeef, ' +
+      (k.clusters || 0) + ' cluster' + ((k.clusters || 0) === 1 ? "" : "s") + ', ' +
+      (k.bovenDrempel || 0) + ' boven de tweebronnendrempel, ' +
+      (k.syntheseAangeroepen || 0) + ' synthese-aanroep' + ((k.syntheseAangeroepen || 0) === 1 ? "" : "en") + ', ' +
+      (k.geschreven || 0) + ' concept' + ((k.geschreven || 0) === 1 ? "" : "en") + ' weggeschreven.</div>';
+    if (j.eersteNul && j.eersteNul.ervoor) {
+      uit += '<div>Stap op nul: <b>' + esc(j.eersteNul.stap) + '</b> — ervoor stond ' +
+        esc(j.eersteNul.ervoor) + ' op ' + j.eersteNul.aantalErvoor + '.</div>';
+    }
+    if (j.duiding) uit += '<div>' + esc(j.duiding) + '</div>';
+    uit += '<div>Laatste concept: ' + (j.laatsteConceptOp ? esc(datum(j.laatsteConceptOp)) : "nog nooit") + '.</div>';
+    uit += '</div>';
+    return uit;
+  }
+
   // ---- Geweigerde bron-URL's -------------------------------------------------
   // Een bronlink die de validatie in lib/bronurl.js niet haalt (vreemde host,
   // leeg pad, asset-host) wordt op /actueel NIET klikbaar getoond. Zonder deze
@@ -796,7 +837,12 @@
     html += '</div>';
 
     if (!state.concepten.length){
-      html += '<div class="leeg">Geen concepten om te beoordelen. Nieuwe verschijnen zodra een verhaal door 2+ onafhankelijke bronnen wordt gemeld.</div>';
+      // "Nieuwe verschijnen zodra een verhaal door 2+ onafhankelijke bronnen
+      // wordt gemeld" stond hier veertig uur lang terwijl de keten stilstond.
+      // Dat is geen geruststelling maar een onwaarheid: de zin belooft dat het
+      // aan het nieuws ligt, terwijl niemand kon zien waar de keten afbrak.
+      // Daarom staat er nu de GEMETEN stand uit het cronjournaal.
+      html += '<div class="leeg">Geen concepten om te beoordelen.' + ketenStandHtml() + '</div>';
     } else {
       if (state.index >= state.concepten.length) state.index = state.concepten.length - 1;
       if (state.index < 0) state.index = 0;
@@ -1264,6 +1310,7 @@
         state.nakijken = res.data.nakijken || [];
         state.bijnaVerlopen = res.data.bijnaVerlopen || [];
         state.ifIndex = res.data.ifIndex || null;
+        state.journaal = res.data.journaal || null;
         if (state.index >= state.concepten.length) state.index = 0;
         render();
       } else {

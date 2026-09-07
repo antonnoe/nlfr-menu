@@ -286,11 +286,12 @@
   .teaser .btn-p { background: var(--brand); color: #fff; }
   .teaser .btn-o { background: #fff; border: 1px solid rgba(128,0,0,.25); color: var(--brand); }
 
-  /* ---- Smalle regel onder de balk, altijd zichtbaar ---- */
-  /* Vier links die vroeger onderin het uitgeklapte paneel stonden. Daar zag
-     niemand ze die het menu niet opende. Hier staan ze op elke pagina van
-     nederlanders.fr in beeld, en ze wikkelen naar een tweede regel zodra ze
-     niet meer naast elkaar passen. */
+  /* ---- Smalle regel onder de balk ---- */
+  /* Vier links die vroeger onderin het uitgeklapte paneel stonden. Op een breed
+     scherm staan ze hier op elke pagina in beeld. Op een telefoon niet: daar
+     wikkelen ze naar twee regels en kosten ze 89px op elke pagina, terwijl
+     verticale ruimte juist daar het schaarse goed is. Ze staan dan in de
+     voetrij van het paneel — zie html.compact .subbalk hieronder. */
   .subbalk { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px;
              padding: 5px 10px; background: #fdfbfa;
              border-bottom: 1px solid rgba(128,0,0,.10); }
@@ -304,10 +305,11 @@
   .sbx { display: inline-flex; opacity: .75; }
 
   /* ---- Voetrij van het paneel ---- */
-  /* Alleen nog het kruisje, rechts. De drie knoppen en de zusterlinks die hier
-     stonden zijn vervallen of naar de subbalk verhuisd. */
-  .paneelvoet { display: flex; justify-content: flex-end; align-items: center;
+  /* Op desktop alleen het kruisje, rechts: de vier links staan daar al in de
+     regel onder de balk. Op mobiel staan ze hier, links van het kruisje. */
+  .paneelvoet { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px;
                 margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(128,0,0,.10); }
+  .voetlinks { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 2px 4px; }
   .pknop { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px;
            border: 1px solid rgba(128,0,0,.22); border-radius: 9px; background: #fff; color: var(--brand);
            font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
@@ -380,9 +382,12 @@
   html.compact .plaatskolommen { grid-template-columns: 1fr; gap: 16px; }
   html.compact .pknop { width: 100%; }
   html.compact .sluitknop { width: 44px; }
-  /* Op een telefoon passen de vier links niet naast elkaar; ze wikkelen naar
-     een tweede regel. Iets ruimer aantikbaar dan op desktop, want daar wordt
-     met een muis gemikt en hier met een duim. */
+  /* DE REGEL ONDER DE BALK IS OP MOBIEL WEG. Hij kostte daar 89px op elke
+     pagina van de site. De vier links staan in de voetrij van het paneel; de
+     grens is html.compact, dezelfde die het menu overal gebruikt, zodat er geen
+     tweede drempel ontstaat. */
+  html.compact .subbalk { display: none; }
+  /* Onder een duim mag ruimer worden gemikt dan onder een muis. */
   html.compact .sbl { min-height: 38px; padding: 0 9px; font-size: 12.5px; }
   /* Raakvlakken van minstens 44px: op een telefoon mik je anders mis. De
      zusterlinks staan in een lopende zin, dus ze blijven inline — alleen hun
@@ -788,9 +793,8 @@
   // tweede lijst ontstaan die gaat afwijken. nederlanders.fr opent in het
   // bovenliggende venster, de zusterplatforms in een nieuw tabblad — dat regelt
   // tgt(), en het pijltje maakt dat verschil ook zichtbaar.
-  function bouwSubbalk(){
-    if (!subbalk) return;
-    subbalk.innerHTML = SNELRIJ.map(function(k){
+  function snelrijHTML(){
+    return SNELRIJ.map(function(k){
       var t = tgt(k[1]), extern = (t === "_blank");
       return '<a class="sbl' + (extern ? " sbl-ext" : "") + '" href="' + k[1] + '" target="' + t + '"' +
              (extern ? ' rel="noopener"' : '') + '>' + k[0] +
@@ -798,14 +802,36 @@
     }).join("");
   }
 
+  function bouwSubbalk(){
+    if (!subbalk) return;
+    subbalk.innerHTML = snelrijHTML();
+  }
+
+  // De voetrij van het paneel. Op een BREED scherm alleen het kruisje: de vier
+  // links staan dan al in de regel onder de balk, en twee keer hetzelfde in
+  // beeld is geen wegwijzer maar ruis.
+  //
+  // Op een SMAL scherm staan ze hier. De regel onder de balk kostte daar 89px
+  // op elke pagina van de site, want de vier links wikkelen naar twee regels,
+  // en verticale ruimte is op een telefoon het schaarse goed. Ze zijn dus niet
+  // verdwenen maar verhuisd: één tik op Menu en ze staan er.
+  //
+  // De grens is isNarrow(), dezelfde die het menu overal gebruikt. Een eigen
+  // breekpunt zou een tweede drempel invoeren die bij de volgende wijziging uit
+  // de pas gaat lopen met de eerste.
+  function voetHTML(smal){
+    return '<div class="paneelvoet">' +
+           (smal ? '<div class="voetlinks">' + snelrijHTML() + '</div>' : '') +
+           // Een knop die alleen een tekening is, heeft zonder aria-label voor
+           // een schermlezer geen naam.
+           '<button type="button" class="pknop sluitknop" id="sluitbtn" ' +
+           'aria-label="Menu sluiten" title="Menu sluiten">' + kruisSvg + '</button>' +
+           '</div>';
+  }
+
   function bouwPaneel(){
     var h = '<div class="kolommen">' + DEUR_VOLGORDE.map(kolomHTML).join("") + '</div>';
-    // De voetrij draagt alleen nog het kruisje. Zonder tekst, dus met een
-    // aria-label: een knop die alleen een tekening is, heeft voor een
-    // schermlezer geen naam.
-    h += '<div class="paneelvoet">' +
-         '<button type="button" class="pknop sluitknop" id="sluitbtn" ' +
-         'aria-label="Menu sluiten" title="Menu sluiten">' + kruisSvg + '</button></div>';
+    h += voetHTML(isNarrow());
     paneel.innerHTML = h;
     bindDeuren();
     var sluit = document.getElementById("sluitbtn");

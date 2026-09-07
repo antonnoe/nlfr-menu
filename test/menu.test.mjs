@@ -243,9 +243,14 @@ test("de knoppen onderin het paneel zijn vervallen", () => {
   assert.ok(!/class="vlinks"/.test(HTML), "en de rij eromheen ook");
   assert.ok(!/class="zusters"/.test(HTML), "de zusterrij onderin het paneel is verhuisd");
   assert.ok(!/Zusterplatforms:/.test(HTML), "inclusief zijn opschrift");
-  // De voetrij draagt alleen nog het kruisje.
-  assert.match(HTML, /'<div class="paneelvoet">' \+\s*\n\s*'<button type="button" class="pknop sluitknop"/,
-    "de voetrij bevat alleen nog de sluitknop");
+  // De voetrij draagt op een breed scherm alleen het kruisje; op mobiel staan de
+  // vier links uit de subbalk erbij. Wat hij nergens meer draagt, zijn de drie
+  // oude knoppen. Zie test/subbalk.test.mjs voor beide standen.
+  const voet = HTML.slice(HTML.indexOf("function voetHTML(smal){"), HTML.indexOf("function bouwPaneel(){"));
+  assert.match(voet, /smal \? '<div class="voetlinks">' \+ snelrijHTML\(\)/,
+    "op mobiel de vier links uit SNELRIJ, uit dezelfde renderer");
+  assert.match(voet, /id="sluitbtn"/, "en het kruisje");
+  assert.ok(!/PANEELKNOPPEN|vlinks/.test(voet), "en niets van de oude voetrij");
 });
 
 test("de vijf kolommen staan in de goede volgorde", () => {

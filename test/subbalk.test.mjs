@@ -21,8 +21,8 @@ const CSS = HTML.slice(HTML.indexOf("<style>"), HTML.indexOf("</style>"));
 const CSS_KAAL = CSS.replace(/\/\*[\s\S]*?\*\//g, " ");
 const NL = "https://www.nederlanders.fr";
 
-// bouwSubbalk() uit het echte bestand, met wat hij nodig heeft.
-function subbalkHTML() {
+// De renderfuncties uit het echte bestand, met wat ze nodig hebben.
+function renderers() {
   const pak = (van, tot) => {
     const a = HTML.indexOf(van), b = HTML.indexOf(tot);
     assert.ok(a >= 0 && b > a, "blok niet gevonden in index.html: " + van);
@@ -33,11 +33,20 @@ function subbalkHTML() {
     pak("  var U = function(p)", "  // ---- De vier ingangen") +
     pak("  var ZUSTERS =", "  // De twee kolommen achter de knop") +
     pak("  var kruisSvg =", "  // ---- Hoogte melden") +
-    pak("  function bouwSubbalk(){", "  function bouwPaneel(){");
+    pak("  function snelrijHTML(){", "  function bouwPaneel(){");
   // eslint-disable-next-line no-new-func
   const fn = new Function("NL", "subbalk",
-    bron + "\nbouwSubbalk();\nreturn subbalk.innerHTML;");
+    bron + "\nbouwSubbalk();\nreturn { subbalk: subbalk.innerHTML, voetHTML: voetHTML };");
   return fn(NL, { innerHTML: "" });
+}
+
+function subbalkHTML() {
+  return renderers().subbalk;
+}
+
+// De voetrij van het paneel, smal (mobiel) of breed (desktop).
+function voetHTML(smal) {
+  return renderers().voetHTML(smal);
 }
 
 function links(html) {
@@ -97,15 +106,40 @@ test("de zusterplatforms zijn als extern herkenbaar, Diensten niet", () => {
 
 // --- altijd zichtbaar, en de hoogte gaat mee -------------------------------
 
-test("de regel staat buiten het paneel en is dus ook met het menu dicht zichtbaar", () => {
+test("op een breed scherm staat de regel buiten het paneel, dus altijd in beeld", () => {
   // In de markup: tussen de strip en de lade, niet in .paneel. Stond hij in het
   // paneel, dan zag je hem pas na het uitklappen — precies het probleem dat
   // deze regel oplost.
   assert.match(HTML, /<div class="subbalk" id="subbalk"><\/div>\s*\n\s*\n?\s*<div class="lade" id="lade">/,
     "de subbalk staat tussen de strip en de lade");
   assert.ok(!/class="paneel"[^>]*>\s*<div class="subbalk"/.test(HTML), "en niet in het paneel");
-  assert.ok(!/display: none/.test(CSS_KAAL.slice(CSS_KAAL.indexOf(".subbalk {"),
-    CSS_KAAL.indexOf(".subbalk {") + 200)), "hij wordt nergens verborgen");
+  const regel = CSS_KAAL.slice(CSS_KAAL.indexOf(".subbalk {"), CSS_KAAL.indexOf("}", CSS_KAAL.indexOf(".subbalk {")));
+  assert.ok(!/display: none/.test(regel), "op breed wordt hij niet verborgen: " + regel);
+});
+
+test("op mobiel is de regel weg en staan de vier links in de voetrij", () => {
+  // 89 pixels op elke pagina van de site, want de vier links wikkelen daar naar
+  // twee regels. Ze zijn niet verdwenen maar verhuisd: één tik op Menu.
+  assert.match(CSS_KAAL, /html\.compact \.subbalk \{ display: none/, "de regel is weg op mobiel");
+  const smal = links(voetHTML(true));
+  assert.deepEqual(smal.map((x) => x.tekst),
+    ["Diensten", "Infofrankrijk", "Café Claude", "Nedergids"],
+    "alle vier staan in de voetrij van het paneel");
+  // En met dezelfde adressen en targets als in de regel: één renderer, één lijst.
+  assert.deepEqual(smal.map((x) => [x.href, x.target]),
+    links(subbalkHTML()).map((x) => [x.href, x.target]));
+});
+
+test("de grens is dezelfde die het menu overal gebruikt", () => {
+  // Geen tweede drempel: html.compact in de CSS, isNarrow() in de code. Een
+  // eigen breekpunt zou bij de volgende wijziging uit de pas gaan lopen.
+  const bouw = HTML.slice(HTML.indexOf("function bouwPaneel(){"), HTML.indexOf("function bindDeuren()"));
+  assert.match(bouw, /voetHTML\(isNarrow\(\)\)/, "de voetrij volgt isNarrow()");
+  const eigen = [...CSS_KAAL.matchAll(/@media[^{]*max-width:\s*(\d+)/g)].map((m) => m[1]);
+  for (const px of eigen) {
+    assert.equal(px, "700", "onverwacht breekpunt in de CSS: " + px + "px");
+  }
+  assert.match(HTML, /var MOBILE_MQ = "\(max-width: 700px\)"/, "en dat is de grens van het menu zelf");
 });
 
 test("de regel wordt bij het opstarten gevuld en wikkelt op smalle schermen", () => {
@@ -128,17 +162,25 @@ test("de links zijn op mobiel ruimer aantikbaar dan op desktop", () => {
 
 // --- de opgeruimde voetrij --------------------------------------------------
 
-test("de voetrij draagt alleen nog een kruisje", () => {
-  const bouw = HTML.slice(HTML.indexOf("function bouwPaneel(){"), HTML.indexOf("function bindDeuren()"));
-  assert.match(bouw, /<div class="paneelvoet">/, "de voetrij bestaat nog");
-  assert.equal(bouw.split("<a ").length - 1, 0, "en bevat geen enkele link meer");
-  assert.equal(bouw.split("<button").length - 1, 1, "precies één knop");
-  assert.match(bouw, /id="sluitbtn"/, "de sluitknop");
-  assert.ok(!bouw.includes("Menu sluiten<"), "zonder tekstlabel");
+test("op een breed scherm draagt de voetrij alleen een kruisje", () => {
+  // De vier links staan daar al in de regel onder de balk; twee keer hetzelfde
+  // in beeld is geen wegwijzer maar ruis.
+  const breed = voetHTML(false);
+  assert.match(breed, /^<div class="paneelvoet">/, "de voetrij bestaat nog");
+  assert.equal(breed.split("<a ").length - 1, 0, "en bevat geen enkele link");
+  assert.equal(breed.split("<button").length - 1, 1, "precies één knop");
+  assert.match(breed, /id="sluitbtn"/, "de sluitknop");
+  assert.ok(!breed.includes("Menu sluiten<"), "zonder tekstlabel");
+  // De drie oude knoppen komen ook op mobiel niet terug.
+  for (const h of [breed, voetHTML(true)]) {
+    for (const weg of ["Plaats bericht", "Plaats advertentie", "Zusterplatforms:"]) {
+      assert.ok(!h.includes(weg), weg + " hoort uit de voetrij te zijn");
+    }
+  }
 });
 
 test("het kruisje houdt zijn naam en zijn tikdoel", () => {
-  const bouw = HTML.slice(HTML.indexOf("function bouwPaneel(){"), HTML.indexOf("function bindDeuren()"));
+  const bouw = HTML.slice(HTML.indexOf("function voetHTML(smal){"), HTML.indexOf("function bouwPaneel(){"));
   // Een knop die alleen een tekening is, heeft zonder aria-label geen naam.
   assert.match(bouw, /aria-label="Menu sluiten"/, "een schermlezer hoort te weten wat dit doet");
   assert.match(bouw, /title="Menu sluiten"/, "en een muisgebruiker ook");

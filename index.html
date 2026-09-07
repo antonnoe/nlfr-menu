@@ -176,8 +176,11 @@
   /* Vijf gelijke sporen. Het dubbele spoor voor Lezen en de twee kolommen
      daarbinnen zijn vervallen met zijn lade: die bestonden alleen omdat Lezen
      43 links droeg en anders drie keer zo hoog werd als de vier andere. */
-  .kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 18px; align-items: start; }
-  .deur { background: #fdfbfa; min-width: 0; }
+  /* STRETCH, GEEN START. De vijf ingangen horen even hoog te zijn: vier korte
+     tegels naast één lange leest als vier half afgemaakte kolommen. De deur is
+     daarom een flexkolom waarvan de tegel de resthoogte opvult. */
+  .kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 18px; align-items: stretch; }
+  .deur { background: #fdfbfa; min-width: 0; display: flex; flex-direction: column; }
   .deurkop { display: block; background: #fdfbfa; border-bottom: 1px solid rgba(128,0,0,.10);
              padding-bottom: 7px; margin-bottom: 10px; }
   .deurkop .dn { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; color: var(--brand-dark); }
@@ -189,10 +192,26 @@
   .deurkop .dc, .deurkop .dcaret { display: none; }
   /* De vier ingangen die doorverwijzen. Op desktop is de kop zelf de link; het
      pijltje staat er alleen op mobiel bij, waar de kop een volle regel is. */
-  a.deurlink { text-decoration: none; }
-  a.deurlink:hover .dn { text-decoration: underline; }
+  /* De vier ingangen die doorverwijzen. De <a> is de hele tegel; het pijltje
+     staat er alleen op mobiel bij, waar de kop een volle regel is. */
+  a.deur-link { text-decoration: none; color: inherit; }
+  a.deur-link:hover .dn { text-decoration: underline; }
+  a.deur-link:hover .tegel { border-color: rgba(128,0,0,.30); }
+  a.deur-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .deurkop.deurlink { display: block; }
   .deurlink .dpijl { display: none; }
-  .deurbody { display: block; background: #fdfbfa; }
+  /* Dezelfde doos als de wervingstegel, zodat de vijf één rij vormen. */
+  .tegel { display: flex; flex-direction: column; background: #fff;
+           border: 1px solid rgba(128,0,0,.14); border-radius: 12px; padding: 12px;
+           transition: border-color 140ms ease; }
+  .tegel .tt { display: block; font-size: 12.5px; color: #333; line-height: 1.35; }
+  .tegel .tp { display: block; margin-top: 8px; padding-top: 8px;
+               border-top: 1px solid rgba(128,0,0,.10);
+               font-size: 12px; color: #666; line-height: 1.45; }
+  /* Flex, geen block: de tegel erin moet de resthoogte van de kolom opvullen,
+     anders zijn de KOLOMMEN even hoog en de TEGELS niet. */
+  .deurbody { display: flex; flex-direction: column; flex: 1; background: #fdfbfa; }
+  .deurbody > .teaser, .deurbody > .tegel { flex: 1; }
   /* WITRUIMTE TUSSEN GROEPEN, niet tussen regels. Tussen twee items zit 10px
      (2 x 5px padding); tussen twee groepen zat 12px, en dat verschil ziet
      niemand — veertien groepen lopen dan als één lijst in elkaar over. Nu 24px,
@@ -219,7 +238,7 @@
      12,25:1. Rood blijft van nu af voorbehouden aan koppen. */
   /* LANGE WOORDEN AFBREKEN. De kolom is bij het iframe van 955px maar 134px
      breed, en die breedte ligt vast: er moeten zes sporen passen omdat de
-     kolom Lezen er dubbel in staat. "Ondernemersnieuws" is 155px op 15px en
+     kolom Lezen er dubbel in staat. "Ondernemers\u00adnieuws" is 155px op 15px en
      stak dus buiten zijn kolom, over de buurkolom heen. Dat deed het op 13,5px
      trouwens al, 140px in een kolom van 134px, dus dit is een bestaand gebrek
      dat met de grotere letter alleen zichtbaarder werd.
@@ -316,7 +335,13 @@
   html.compact .gl { display: block; padding-bottom: 6px; }
   html.compact .grp a { min-height: 44px; display: flex; align-items: center; }
   /* De vier ingangen die doorverwijzen zijn op mobiel gewone regels van 52px,
-     met een pijl naar rechts in plaats van een caret naar beneden. */
+     met een pijl naar rechts in plaats van een caret naar beneden. Hun tegel
+     staat dicht: html.compact .deurbody is display:none en een link-ingang
+     krijgt nooit de klasse .open. De tegels zijn een desktopmiddel — daar
+     stonden vier kolommen leeg naast één gevulde. Op een telefoon staan de vijf
+     regels onder elkaar zoals ze stonden; alle vijf de beschrijvingen tonen zou
+     het paneel weer met ruim 400px verlengen. */
+  html.compact .deurkop.deurlink { display: flex; }
   html.compact .deurlink .dpijl { display: inline-flex; color: #666; }
   /* De lade mag op een telefoon de volle breedte nemen; dan is er ook geen
      knop om een pijltje naar te richten. */
@@ -465,11 +490,39 @@
   // Uit het oude "Onderwerpen"-menu (TOPICS) is Communities Abroad naar de rij
   // zusterplatforms (ZUSTERS) gegaan; de vier andere items zaten in Lezen en
   // staan daarmee nu op /page/lezen.
+  //
+  // Elke ingang draagt een tegel: een beschrijving van een of twee regels en
+  // daaronder de subonderwerpen als opsomming ZONDER link. Die opsomming toont
+  // wat er achter de ingang zit; klikken doe je op de tegel als geheel, die één
+  // link is naar de categoriepagina. Losse links per subonderwerp zouden de
+  // lade terugbrengen die we net hebben weggehaald, en zouden op twee plekken
+  // onderhouden moeten worden.
   var DEUREN_LINK = {
-    lezen:  { naam: "Lezen",   sub: "rubrieken",             url: U("/page/lezen") },
-    doen:   { naam: "Meedoen", sub: "plaatsen &amp; steunen", url: U("/page/meedoen") },
-    vinden: { naam: "Vinden",  sub: "tools &amp; hulp",       url: U("/page/vinden") },
-    nieuws: { naam: "Nieuws",  sub: "&amp; feeds",            url: U("/page/frankrijknieuws") }
+    lezen: {
+      naam: "Lezen", sub: "rubrieken", url: U("/page/lezen"),
+      tekst: "Alles wat leden in 24 jaar hebben gevraagd en beantwoord, geordend per onderwerp.",
+      punten: ["Wonen &amp; klussen", "Werk &amp; ondernemen", "Geld, overheid &amp; migratie",
+               "Leren &amp; taal", "Leven &amp; zorg", "Ontmoeten &amp; cultuur", "Marktplaats",
+               "Meer in het forum"]
+    },
+    doen: {
+      naam: "Meedoen", sub: "plaatsen &amp; steunen", url: U("/page/meedoen"),
+      tekst: "Uw vraag stellen, uw ervaring delen, en het forum steunen.",
+      punten: ["Plaats bericht", "Plaats advertentie", "Foto's en video's", "Groepen", "Doneer",
+               "Word sponsor"]
+    },
+    vinden: {
+      naam: "Vinden", sub: "tools &amp; hulp", url: U("/page/vinden"),
+      tekst: "Hulpmiddelen, adressen en de weg naar de Franse instanties.",
+      punten: ["Vervoershub", "Verenigingen in Frankrijk", "Frans leren", "Wegwijs Franse overheid",
+               "Handige sites", "Nedergids", "Huisregels", "Contact beheerder"]
+    },
+    nieuws: {
+      naam: "Nieuws", sub: "&amp; feeds", url: U("/page/frankrijknieuws"),
+      tekst: "Offici\u00eble berichten uit Frankrijk, in het Nederlands samengevat.",
+      punten: ["Actueel Frankrijk\u00adnieuws", "Dagelijks Frankrijk\u00adnieuws", "Ondernemers\u00adnieuws",
+               "Reizen in Frankrijk", "Nieuwsbrief", "RSS-feeds"]
+    }
   };
 
   // Mijn NLFR is de vijfde kolom, maar hangt aan de ingelogde gebruiker en
@@ -619,11 +672,17 @@
   function linkKolomHTML(sleutel){
     var d = DEUREN_LINK[sleutel];
     var t = tgt(d.url), rel = (t === "_blank") ? ' rel="noopener"' : '';
-    return '<div class="deur deur-link" data-deur="'+sleutel+'">' +
-           '<a class="deurkop deurlink" href="'+d.url+'" target="'+t+'"'+rel+'>' +
+    // DE HELE TEGEL IS DE LINK, dus de <a> staat buitenom. Alles daarbinnen is
+    // een <span>: een tweede <a> in een <a> mag niet en zou de tegel in stukken
+    // knippen die elk apart aanklikbaar zijn.
+    return '<a class="deur deur-link" data-deur="'+sleutel+'" href="'+d.url+'" target="'+t+'"'+rel+'>' +
+           '<span class="deurkop deurlink">' +
            '<span class="dn">'+d.naam+'</span><span class="ds">'+d.sub+'</span>' +
-           '<span class="dpijl">'+pijlSvg+'</span></a>' +
-           '</div>';
+           '<span class="dpijl">'+pijlSvg+'</span></span>' +
+           '<span class="deurbody"><span class="tegel">' +
+           '<span class="tt">'+d.tekst+'</span>' +
+           '<span class="tp">'+d.punten.join(" \u00b7 ")+'</span>' +
+           '</span></span></a>';
   }
 
   function kolomHTML(sleutel){

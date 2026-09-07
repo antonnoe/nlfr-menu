@@ -100,13 +100,15 @@ test("de vier links openen in het bovenliggende venster, niet in de iframe", () 
   assert.equal(tgt("https://infofrankrijk.com/"), "_blank");
 });
 
-test("een ingang die doorverwijst is een link, geen knop", () => {
+test("een ingang die doorverwijst is één link over de hele tegel", () => {
   const m = menu(false);
   const h = m.kolomHTML("lezen");
-  assert.match(h, /<a class="deurkop deurlink"/, "de kop is een <a>");
+  assert.match(h, /^<a class="deur deur-link"/, "de tegel zelf is de <a>");
+  assert.equal(h.split("<a ").length - 1, 1, "precies één <a>: de tegel valt niet in stukken uiteen");
   assert.ok(!/role="button"/.test(h), "geen knoprol op iets dat navigeert");
   assert.ok(!/aria-expanded/.test(h), "en geen open-stand op iets dat niet openklapt");
-  assert.ok(!/class="deurbody"/.test(h), "en geen body");
+  // Binnen een <a> mag geen tweede <a>; alles daarbinnen is een <span>.
+  assert.ok(!/<div/.test(h), "geen blokelement binnen de link");
 });
 
 // --- 2. Mijn NLFR houdt zijn lade ------------------------------------------
@@ -172,9 +174,11 @@ test("de vier vervallen laden komen niet ongemerkt terug", () => {
   const m = menu(false);
   for (const sleutel of ["lezen", "doen", "vinden", "nieuws"]) {
     const h = m.kolomHTML(sleutel);
-    assert.ok(!h.includes("deurbody"), sleutel + " hoort geen body meer te hebben");
+    // De tegel heeft wél een body, maar geen LINKS: de opsomming is tekst.
     assert.ok(!h.includes('class="grp"'), sleutel + " hoort geen groepen meer te hebben");
     assert.ok(!h.includes('class="gl"'), sleutel + " hoort geen linklijst meer te hebben");
+    assert.equal(h.split("href=").length - 1, 1,
+      sleutel + " hoort precies één adres te bevatten, dat van zijn eigen pagina");
   }
   // En de data waaruit die laden werden gevuld bestaat niet meer.
   assert.ok(!/var DOORS\s*=/.test(HTML), "de DOORS-tabel hoort verdwenen te zijn");
@@ -226,7 +230,7 @@ test("de vijf ingangen houden hun tikdoel op mobiel", () => {
     "52px voor alle vijf, ruim boven de eis van 44");
   assert.match(CSS, /html\.compact \.deurlink \.dpijl \{ display: inline-flex/,
     "de vier links krijgen een pijl naar rechts");
-  assert.match(CSS, /a\.deurlink \{ text-decoration: none/, "en zijn op desktop niet onderstreept");
+  assert.match(CSS, /a\.deur-link \{ text-decoration: none/, "en zijn niet onderstreept");
 });
 
 test("de doelpagina's staan op één plek in het bestand", () => {
@@ -237,4 +241,104 @@ test("de doelpagina's staan op één plek in het bestand", () => {
     const treffers = HTML.split('U("' + pad + '")').length - 1;
     assert.equal(treffers, 1, sleutel + " (" + pad + ") hoort precies één keer in het bestand te staan");
   }
+});
+
+// --- 6. de tegel onder elke kop --------------------------------------------
+//
+// Vier kolommen toonden alleen een kop naast één volle wervingstegel. Elke
+// ingang draagt nu een tegel met een beschrijving en de subonderwerpen als
+// OPSOMMING ZONDER LINK: de tegel als geheel is de link. Losse links per
+// subonderwerp zouden de lade terugbrengen die net is weggehaald, en zouden op
+// twee plekken onderhouden moeten worden.
+
+// Zoals de bezoeker het leest: zonder de zachte afbreekstreepjes en met de
+// HTML-entiteiten terug. Die streepjes staan in de labels omdat de kolom smal
+// is (zie test/menu-lettergrootte.test.mjs); ze horen niet in de vergelijking.
+function leesbaar(t) {
+  return t.replace(/­/g, "").replace(/&amp;/g, "&");
+}
+
+const TEGELS = {
+  lezen: {
+    tekst: "Alles wat leden in 24 jaar hebben gevraagd en beantwoord, geordend per onderwerp.",
+    punten: ["Wonen & klussen", "Werk & ondernemen", "Geld, overheid & migratie", "Leren & taal",
+             "Leven & zorg", "Ontmoeten & cultuur", "Marktplaats", "Meer in het forum"],
+  },
+  doen: {
+    tekst: "Uw vraag stellen, uw ervaring delen, en het forum steunen.",
+    punten: ["Plaats bericht", "Plaats advertentie", "Foto's en video's", "Groepen", "Doneer",
+             "Word sponsor"],
+  },
+  vinden: {
+    tekst: "Hulpmiddelen, adressen en de weg naar de Franse instanties.",
+    punten: ["Vervoershub", "Verenigingen in Frankrijk", "Frans leren", "Wegwijs Franse overheid",
+             "Handige sites", "Nedergids", "Huisregels", "Contact beheerder"],
+  },
+  nieuws: {
+    tekst: "Officiële berichten uit Frankrijk, in het Nederlands samengevat.",
+    punten: ["Actueel Frankrijknieuws", "Dagelijks Frankrijknieuws", "Ondernemersnieuws",
+             "Reizen in Frankrijk", "Nieuwsbrief", "RSS-feeds"],
+  },
+};
+
+test("elke ingang draagt zijn eigen beschrijving, letterlijk", () => {
+  const m = menu(false);
+  for (const [sleutel, verwacht] of Object.entries(TEGELS)) {
+    const h = m.kolomHTML(sleutel);
+    const tt = h.match(/<span class="tt">([^<]*)<\/span>/);
+    assert.ok(tt, sleutel + " hoort een beschrijving te hebben");
+    assert.equal(leesbaar(tt[1]), verwacht.tekst, "de beschrijving van " + sleutel);
+  }
+});
+
+test("de opsomming staat er voluit en in de opgegeven volgorde", () => {
+  const m = menu(false);
+  for (const [sleutel, verwacht] of Object.entries(TEGELS)) {
+    const h = m.kolomHTML(sleutel);
+    const tp = h.match(/<span class="tp">([^<]*)<\/span>/);
+    assert.ok(tp, sleutel + " hoort een opsomming te hebben");
+    // Op het scheidingsteken splitsen en woord voor woord vergelijken: een
+    // includes() op de hele regel slaagt ook als de volgorde is omgegooid.
+    const punten = leesbaar(tp[1]).split(" · ");
+    assert.deepEqual(punten, verwacht.punten, "de opsomming van " + sleutel);
+  }
+});
+
+test("de subonderwerpen zijn tekst, geen links", () => {
+  const m = menu(false);
+  for (const sleutel of Object.keys(TEGELS)) {
+    const h = m.kolomHTML(sleutel);
+    const tp = h.match(/<span class="tp">([^<]*)<\/span>/)[1];
+    assert.ok(!tp.includes("<"), sleutel + ": de opsomming hoort platte tekst te zijn");
+    assert.ok(!tp.includes("href"), sleutel + ": en zeker geen adressen te bevatten");
+  }
+});
+
+test("de vijf tegels zijn op desktop even hoog", () => {
+  // De kolommen rekken mee met de langste (stretch), de deur is een flexkolom,
+  // en de tegel erin vult de resthoogte. Ontbreekt één van die drie, dan zijn
+  // de KOLOMMEN wel even hoog en de TEGELS niet — precies wat het eruit haalt.
+  const kaal = CSS.replace(/\/\*[\s\S]*?\*\//g, " ");
+  assert.match(kaal, /\.kolommen \{[^}]*align-items: stretch/, "de kolommen rekken mee");
+  assert.match(kaal, /\.deur \{[^}]*display: flex; flex-direction: column/, "de deur is een flexkolom");
+  assert.match(kaal, /\.deurbody \{[^}]*flex: 1/, "de body vult de resthoogte");
+  assert.match(kaal, /\.deurbody > \.teaser, \.deurbody > \.tegel \{ flex: 1/,
+    "en de tegel erin ook, anders zweeft hij bovenin");
+  // De tegel is dezelfde doos als de wervingstegel: gelijke rand en radius.
+  assert.match(kaal, /\.tegel \{[^}]*border: 1px solid rgba\(128,0,0,\.14\)/);
+  assert.match(kaal, /\.tegel \{[^}]*border-radius: 12px/);
+  assert.match(kaal, /\.teaser \{[^}]*border: 1px solid rgba\(128,0,0,\.14\)/);
+  assert.match(kaal, /\.teaser \{[^}]*border-radius: 12px/);
+});
+
+test("op mobiel blijven de tegels dicht en blijven het vijf regels", () => {
+  // De tegels zijn een desktopmiddel. Op een telefoon zou het tonen van alle
+  // vijf de beschrijvingen het paneel weer met honderden pixels verlengen, en
+  // daar was juist de hele wegwijzer voor bedoeld.
+  assert.match(CSS, /html\.compact \.deurbody \{ display: none/, "de body staat dicht op mobiel");
+  assert.match(CSS, /html\.compact \.deur\.open \.deurbody \{ display: block/,
+    "en gaat alleen open bij een ingang die openklapt");
+  // Een link-ingang krijgt nooit .open: bindDeuren bindt alleen div.deurkop.
+  const blok = HTML.slice(HTML.indexOf("function bindDeuren()"), HTML.indexOf("function zetPaneel"));
+  assert.match(blok, /querySelectorAll\("\.deur > div\.deurkop"\)/);
 });

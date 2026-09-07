@@ -75,8 +75,10 @@
   #bannerhost:not(:empty) { margin-bottom: 8px; }
 
   /* ---- Kaart ---- */
+  /* Geen slagschaduw. Die tekende een rode waas onder het uitgeklapte paneel;
+     de rand van de kaart zet het blok al genoeg af tegen de pagina. */
   .card { background: #fff; border: 1px solid rgba(128,0,0,.12); border-radius: 16px;
-          box-shadow: 0 12px 40px -26px rgba(90,0,0,.55); overflow: hidden; }
+          overflow: hidden; }
 
   /* ---- Strip: één bordeaux balk ----
      Dit is het eerste element in de kaart. De kaart heeft overflow:hidden, dus
@@ -284,20 +286,35 @@
   .teaser .btn-p { background: var(--brand); color: #fff; }
   .teaser .btn-o { background: #fff; border: 1px solid rgba(128,0,0,.25); color: var(--brand); }
 
+  /* ---- Smalle regel onder de balk, altijd zichtbaar ---- */
+  /* Vier links die vroeger onderin het uitgeklapte paneel stonden. Daar zag
+     niemand ze die het menu niet opende. Hier staan ze op elke pagina van
+     nederlanders.fr in beeld, en ze wikkelen naar een tweede regel zodra ze
+     niet meer naast elkaar passen. */
+  .subbalk { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px;
+             padding: 5px 10px; background: #fdfbfa;
+             border-bottom: 1px solid rgba(128,0,0,.10); }
+  .sbl { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 8px;
+         border-radius: 7px; text-decoration: none;
+         font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         font-weight: 600; font-size: 12.5px; color: var(--brand); }
+  .sbl-ext { color: var(--actueel); }
+  .sbl:hover { background: rgba(128,0,0,.06); text-decoration: underline; }
+  .sbl-ext:hover { background: rgba(47,107,58,.08); }
+  .sbx { display: inline-flex; opacity: .75; }
+
   /* ---- Voetrij van het paneel ---- */
-  .paneelvoet { display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  /* Alleen nog het kruisje, rechts. De drie knoppen en de zusterlinks die hier
+     stonden zijn vervallen of naar de subbalk verhuisd. */
+  .paneelvoet { display: flex; justify-content: flex-end; align-items: center;
                 margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(128,0,0,.10); }
-  .paneelvoet .vlinks { display: flex; flex-wrap: wrap; gap: 8px; }
   .pknop { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px;
            border: 1px solid rgba(128,0,0,.22); border-radius: 9px; background: #fff; color: var(--brand);
            font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
   .pknop:hover { background: rgba(128,0,0,.06); }
-  .zusters { flex: 1 1 auto; text-align: center; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600;
-             font-size: 12.5px; color: var(--actueel); }
-  .zusters a { color: var(--actueel); }
-  .zusters a:hover { text-decoration: underline; }
-  .zusters .sep { opacity: .5; padding: 0 5px; }
-  .sluitknop { margin-left: auto; }
+  /* Het kruisje draagt geen tekst, dus het tikdoel moet uit de maten komen:
+     44 bij 44, ook op een telefoon waar .pknop normaal de volle breedte pakt. */
+  .sluitknop { width: 44px; min-width: 44px; padding: 0; }
 
   /* ---- Mobiel (<=700px en html.compact) ---- */
   @media (max-width: 700px) {
@@ -361,11 +378,12 @@
   html.compact .ladepijl { display: none; }
   html.compact .ladekaart { width: auto !important; margin-left: 0 !important; }
   html.compact .plaatskolommen { grid-template-columns: 1fr; gap: 16px; }
-  html.compact .paneelvoet { flex-direction: column; align-items: stretch; }
-  html.compact .paneelvoet .vlinks { display: grid; grid-template-columns: 1fr 1fr; }
   html.compact .pknop { width: 100%; }
-  html.compact .sluitknop { margin-left: 0; }
-  html.compact .zusters { text-align: center; }
+  html.compact .sluitknop { width: 44px; }
+  /* Op een telefoon passen de vier links niet naast elkaar; ze wikkelen naar
+     een tweede regel. Iets ruimer aantikbaar dan op desktop, want daar wordt
+     met een muis gemikt en hier met een duim. */
+  html.compact .sbl { min-height: 38px; padding: 0 9px; font-size: 12.5px; }
   /* Raakvlakken van minstens 44px: op een telefoon mik je anders mis. De
      zusterlinks staan in een lopende zin, dus ze blijven inline — alleen hun
      tikhoogte gaat omhoog. */
@@ -426,6 +444,10 @@
 
       <button type="button" class="sknop sadmin" id="adminbtn" aria-label="Beheer" aria-expanded="false" aria-controls="lade"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>
+
+    <!-- Smalle regel onder de balk, altijd zichtbaar, ook met het menu dicht.
+         Wordt gevuld uit SNELRIJ; zie het script. -->
+    <div class="subbalk" id="subbalk"></div>
 
     <div class="lade" id="lade"></div>
     <div class="paneel" id="paneel"></div>
@@ -586,8 +608,18 @@
     knop: "Word lid, gratis"
   };
 
-  var ZUSTERS = [["Infofrankrijk","https://infofrankrijk.com/"],["Café Claude","https://www.cafeclaude.fr/"],["Nedergids","https://nedergids.nl/"],["Communities Abroad","https://www.communitiesabroad.com"]];
-  var PANEELKNOPPEN = [["Plaats bericht",U("/profiles/blog/new")],["Plaats advertentie",U("/page/betaalpagina-berichten")],["Diensten",U("/diensten")]];
+  // De zusterplatforms. Communities Abroad is eruit: dat is corporate
+  // communicatie en niet waar een bezoeker van dit menu naar op zoek is.
+  var ZUSTERS = [["Infofrankrijk","https://infofrankrijk.com/"],["Café Claude","https://www.cafeclaude.fr/"],["Nedergids","https://nedergids.nl/"]];
+
+  // De smalle regel onder de balk, ALTIJD ZICHTBAAR, ook met het menu dicht.
+  // Diensten stond met twee andere knoppen onderin het paneel; die twee zijn
+  // vervallen omdat ze al in de balk en in de tegel Meedoen staan. De
+  // zusterlinks stonden daar ook; ze zijn hierheen verhuisd, want een link die
+  // je pas ziet nadat je het menu hebt uitgeklapt, wordt niet gevonden.
+  //
+  // /page/diensten en niet /diensten: dat laatste stond buiten Ning.
+  var SNELRIJ = [["Diensten", U("/page/diensten")]].concat(ZUSTERS);
 
   // De twee kolommen achter de knop "Plaats bericht". Naast elkaar op desktop,
   // onder elkaar op mobiel. Het verschil gratis/betaald is de hele reden dat
@@ -618,6 +650,7 @@
 
   var paneel = document.getElementById("paneel");
   var lade = document.getElementById("lade");
+  var subbalk = document.getElementById("subbalk");
   var menubtn = document.getElementById("menubtn");
   var plaatsbtn = document.getElementById("plaatsbtn");
   var actueelbtn = document.getElementById("actueelbtn");
@@ -627,6 +660,9 @@
   // Het pijltje op een ingang die doorverwijst. Bewust een ander teken dan de
   // caret van Mijn NLFR: die klapt open, deze gaat naar een andere pagina.
   var pijlSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg>';
+  var kruisSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  // Het pijltje naast een link die de bezoeker van nederlanders.fr wegvoert.
+  var extSvg = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 
   // ---- Hoogte melden ----------------------------------------------------
   // Meet de werkelijke hoogte van #alles (banner + kaart), niet
@@ -748,18 +784,28 @@
     return h + '</div></div>';
   }
 
+  // De smalle regel onder de balk. Eén databron (SNELRIJ), dus er kan geen
+  // tweede lijst ontstaan die gaat afwijken. nederlanders.fr opent in het
+  // bovenliggende venster, de zusterplatforms in een nieuw tabblad — dat regelt
+  // tgt(), en het pijltje maakt dat verschil ook zichtbaar.
+  function bouwSubbalk(){
+    if (!subbalk) return;
+    subbalk.innerHTML = SNELRIJ.map(function(k){
+      var t = tgt(k[1]), extern = (t === "_blank");
+      return '<a class="sbl' + (extern ? " sbl-ext" : "") + '" href="' + k[1] + '" target="' + t + '"' +
+             (extern ? ' rel="noopener"' : '') + '>' + k[0] +
+             (extern ? '<span class="sbx">' + extSvg + '</span>' : '') + '</a>';
+    }).join("");
+  }
+
   function bouwPaneel(){
     var h = '<div class="kolommen">' + DEUR_VOLGORDE.map(kolomHTML).join("") + '</div>';
-    h += '<div class="paneelvoet"><div class="vlinks">' +
-         PANEELKNOPPEN.map(function(k){
-           var t = tgt(k[1]), rel = (t === "_blank") ? ' rel="noopener"' : '';
-           return '<a class="pknop" href="'+k[1]+'" target="'+t+'"'+rel+'>'+k[0]+'</a>';
-         }).join("") + '</div>';
-    h += '<div class="zusters">Zusterplatforms: ' +
-         ZUSTERS.map(function(z){
-           return '<a href="'+z[1]+'" target="_blank" rel="noopener">'+z[0]+'</a>';
-         }).join('<span class="sep">·</span>') + '</div>';
-    h += '<button type="button" class="pknop sluitknop" id="sluitbtn">Menu sluiten</button></div>';
+    // De voetrij draagt alleen nog het kruisje. Zonder tekst, dus met een
+    // aria-label: een knop die alleen een tekening is, heeft voor een
+    // schermlezer geen naam.
+    h += '<div class="paneelvoet">' +
+         '<button type="button" class="pknop sluitknop" id="sluitbtn" ' +
+         'aria-label="Menu sluiten" title="Menu sluiten">' + kruisSvg + '</button></div>';
     paneel.innerHTML = h;
     bindDeuren();
     var sluit = document.getElementById("sluitbtn");
@@ -1031,7 +1077,7 @@
     h += mrij(U("/profiles/blog/new"), "plaats", "Plaats een bericht");
     h += mrij(isMember ? myPage : U("/main/authorization/signIn"), "mijn", isMember ? "Mijn pagina" : "Meld je aan", isMember ? "" : "of word gratis lid");
     h += '<div class="sep">Handig</div>';
-    h += mrij(U("/diensten"), "diensten", "Diensten");
+    h += mrij(U("/page/diensten"), "diensten", "Diensten");
     h += mrij(U("/page/nederlandse-verenigingen-in-frankrijk"), "verenig", "NL-verenigingen");
     h += mrij(U("/page/hulpverlening-in-frankrijk"), "hulp", "Hulp vinden");
     h += '<a class="full" href="' + U("/") + '" target="_parent">Naar de volledige website</a>';
@@ -1130,6 +1176,7 @@
   }
 
   // ---- Opstarten ---------------------------------------------------------
+  bouwSubbalk();
   bouwPaneel();
   laadActueel();
   laadBanner();

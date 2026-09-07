@@ -27,14 +27,20 @@ const VERHUISD = JSON.parse(fs.readFileSync(new URL("./fixtures/menu-urls-verhui
 
 const NL = "https://www.nederlanders.fr";
 
-// Uit de opdracht: deze drie verdwijnen met opzet.
+// Uit de opdrachten: deze vijf verdwijnen met opzet.
 //   /page/rubrieken .................. vervalt
 //   /group/vervoerspagina ............ samengevoegd met /page/lift-en-transportcentrale
 //   /profiles/blogs/overzicht-... .... samengevoegd met /page/nederlandse-verenigingen-in-frankrijk
+//   communitiesabroad.com ............ corporate communicatie, niet voor deze
+//                                      bezoeker; uit de zusterplatforms gehaald
+//   /diensten ........................ vervangen door /page/diensten, de pagina
+//                                      binnen Ning; de oude stond daarbuiten
 const BEWUST_WEG = new Set([
   NL + "/page/rubrieken",
   NL + "/group/vervoerspagina",
   NL + "/profiles/blogs/overzicht-van-nederlandse-verenigingen-in-frankrijk",
+  "https://www.communitiesabroad.com",
+  NL + "/diensten",
 ]);
 
 // De datablokken uit index.html uitvoeren. Het menu is één bestand zonder
@@ -55,7 +61,7 @@ function menuData() {
     pak("var DEUR_VOLGORDE =", "var ACTUEEL = null");
 
   const fn = new Function("U", "myPage", "uid",
-    bron + "\nreturn { DEUREN_LINK, memberGroups, ADMIN_LINKS, WERVING, ZUSTERS, PANEELKNOPPEN, PLAATS_KOLOMMEN, DEUR_VOLGORDE };");
+    bron + "\nreturn { DEUREN_LINK, memberGroups, ADMIN_LINKS, WERVING, ZUSTERS, SNELRIJ, PLAATS_KOLOMMEN, DEUR_VOLGORDE };");
   return fn((p) => NL + p, NL + "/profiles/settings/editProfileInfo", "UID");
 }
 
@@ -70,7 +76,7 @@ function nieuweUrls() {
   for (const [, links] of d.memberGroups()) for (const l of links) voegToe(l[1]);
   for (const l of d.ADMIN_LINKS) voegToe(l[1]);
   for (const z of d.ZUSTERS) voegToe(z[1]);
-  for (const k of d.PANEELKNOPPEN) voegToe(k[1]);
+  for (const k of d.SNELRIJ) voegToe(k[1]);
 
   // Vaste links in de markup en in de /m-lijst: die staan letterlijk in het
   // bestand, dus daar zoeken we ze ook letterlijk op.
@@ -113,7 +119,7 @@ test("elke verhuisde URL noemt de pagina die hem hoort te bevatten", () => {
   for (const pagina of paginas) assert.ok(nieuw.has(pagina), "het menu wijst niet naar " + pagina);
 });
 
-test("de drie bewust geschrapte URL's staan er ook echt niet meer in", () => {
+test("de bewust geschrapte URL's staan er ook echt niet meer in", () => {
   const nieuw = nieuweUrls();
   for (const weg of BEWUST_WEG) {
     assert.ok(!nieuw.has(weg), weg + " hoort vervallen te zijn");
@@ -136,7 +142,12 @@ test("de TOPICS-items staan op de pagina waar ze thuishoren", () => {
     assert.ok(v, "niet in de verhuislijst: " + url);
     assert.equal(v.pagina, lezen, url + " hoorde onder Lezen te vallen");
   }
-  assert.ok(d.ZUSTERS.some((z) => z[1] === "https://www.communitiesabroad.com"), "Communities Abroad hoort bij de zusterplatforms");
+  // Communities Abroad stond hier bij de zusterplatforms en is er in de
+  // opruiming van 07-09-2026 uit gehaald: corporate communicatie, niet waar een
+  // bezoeker van dit menu naar op zoek is.
+  assert.ok(!d.ZUSTERS.some((z) => z[1] === "https://www.communitiesabroad.com"),
+    "Communities Abroad hoort uit de zusterplatforms te zijn");
+  assert.deepEqual(d.ZUSTERS.map((z) => z[0]), ["Infofrankrijk", "Café Claude", "Nedergids"]);
 });
 
 test("de links uit de vorige opdracht zijn mee verhuisd, niet geschrapt", () => {
@@ -211,6 +222,30 @@ test("de link-targetregels zijn ongewijzigd", () => {
   const abo = VERHUISD.find((v) => v.url === "https://infofrankrijk.com/abonnement/");
   assert.ok(abo, "Word abonnee is uit de inventaris verdwenen");
   assert.equal(abo.pagina, NL + "/page/meedoen");
+});
+
+test("de smalle regel onder de balk telt precies vier links", () => {
+  const d = menuData();
+  assert.deepEqual(d.SNELRIJ.map((k) => k[0]),
+    ["Diensten", "Infofrankrijk", "Café Claude", "Nedergids"],
+    "deze vier, in deze volgorde, en geen andere");
+  assert.equal(d.SNELRIJ[0][1], NL + "/page/diensten",
+    "Diensten wijst naar de pagina binnen Ning, niet naar het oude /diensten");
+  // De drie zusterplatforms komen uit ZUSTERS, dus ze staan op één plek.
+  assert.deepEqual(d.SNELRIJ.slice(1), d.ZUSTERS);
+});
+
+test("de knoppen onderin het paneel zijn vervallen", () => {
+  // Plaats bericht en Plaats advertentie stonden dubbel: in de balk en in de
+  // tegel Meedoen. De zusterlinks stonden onderin het paneel, waar niemand ze
+  // zag die het menu niet uitklapte; die staan nu in de smalle regel.
+  assert.ok(!/var PANEELKNOPPEN/.test(HTML), "PANEELKNOPPEN hoort verdwenen te zijn");
+  assert.ok(!/class="vlinks"/.test(HTML), "en de rij eromheen ook");
+  assert.ok(!/class="zusters"/.test(HTML), "de zusterrij onderin het paneel is verhuisd");
+  assert.ok(!/Zusterplatforms:/.test(HTML), "inclusief zijn opschrift");
+  // De voetrij draagt alleen nog het kruisje.
+  assert.match(HTML, /'<div class="paneelvoet">' \+\s*\n\s*'<button type="button" class="pknop sluitknop"/,
+    "de voetrij bevat alleen nog de sluitknop");
 });
 
 test("de vijf kolommen staan in de goede volgorde", () => {

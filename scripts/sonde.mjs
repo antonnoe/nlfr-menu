@@ -16,7 +16,10 @@
 //   SONDE_TOON_FILTER  beperkt die lijst tot titels die deze tekst bevatten
 //   SONDE_WEBHOOK_URL  optioneel; ontbreekt hij, dan wordt die stap overgeslagen.
 
+import { readFileSync } from "node:fs";
+
 import { laadBronnen } from "../lib/feeds.js";
+import { bestemmingenUit, oordeelOverStatus } from "../lib/menu-bestemmingen.js";
 import { artikelSleutel } from "../lib/levering.js";
 import { bronUrlOordeel, bronVoorNaam, bronVoorThema, isAssetHost } from "../lib/bronurl.js";
 import { kernUitTekst, zelfdeVerhaal } from "../lib/cluster.js";
@@ -545,8 +548,52 @@ async function main() {
     }
   }
 
+  // ---- I16. Het menu wijst nergens naar een 404 ---------------------------
+  // Het menu is op desktop de enige navigatie van nederlanders.fr en wijst
+  // sinds 7 september naar pagina's die BUITEN deze repository staan: vier
+  // categoriepagina's en de vier links in de smalle regel onder de balk.
+  // Hernoemt iemand daar een pagina, dan krijgt elke bezoeker een 404 en merkt
+  // niemand het — elke andere invariant hier kijkt naar /api/actueel.
+  await toetsMenubestemmingen();
+
   toonInventaris(data, artikelen, teksten, archief);
   return klaar(nu);
+}
+
+// De lijst komt uit index.html zelf (lib/menu-bestemmingen.js), niet uit een
+// tweede opsomming hier: die zou gaan afwijken zodra iemand het menu wijzigt.
+async function toetsMenubestemmingen() {
+  let bestemmingen;
+  try {
+    const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+    bestemmingen = bestemmingenUit(html);
+  } catch (e) {
+    // Kan de lijst niet worden gelezen, dan bewaakt deze invariant niets meer.
+    // Dat is zelf een bevinding: stil overslaan is precies hoe een sonde groen
+    // blijft terwijl hij niets doet.
+    meld("I16 menubestemmingen", `de lijst is niet uit index.html te lezen: ${e.message}`);
+    return;
+  }
+
+  console.log(`\n[I16] ${bestemmingen.length} bestemming(en) uit index.html:`);
+  for (const { naam, url } of bestemmingen) {
+    let status;
+    try {
+      const r = await fetch(url, {
+        redirect: "follow",
+        headers: { "User-Agent": "NLFR-Sonde/1.0" },
+        signal: AbortSignal.timeout(20000),
+        cache: "no-store",
+      });
+      status = r.status;
+    } catch (e) {
+      console.log(`      ${naam}: ${url} — geen antwoord (${e.message})`);
+      continue;
+    }
+    const oordeel = oordeelOverStatus(status);
+    if (oordeel.rood) meld("I16 menubestemmingen", `${naam} · ${url} · ${oordeel.reden}`);
+    console.log(`      ${naam}: ${url} — ${oordeel.rood ? "ROOD " : ""}HTTP ${status}`);
+  }
 }
 
 // BEWUST NIET GETOETST.

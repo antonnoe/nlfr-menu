@@ -301,20 +301,16 @@
   html.compact .deur.open .deurbody { display: block; }
   html.compact .grp { background: #fff; margin-bottom: 0; border-top: 1px solid rgba(128,0,0,.08); }
   html.compact .grp:first-child { border-top: 0; }
-  /* Tweede accordeon, binnen de deur: de groepen zelf klappen open en dicht,
-     één tegelijk, de eerste open — zoals het oude menu deed. */
-  html.compact .gk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0;
-                     cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  html.compact .gk .gn { flex: 1; }
-  /* Teller en caret stonden op #a99e9a: 2,61:1 op wit. Een teller is tekst
-     (eis 4,5:1) en een caret is een betekenisdragend icoon (eis 3:1); beide
-     zakten. Nu #666666, op 5,74:1. */
-  html.compact .gk .gc { display: inline-block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-                         font-size: 12px; letter-spacing: 0; text-transform: none; color: #666; }
-  html.compact .gk .gcaret { display: inline-flex; color: #666; transition: transform 180ms ease; }
-  html.compact .grp.open .gk .gcaret { transform: rotate(180deg); }
-  html.compact .gl { display: none; padding-bottom: 6px; }
-  html.compact .grp.open .gl { display: block; }
+  /* BINNEN EEN GEOPENDE INGANG STAAT ALLES OPEN. Hier zat een tweede accordeon
+     onder de eerste: je tikte "Lezen" open en kreeg zestien dichte groepen
+     waarvan er één openstond. Twee tikken per link, en geen overzicht van wat
+     er in die ingang zit. Eén laag klapwerk is genoeg, en die zit op de vijf
+     ingangen zelf.
+     De groepskop is daarmee weer een kop: geen tikvlak, geen caret, geen
+     teller. Een pijltje naast een kop die niet opengaat belooft iets wat er
+     niet is. */
+  html.compact .gk { margin: 0; padding: 2px 0; }
+  html.compact .gl { display: block; padding-bottom: 6px; }
   html.compact .grp a { min-height: 44px; display: flex; align-items: center; }
   /* De twee sporen van Lezen zijn een desktopmiddel; op mobiel staat alles
      gewoon onder elkaar in de accordeon. */
@@ -590,13 +586,18 @@
 
   // Eén groep: kop met teller en caret (alleen zichtbaar op mobiel, waar de
   // groepen accordeons zijn), daaronder de links.
+  // DE GROEPSKOP IS EEN KOP, GEEN KNOP. Binnen een geopende ingang staat alles
+  // open: alle groepen, alle items. Er zat hier een tweede accordeon onder de
+  // eerste — je tikte "Lezen" open en kreeg zestien dichte groepen waarvan er
+  // één openstond, dus twee tikken per link en geen overzicht van wat er in die
+  // ingang zit. Eén laag klapwerk is genoeg; die zit op de vijf ingangen.
+  //
+  // Zonder klapwerk hoort er ook geen caret en geen teller bij: een pijltje
+  // naast een kop die niet opengaat belooft iets wat er niet is, en een aantal
+  // naast een lijst die er volledig onder staat telt wat je al ziet.
   function groepHTML(g){
     return '<div class="grp">' +
-      '<div class="gk" role="button" tabindex="0" aria-expanded="false">' +
-        '<span class="gn">' + g[0] + '</span>' +
-        '<span class="gc">' + g[1].length + '</span>' +
-        '<span class="gcaret">' + caretSvg + '</span>' +
-      '</div>' +
+      '<div class="gk"><span class="gn">' + g[0] + '</span></div>' +
       '<div class="gl">' + g[1].map(function(l){ return link(l[1], l[0], l[2]); }).join("") + '</div>' +
     '</div>';
   }
@@ -699,7 +700,6 @@
         if (!wasOpen) {
           deur.classList.add("open");
           kop.setAttribute("aria-expanded", "true");
-          openEersteGroep(deur);
         }
         report();
       }
@@ -708,41 +708,6 @@
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
       });
     });
-    bindGroepen();
-  }
-
-  // Tweede accordeon, binnen de deur: op mobiel klappen de groepen zelf ook
-  // open en dicht, één tegelijk binnen dezelfde deur. Op desktop staan ze
-  // allemaal open en doet de klasse niets (zie CSS).
-  function bindGroepen(){
-    Array.prototype.forEach.call(paneel.querySelectorAll(".grp > .gk"), function(kop){
-      function toggle(){
-        var grp = kop.parentNode, wasOpen = grp.classList.contains("open");
-        var deur = grp.closest ? grp.closest(".deur") : null;
-        var buren = (deur || paneel).querySelectorAll(".grp");
-        Array.prototype.forEach.call(buren, function(g){
-          g.classList.remove("open");
-          var k = g.querySelector(".gk");
-          if (k) k.setAttribute("aria-expanded", "false");
-        });
-        if (!wasOpen) { grp.classList.add("open"); kop.setAttribute("aria-expanded", "true"); }
-        report();
-      }
-      kop.addEventListener("click", toggle);
-      kop.addEventListener("keydown", function(e){
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
-      });
-    });
-  }
-
-  function openEersteGroep(deur){
-    if (!isNarrow() || !deur) return;
-    if (deur.querySelector(".grp.open")) return;
-    var eerste = deur.querySelector(".grp");
-    if (!eerste) return;
-    eerste.classList.add("open");
-    var k = eerste.querySelector(".gk");
-    if (k) k.setAttribute("aria-expanded", "true");
   }
 
   function zetPaneel(open){
@@ -757,7 +722,6 @@
       if (eerste && !paneel.querySelector(".deur.open")) {
         eerste.classList.add("open");
         eerste.querySelector(".deurkop").setAttribute("aria-expanded", "true");
-        openEersteGroep(eerste);
       }
     }
     report();
@@ -1061,8 +1025,22 @@
     var bijWissel = function(){
       applyCompact();
       var wasOpen = paneel.classList.contains("open");
+      // WELKE INGANG STOND OPEN. bouwPaneel() tekent het paneel opnieuw, en
+      // daarmee verdween de stand van de accordeon: wie zijn telefoon draaide
+      // terwijl "Vinden" openstond, keek daarna naar vijf dichte regels en moest
+      // opnieuw zoeken waar hij was. Draaien mag de stand niet verstoren.
+      var deurEl = paneel.querySelector(".deur.open");
+      var openDeur = deurEl ? deurEl.getAttribute("data-deur") : null;
       bouwPaneel();
       if (wasOpen) paneel.classList.add("open");
+      if (openDeur) {
+        var terug = paneel.querySelector('.deur[data-deur="' + openDeur + '"]');
+        if (terug) {
+          terug.classList.add("open");
+          var kop = terug.querySelector(".deurkop");
+          if (kop) kop.setAttribute("aria-expanded", "true");
+        }
+      }
       richtLade();
       report();
     };

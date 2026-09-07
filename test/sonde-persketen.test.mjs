@@ -172,3 +172,60 @@ test("een ontbrekend bewakingsblok is zelf een bevinding", async () => {
   assert.equal(code, 1);
   assert.match(uit, /geen bewakingsblok/);
 });
+
+// I17 (07-09-2026). De storing van 6 september was een geweigerde API-sleutel.
+// I15 zou dat pas na een etmaal stilte hebben gemeld; de cron wist het al bij de
+// eerste ronde. Wat de cron zelf heeft opgeschreven, hoort meteen rood te zijn.
+test("I17 wordt rood zodra de laatste ronde afbrak op de API-sleutel", async () => {
+  const { code, uit } = await draaiSonde({
+    persArtikelen: 3,
+    bewaking: {
+      ronde: gelegen(5 * 60e3),
+      // Nog geen etmaal stil: I15 zwijgt hier dus, en dat is precies het gat.
+      laatsteConceptOp: gelegen(2 * UUR),
+      persItemsLaatsteRonde: 61,
+      keten: {},
+      eersteNul: null,
+      duiding: null,
+      storing: {
+        soort: "sleutel",
+        status: 401,
+        reden: "de API-sleutel wordt geweigerd (HTTP 401). ANTHROPIC_API_KEY is wél gezet",
+      },
+      tegels: { "pers-landelijk": { laatstGevuld: gelegen(UUR) } },
+    },
+  });
+  assert.equal(code, 1);
+  assert.match(uit, /I17 modelaanroep/);
+  assert.match(uit, /HTTP 401/, "de status hoort in de melding");
+  assert.match(uit, /API-sleutel/, "en de reden ook");
+  assert.doesNotMatch(uit, /I15 persketen/, "I15 zwijgt nog: er is pas twee uur geen concept");
+});
+
+test("I17 zwijgt zodra de volgende ronde weer normaal draait", async () => {
+  // Het veld is zelfwissend: de cron bouwt het bewakingsblok elke ronde
+  // opnieuw op. Een sonde die een opgeloste storing blijft melden, wordt
+  // genegeerd, en dan is de volgende echte storing ook onzichtbaar.
+  const { code, uit } = await draaiSonde({
+    persArtikelen: 3,
+    bewaking: {
+      ronde: gelegen(5 * 60e3),
+      laatsteConceptOp: gelegen(2 * UUR),
+      persItemsLaatsteRonde: 61,
+      keten: {},
+      eersteNul: null,
+      duiding: null,
+      storing: null,
+      tegels: { "pers-landelijk": { laatstGevuld: gelegen(UUR) } },
+    },
+  });
+  assert.doesNotMatch(uit, /I17 modelaanroep/);
+  // Ook toetsen dat de sonde zijn ronde AF heeft gemaakt, niet alleen dat die
+  // tekst er niet staat: een sonde die op een lege storing struikelt, drukt
+  // hem óók niet af, en dan zou deze toets groen blijven terwijl I17 stuk is.
+  // Het verdict zelf is hier rood — deze proeflevering is met opzet mager en
+  // struikelt over I11 — dus daar valt niets aan af te lezen; wat telt is dat
+  // hij er staat.
+  assert.match(uit, /VERDICT:/, "de sonde hoort zijn ronde te hebben afgemaakt");
+  assert.equal(code, 1, "rood om andere redenen dan I17, zoals deze proeflevering hoort");
+});

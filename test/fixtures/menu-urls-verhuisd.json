@@ -1,0 +1,362 @@
+[
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Woningen+Algemeen",
+    "label": "Lezen › Wonen & klussen › Woningen algemeen",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Woningbeheer+en+Huishouding",
+    "label": "Lezen › Wonen & klussen › Woningbeheer & huishouding",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Bouw",
+    "label": "Lezen › Wonen & klussen › Bouw",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Inrichting",
+    "label": "Lezen › Wonen & klussen › Inrichting",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Exterieur",
+    "label": "Lezen › Wonen & klussen › Exterieur",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/telecommunicatie",
+    "label": "Lezen › Wonen & klussen › Telecommunicatie",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Telecommunicatie",
+    "label": "Lezen › Wonen & klussen › Telecommunicatie in het forum",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Werk+Algemeen",
+    "label": "Lezen › Werk & ondernemen › Werk algemeen",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Midden-+en+Kleinbedrijf",
+    "label": "Lezen › Werk & ondernemen › Midden- en kleinbedrijf",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Horeca+en+Toerisme",
+    "label": "Lezen › Werk & ondernemen › Horeca en toerisme",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Vervoer",
+    "label": "Lezen › Werk & ondernemen › Vervoer",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Overige+Diensten",
+    "label": "Lezen › Werk & ondernemen › Overige diensten",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Geldzaken",
+    "label": "Lezen › Geld, overheid & migratie › Geldzaken",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Overheid",
+    "label": "Lezen › Geld, overheid & migratie › Overheid",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Migratie",
+    "label": "Lezen › Geld, overheid & migratie › Migratie",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Onderwijs",
+    "label": "Lezen › Leren & taal › Onderwijs",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Cursussen+en+Opleidingen",
+    "label": "Lezen › Leren & taal › Cursussen en opleidingen",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Kinderen",
+    "label": "Lezen › Leren & taal › Kinderen",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Vertaling",
+    "label": "Lezen › Leren & taal › Vertaling",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Lexicon",
+    "label": "Lezen › Leren & taal › Woordenlijsten",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Correspondentie",
+    "label": "Lezen › Leren & taal › Correspondentie",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Gezondheid%2C+Sport+en+Spel",
+    "label": "Lezen › Leven & zorg › Gezondheid, sport & spel",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Ouderverzorging",
+    "label": "Lezen › Leven & zorg › Ouderverzorging",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Dieren",
+    "label": "Lezen › Leven & zorg › Dieren",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Recepten",
+    "label": "Lezen › Leven & zorg › Recepten",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Clubs%2C+Verenigingen+en+Bij%C3%A9%C3%A9nkomsten",
+    "label": "Lezen › Ontmoeten & cultuur › Clubs, verenigingen & bijeenkomsten",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Contact+Gezocht",
+    "label": "Lezen › Ontmoeten & cultuur › Contact gezocht",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Kunst+en+Cultuur",
+    "label": "Lezen › Ontmoeten & cultuur › Kunst & cultuur",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Korte+Verhalen",
+    "label": "Lezen › Ontmoeten & cultuur › Korte verhalen",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/onroerend-goed",
+    "label": "Lezen › Marktplaats › Vastgoed van leden",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Woningen+Aangeboden",
+    "label": "Lezen › Marktplaats › Huizen aangeboden",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Te+Koop+Aangeboden",
+    "label": "Lezen › Marktplaats › Roerende goederen te koop",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Te+Koop+Gevraagd",
+    "label": "Lezen › Marktplaats › Te koop gevraagd",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Werk+Aangeboden",
+    "label": "Lezen › Marktplaats › Werk aangeboden",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Werk+Gevraagd",
+    "label": "Lezen › Marktplaats › Werk gevraagd",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Woningen+Gevraagd",
+    "label": "Lezen › Marktplaats › Woningen gevraagd",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Vakantiehuis",
+    "label": "Lezen › Marktplaats › Vakantiewoningen",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?tag=Woningruil",
+    "label": "Lezen › Marktplaats › Woningruil",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.facebook.com/groups/kringloopfrankrijk/",
+    "label": "Lezen › Marktplaats › Kringloopwinkel",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?promoted=1",
+    "label": "Lezen › Meer in het forum › In de schijnwerpers",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list",
+    "label": "Lezen › Meer in het forum › Alle berichten",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/photo",
+    "label": "Lezen › Meer in het forum › Alle foto's",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/video/video",
+    "label": "Lezen › Meer in het forum › Alle video's",
+    "pagina": "https://www.nederlanders.fr/page/lezen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/new",
+    "label": "Meedoen › Plaatsen › Plaats bericht",
+    "pagina": "https://www.nederlanders.fr/page/meedoen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/betaalpagina-berichten",
+    "label": "Meedoen › Plaatsen › Plaats advertentie",
+    "pagina": "https://www.nederlanders.fr/page/meedoen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/photo/photo/new",
+    "label": "Meedoen › Plaatsen › Plaats een foto",
+    "pagina": "https://www.nederlanders.fr/page/meedoen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/video/video/new",
+    "label": "Meedoen › Plaatsen › Plaats een video",
+    "pagina": "https://www.nederlanders.fr/page/meedoen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blogs/waarom-zou-u-lid-worden-van-nederlanders-fr",
+    "label": "Meedoen › Steunen › Waarom aanmelden",
+    "pagina": "https://www.nederlanders.fr/page/meedoen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/fundraising-en-donaties",
+    "label": "Meedoen › Steunen › Doneer",
+    "pagina": "https://www.nederlanders.fr/page/meedoen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/sponsorprogramma",
+    "label": "Meedoen › Steunen › Word sponsor",
+    "pagina": "https://www.nederlanders.fr/page/meedoen"
+  },
+  {
+    "url": "https://infofrankrijk.com/abonnement/",
+    "label": "Meedoen › Steunen › Word abonnee",
+    "pagina": "https://www.nederlanders.fr/page/meedoen"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/lift-en-transportcentrale",
+    "label": "Vinden › Tools & bestemmingen › Vervoershub",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/nederlandse-verenigingen-in-frankrijk",
+    "label": "Vinden › Tools & bestemmingen › Verenigingen in Frankrijk",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/frantastique-1",
+    "label": "Vinden › Tools & bestemmingen › Frans leren",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/huisregels",
+    "label": "Vinden › Regels & hulp › Huisregels",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/hulpverlening-in-frankrijk",
+    "label": "Vinden › Regels & hulp › Hulp vinden",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/message/newFromProfile?screenName=3pjypz5h1ilpc&target=https%3A%2F%2Fwww.nederlanders.fr%2Fprofiles%2Fprofile%2Fshow%3Fid%3DAntonNoe%26",
+    "label": "Vinden › Regels & hulp › Contact beheerder",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blogs/wegwijs-franse-overheid",
+    "label": "Vinden › Adressen › Wegwijs Franse overheid",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/handige-sites",
+    "label": "Vinden › Adressen › Handige sites",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://nedergids.nl/",
+    "label": "Vinden › Adressen › Nedergids",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/list?promoted=1",
+    "label": "Vinden › Uitgelicht › In de schijnwerpers",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/groups",
+    "label": "Vinden › Uitgelicht › Groepen",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/sponsors",
+    "label": "Vinden › Uitgelicht › Onze sponsors",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/friend/listFeatured",
+    "label": "Vinden › Uitgelicht › Auteurs",
+    "pagina": "https://www.nederlanders.fr/page/vinden"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/dagelijks-frankrijknieuws",
+    "label": "Nieuws › Lezen › Dagelijks Frankrijknieuws",
+    "pagina": "https://www.nederlanders.fr/page/frankrijknieuws"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/dagelijks-ondernemersnieuws-uit-frankrijk",
+    "label": "Nieuws › Lezen › Ondernemersnieuws",
+    "pagina": "https://www.nederlanders.fr/page/frankrijknieuws"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/reizen-in-frankrijk",
+    "label": "Nieuws › Lezen › Reizen in Frankrijk",
+    "pagina": "https://www.nederlanders.fr/page/frankrijknieuws"
+  },
+  {
+    "url": "https://www.nederlanders.fr/page/bosbranden",
+    "label": "Nieuws › Lezen › Bosbranden",
+    "pagina": "https://www.nederlanders.fr/page/frankrijknieuws"
+  },
+  {
+    "url": "https://laposta.nl/f/ssysinmqgflb",
+    "label": "Nieuws › Abonneren › Dagelijkse nieuwsbrief",
+    "pagina": "https://www.nederlanders.fr/page/frankrijknieuws"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/feed?xn_auth=no",
+    "label": "Nieuws › Abonneren › RSS — berichten",
+    "pagina": "https://www.nederlanders.fr/page/frankrijknieuws"
+  },
+  {
+    "url": "https://www.nederlanders.fr/activity/log/list?fmt=rss",
+    "label": "Nieuws › Abonneren › RSS — activiteit",
+    "pagina": "https://www.nederlanders.fr/page/frankrijknieuws"
+  },
+  {
+    "url": "https://www.nederlanders.fr/profiles/blog/feed?xn_auth=no",
+    "label": "Nieuws › Abonneren-knop",
+    "pagina": "https://www.nederlanders.fr/page/frankrijknieuws"
+  }
+]

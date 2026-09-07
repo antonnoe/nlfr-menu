@@ -32,7 +32,7 @@ const menu = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 // test/menu.test.mjs.
 function adminLinks() {
   const begin = menu.indexOf("var ADMIN_LINKS =");
-  const eind = menu.indexOf("var PERKS");
+  const eind = menu.indexOf("var WERVING");
   // >= 0, niet > 0: indexOf geeft 0 terug als het anker vooraan staat, en dan is
   // het wél gevonden. Onwaarschijnlijk in een HTML-bestand, maar een toets die
   // "niet gevonden" zegt over iets dat er staat, stuurt de verkeerde kant op.

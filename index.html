@@ -183,7 +183,10 @@
   .deur { background: #fdfbfa; min-width: 0; display: flex; flex-direction: column; }
   .deurkop { display: block; background: #fdfbfa; border-bottom: 1px solid rgba(128,0,0,.10);
              padding-bottom: 7px; margin-bottom: 10px; }
-  .deurkop .dn { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; color: var(--brand-dark); }
+  /* #800000, niet #5c0f0f: de koppen op de categoriepagina's staan op de
+     primaire huisstijlkleur, en het menu hoort daar één geheel mee te vormen.
+     Contrast op #fdfbfa: 10,61:1 (zie test/menu-contrast.test.mjs). */
+  .deurkop .dn { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; color: var(--brand); }
   /* Ondertitel onder de kolomkop. Stond op #a99e9a (2,53:1) en was daarmee
      niet te lezen; nu #666666, de subtiele tekstkleur uit de huisstijl, op
      5,57:1. Een halve punt groter, want 11,5px is klein voor een regel die
@@ -200,14 +203,23 @@
   a.deur-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   .deurkop.deurlink { display: block; }
   .deurlink .dpijl { display: none; }
-  /* Dezelfde doos als de wervingstegel, zodat de vijf één rij vormen. */
-  .tegel { display: flex; flex-direction: column; background: #fff;
-           border: 1px solid rgba(128,0,0,.14); border-radius: 12px; padding: 12px;
+  /* DEZELFDE DOOS ALS OP DE CATEGORIEPAGINA'S. De tegels op nederlanders.fr
+     staan op rgba(128,0,0,.05) met een rand van rgba(128,0,0,.16); menu en
+     pagina horen als één geheel te ogen, dus die waarden staan hier ook. De
+     wervingstegel deelt ze, anders valt hij als vreemde eend uit de rij. */
+  .tegel, .teaser { background: rgba(128,0,0,.05); border: 1px solid rgba(128,0,0,.16); }
+  .tegel { display: flex; flex-direction: column; border-radius: 12px; padding: 12px;
            transition: border-color 140ms ease; }
   .tegel .tt { display: block; font-size: 12.5px; color: #333; line-height: 1.35; }
+  /* De opsomming staat ONDER ELKAAR, één regel per onderwerp. Als doorlopende
+     regel met scheidingstekens leest een kolom van 130px als één lange zin. */
   .tegel .tp { display: block; margin-top: 8px; padding-top: 8px;
-               border-top: 1px solid rgba(128,0,0,.10);
-               font-size: 12px; color: #666; line-height: 1.45; }
+               border-top: 1px solid rgba(128,0,0,.14); }
+  .tegel .tpi { display: block; font-size: 12px; color: #666; line-height: 1.45; }
+  /* Het kernonderdeel van een ingang: bordeaux en halfvet, de rest blijft grijs. */
+  .tegel .tp-accent { color: var(--brand); font-weight: 600; }
+  /* Ingesprongen: deze regel hangt onder de regel erboven. */
+  .tegel .tp-in { padding-left: 12px; }
   /* Flex, geen block: de tegel erin moet de resthoogte van de kolom opvullen,
      anders zijn de KOLOMMEN even hoog en de TEGELS niet. */
   .deurbody { display: flex; flex-direction: column; flex: 1; background: #fdfbfa; }
@@ -257,7 +269,7 @@
   /* Abonneerknop onderin de Nieuws-kolom */
 
   /* Teaser in de kolom Mijn NLFR (niet ingelogd) */
-  .teaser { background: #fff; border: 1px solid rgba(128,0,0,.14); border-radius: 12px; padding: 12px; }
+  .teaser { border-radius: 12px; padding: 12px; }
   .teaser h3 { margin: 0 0 6px; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 13.5px; color: var(--brand); }
   .teaser .tsub { margin: 0 0 8px; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 12.5px; color: #666; line-height: 1.3; }
   .teaser .perk { display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: #333; line-height: 1.3; margin-bottom: 5px; }
@@ -497,31 +509,42 @@
   // link is naar de categoriepagina. Losse links per subonderwerp zouden de
   // lade terugbrengen die we net hebben weggehaald, en zouden op twee plekken
   // onderhouden moeten worden.
+  // Elk punt is [label] of [label, markeringen]. Twee markeringen:
+  //   "accent"  het kernonderdeel van die ingang: bordeaux en halfvet.
+  //   "in"      ingesprongen, omdat het onder de regel erboven hangt.
+  // Ze staan als tweede element en niet in het label zelf, zodat de toets die
+  // lange labels op hun afbreekstreepje controleert het label blijft zien
+  // (test/menu-lettergrootte.test.mjs kijkt naar tekst direct na [ of ,).
   var DEUREN_LINK = {
     lezen: {
       naam: "Lezen", sub: "rubrieken", url: U("/page/lezen"),
       tekst: "Alles wat leden in 24 jaar hebben gevraagd en beantwoord, geordend per onderwerp.",
-      punten: ["Wonen &amp; klussen", "Werk &amp; ondernemen", "Geld, overheid &amp; migratie",
-               "Leren &amp; taal", "Leven &amp; zorg", "Ontmoeten &amp; cultuur", "Marktplaats",
-               "Meer in het forum"]
+      punten: [["Wonen &amp; klussen"], ["Werk &amp; ondernemen"], ["Geld, overheid &amp; migratie"],
+               ["Leren &amp; taal"], ["Leven &amp; zorg"], ["Ontmoeten &amp; cultuur"],
+               ["Marktplaats"], ["Meer in het forum"]]
     },
     doen: {
       naam: "Meedoen", sub: "plaatsen &amp; steunen", url: U("/page/meedoen"),
       tekst: "Uw vraag stellen, uw ervaring delen, en het forum steunen.",
-      punten: ["Plaats bericht", "Plaats advertentie", "Foto's en video's", "Groepen", "Doneer",
-               "Word sponsor"]
+      punten: [["Plaats bericht", "accent"], ["Plaats advertentie"], ["Foto's en video's"],
+               ["Groepen", "accent"], ["Doneer"], ["Word sponsor"]]
     },
     vinden: {
       naam: "Vinden", sub: "tools &amp; hulp", url: U("/page/vinden"),
       tekst: "Hulpmiddelen, adressen en de weg naar de Franse instanties.",
-      punten: ["Vervoershub", "Verenigingen in Frankrijk", "Frans leren", "Wegwijs Franse overheid",
-               "Handige sites", "Nedergids", "Huisregels", "Contact beheerder"]
+      punten: [["Vervoershub", "accent"], ["Verenigingen in Frankrijk", "accent"], ["Frans leren"],
+               ["Wegwijs Franse overheid"], ["Handige sites"], ["Nedergids", "accent"],
+               ["Huisregels"], ["Contact beheerder"]]
     },
     nieuws: {
       naam: "Nieuws", sub: "&amp; feeds", url: U("/page/frankrijknieuws"),
       tekst: "Offici\u00eble berichten uit Frankrijk, in het Nederlands samengevat.",
-      punten: ["Actueel Frankrijk\u00adnieuws", "Dagelijks Frankrijk\u00adnieuws", "Ondernemers\u00adnieuws",
-               "Reizen in Frankrijk", "Nieuwsbrief", "RSS-feeds"]
+      // De drie ingesprongen regels zijn de rubrieken die IN de dagelijkse
+      // nieuwsbrief staan. Ze hebben elk ook een eigen pagina, maar horen in
+      // dit overzicht onder de nieuwsbrief te hangen.
+      punten: [["Actueel Frankrijk\u00adnieuws"], ["Dagelijkse nieuwsbrief", "accent"],
+               ["Dagelijks Frankrijk\u00adnieuws", "in"], ["Ondernemers\u00adnieuws", "in"],
+               ["Reizen in Frankrijk", "in"], ["RSS-feeds"]]
     }
   };
 
@@ -558,8 +581,7 @@
       "24 jaar aan vragen en antwoorden, van meer dan 25.000 leden",
       "Stel uw eigen vraag aan Nederlandstaligen die hier wonen",
       "Vind landgenoten en verenigingen bij u in de buurt",
-      "Dagelijks officieel Frankrijknieuws, in het Nederlands samengevat",
-      "Plaats gratis berichten, advertenties en foto's"
+      "Dagelijks officieel Frankrijknieuws, in het Nederlands samengevat"
     ],
     knop: "Word lid, gratis"
   };
@@ -669,6 +691,15 @@
   // navigeert en een kop die openklapt zijn twee verschillende dingen, en een
   // schermlezer hoort dat verschil te krijgen: geen aria-expanded op iets dat
   // niet open- en dichtgaat.
+  // Eén regel uit de opsomming. Geen opsommingsteken: de regels staan al onder
+  // elkaar en een bolletje ervoor kost breedte in een kolom van 130px.
+  function puntHTML(p){
+    var m = (p[1] || "").split(" ");
+    var kl = "tpi";
+    for (var i = 0; i < m.length; i++) if (m[i]) kl += " tp-" + m[i];
+    return '<span class="' + kl + '">' + p[0] + '</span>';
+  }
+
   function linkKolomHTML(sleutel){
     var d = DEUREN_LINK[sleutel];
     var t = tgt(d.url), rel = (t === "_blank") ? ' rel="noopener"' : '';
@@ -681,7 +712,7 @@
            '<span class="dpijl">'+pijlSvg+'</span></span>' +
            '<span class="deurbody"><span class="tegel">' +
            '<span class="tt">'+d.tekst+'</span>' +
-           '<span class="tp">'+d.punten.join(" \u00b7 ")+'</span>' +
+           '<span class="tp">'+d.punten.map(puntHTML).join("")+'</span>' +
            '</span></span></a>';
   }
 

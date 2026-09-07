@@ -49,7 +49,7 @@ function menu(ingelogd) {
     pak("  var WERVING = {", "  var ZUSTERS") +
     pak("  var caretSvg =", "  // ---- Hoogte melden") +
     pak("  function groepHTML(g){", "  // ---- Eén kolom in het paneel") +
-    pak("  function linkKolomHTML(sleutel){", "  function bouwPaneel(){");
+    pak("  function puntHTML(p){", "  function bouwPaneel(){");
   // eslint-disable-next-line no-new-func
   const fn = new Function("NL", "isMember", "myPage", "uid",
     bron + "\nreturn { kolomHTML: kolomHTML, DEUREN_LINK: DEUREN_LINK, WERVING: WERVING };");
@@ -142,7 +142,7 @@ test("een ingelogd lid ziet zijn eigen links, ongewijzigd", () => {
   assert.ok(!h.includes("Word gratis lid"), "een lid krijgt geen wervende tekst");
 });
 
-test("een bezoeker die niet is ingelogd krijgt de vijf wervende punten, letterlijk", () => {
+test("een bezoeker die niet is ingelogd krijgt de vier wervende punten, letterlijk", () => {
   const h = menu(false).kolomHTML("mijn");
   assert.ok(h.includes("<h3>Word gratis lid</h3>"), "de kop");
   assert.ok(h.includes('<p class="tsub">Vraag het aan wie het al heeft meegemaakt</p>'), "de ondertitel");
@@ -151,13 +151,15 @@ test("een bezoeker die niet is ingelogd krijgt de vijf wervende punten, letterli
     "Stel uw eigen vraag aan Nederlandstaligen die hier wonen",
     "Vind landgenoten en verenigingen bij u in de buurt",
     "Dagelijks officieel Frankrijknieuws, in het Nederlands samengevat",
-    "Plaats gratis berichten, advertenties en foto's",
   ];
   for (const punt of punten) assert.ok(h.includes(punt), "punt ontbreekt: " + punt);
   // En in deze volgorde: de plek in de rij is een redactionele keuze.
   const plek = punten.map((p) => h.indexOf(p));
   assert.deepEqual(plek, [...plek].sort((a, b) => a - b), "de punten staan in de verkeerde volgorde");
-  assert.equal(menu(false).WERVING.punten.length, 5, "precies vijf punten");
+  assert.equal(menu(false).WERVING.punten.length, 4, "precies vier punten");
+  // "Plaats gratis berichten, advertenties en foto's" is eruit: die informatie
+  // staat al elders in beeld, en de tegel werd er te lang van.
+  assert.ok(!h.includes("Plaats gratis berichten"), "de vijfde bullet hoort weg te zijn");
 });
 
 test("de twee knoppen onder de wervende tekst staan er allebei", () => {
@@ -276,8 +278,8 @@ const TEGELS = {
   },
   nieuws: {
     tekst: "Officiële berichten uit Frankrijk, in het Nederlands samengevat.",
-    punten: ["Actueel Frankrijknieuws", "Dagelijks Frankrijknieuws", "Ondernemersnieuws",
-             "Reizen in Frankrijk", "Nieuwsbrief", "RSS-feeds"],
+    punten: ["Actueel Frankrijknieuws", "Dagelijkse nieuwsbrief", "Dagelijks Frankrijknieuws",
+             "Ondernemersnieuws", "Reizen in Frankrijk", "RSS-feeds"],
   },
 };
 
@@ -291,26 +293,80 @@ test("elke ingang draagt zijn eigen beschrijving, letterlijk", () => {
   }
 });
 
+// De regels van de opsomming, met hun markeringen, in de volgorde waarin ze
+// staan. Regel voor regel vergelijken en niet met een includes() op het geheel:
+// dat laatste slaagt ook als de volgorde is omgegooid.
+function opsomming(html) {
+  const i = html.indexOf('<span class="tp">');
+  assert.ok(i >= 0, "er hoort een opsomming te staan");
+  // Vanaf de opsomming tot het einde, en dan alleen de .tpi-regels eruit. Niet
+  // proberen het blok met één regex af te bakenen: geneste </span></span> maken
+  // dat de laatste regel er stilletjes buiten valt.
+  return [...html.slice(i).matchAll(/<span class="(tpi[^"]*)">([^<]*)<\/span>/g)]
+    .map((m) => ({ tekst: leesbaar(m[2]), klassen: m[1].split(" ") }));
+}
+
 test("de opsomming staat er voluit en in de opgegeven volgorde", () => {
   const m = menu(false);
   for (const [sleutel, verwacht] of Object.entries(TEGELS)) {
-    const h = m.kolomHTML(sleutel);
-    const tp = h.match(/<span class="tp">([^<]*)<\/span>/);
-    assert.ok(tp, sleutel + " hoort een opsomming te hebben");
-    // Op het scheidingsteken splitsen en woord voor woord vergelijken: een
-    // includes() op de hele regel slaagt ook als de volgorde is omgegooid.
-    const punten = leesbaar(tp[1]).split(" · ");
-    assert.deepEqual(punten, verwacht.punten, "de opsomming van " + sleutel);
+    const regels = opsomming(m.kolomHTML(sleutel));
+    assert.deepEqual(regels.map((r) => r.tekst), verwacht.punten, "de opsomming van " + sleutel);
   }
+});
+
+test("elke regel van de opsomming staat op zijn eigen regel", () => {
+  // Geen doorlopende regel met scheidingstekens meer: elk onderwerp is een
+  // eigen blokelement. En geen opsommingsteken ervoor — dat kost breedte in een
+  // kolom van 130px en de regels staan al onder elkaar.
+  const m = menu(false);
+  for (const sleutel of Object.keys(TEGELS)) {
+    const regels = opsomming(m.kolomHTML(sleutel));
+    for (const r of regels) {
+      assert.ok(r.klassen.includes("tpi"), sleutel + ": elke regel is een .tpi");
+      assert.ok(!/^[\u2022\u00b7\-*]/.test(r.tekst.trim()), sleutel + ": geen opsommingsteken in " + r.tekst);
+    }
+    assert.ok(!m.kolomHTML(sleutel).includes(" · "), sleutel + ": geen scheidingstekens meer");
+  }
+  assert.match(CSS, /\.tegel \.tpi \{ display: block/, "en in de CSS staan ze als blok onder elkaar");
+});
+
+test("de kernonderdelen krijgen hun accent, de rest niet", () => {
+  const m = menu(false);
+  const accent = {};
+  for (const sleutel of Object.keys(TEGELS)) {
+    for (const r of opsomming(m.kolomHTML(sleutel))) {
+      if (r.klassen.includes("tp-accent")) (accent[sleutel] = accent[sleutel] || []).push(r.tekst);
+    }
+  }
+  assert.deepEqual(accent, {
+    doen: ["Plaats bericht", "Groepen"],
+    vinden: ["Vervoershub", "Verenigingen in Frankrijk", "Nedergids"],
+    nieuws: ["Dagelijkse nieuwsbrief"],
+  }, "precies deze zes items horen een accent te krijgen, en geen andere");
+  assert.match(CSS, /\.tegel \.tp-accent \{ color: var\(--brand\); font-weight: 600/,
+    "bordeaux en halfvet");
+});
+
+test("de drie rubrieken uit de nieuwsbrief staan ingesprongen onder de nieuwsbrief", () => {
+  const regels = opsomming(menu(false).kolomHTML("nieuws"));
+  const ingesprongen = regels.filter((r) => r.klassen.includes("tp-in")).map((r) => r.tekst);
+  assert.deepEqual(ingesprongen,
+    ["Dagelijks Frankrijknieuws", "Ondernemersnieuws", "Reizen in Frankrijk"]);
+  // En ze hangen ónder de nieuwsbrief, niet erboven: de volgorde draagt de
+  // betekenis, inspringen alleen zegt niets als de regel erboven verschuift.
+  const namen = regels.map((r) => r.tekst);
+  assert.equal(namen.indexOf("Dagelijkse nieuwsbrief") + 1, namen.indexOf("Dagelijks Frankrijknieuws"),
+    "de eerste ingesprongen regel hoort direct onder de nieuwsbrief te staan");
+  assert.match(CSS, /\.tegel \.tp-in \{ padding-left: 12px/, "en ze springen zichtbaar in");
 });
 
 test("de subonderwerpen zijn tekst, geen links", () => {
   const m = menu(false);
   for (const sleutel of Object.keys(TEGELS)) {
     const h = m.kolomHTML(sleutel);
-    const tp = h.match(/<span class="tp">([^<]*)<\/span>/)[1];
-    assert.ok(!tp.includes("<"), sleutel + ": de opsomming hoort platte tekst te zijn");
-    assert.ok(!tp.includes("href"), sleutel + ": en zeker geen adressen te bevatten");
+    const tp = h.slice(h.indexOf('<span class="tp">'));
+    assert.ok(!tp.includes("<a"), sleutel + ": de opsomming hoort geen links te bevatten");
+    assert.ok(!tp.includes("href"), sleutel + ": en zeker geen adressen");
   }
 });
 
@@ -324,10 +380,10 @@ test("de vijf tegels zijn op desktop even hoog", () => {
   assert.match(kaal, /\.deurbody \{[^}]*flex: 1/, "de body vult de resthoogte");
   assert.match(kaal, /\.deurbody > \.teaser, \.deurbody > \.tegel \{ flex: 1/,
     "en de tegel erin ook, anders zweeft hij bovenin");
-  // De tegel is dezelfde doos als de wervingstegel: gelijke rand en radius.
-  assert.match(kaal, /\.tegel \{[^}]*border: 1px solid rgba\(128,0,0,\.14\)/);
+  // De tegel is dezelfde doos als de wervingstegel, en beide dragen de kleuren
+  // van de categoriepagina's: achtergrond .05, rand .16.
+  assert.match(kaal, /\.tegel, \.teaser \{ background: rgba\(128,0,0,\.05\); border: 1px solid rgba\(128,0,0,\.16\)/);
   assert.match(kaal, /\.tegel \{[^}]*border-radius: 12px/);
-  assert.match(kaal, /\.teaser \{[^}]*border: 1px solid rgba\(128,0,0,\.14\)/);
   assert.match(kaal, /\.teaser \{[^}]*border-radius: 12px/);
 });
 

@@ -359,6 +359,29 @@ async function main() {
       );
     }
 
+    // I17. De laatste ronde brak af op een storing die de hele ronde raakte.
+    //
+    // WAAROM DIT NIET AAN I15 WORDT OVERGELATEN. Die gaat pas af na
+    // CONCEPT_STILTE_MAX_UREN uur stilte — een etmaal — en dat is te laat voor
+    // iets dat de cron zelf al heeft herkend en opgeschreven. Op 6 september
+    // was de oorzaak een geweigerde API-sleutel; die staat vanaf de eerste
+    // ronde in het journaal, met zijn HTTP-status. Daar hoeft niemand een dag
+    // op te wachten.
+    //
+    // Het veld is zelfwissend: `bewaking` wordt elke ronde opnieuw opgebouwd,
+    // dus zodra er weer een ronde zonder storing draait, is deze bevinding weg.
+    // Een sonde die een opgeloste storing blijft melden, wordt genegeerd.
+    if (bewaking.storing) {
+      const st = bewaking.storing;
+      meld(
+        "I17 modelaanroep",
+        `de perssynthese brak af op ${st.soort}` +
+          (st.status ? ` (HTTP ${st.status})` : "") +
+          `: ${st.reden || "reden niet opgeschreven"}` +
+          ` — ronde van ${bewaking.ronde || "onbekend"}`
+      );
+    }
+
     // I15. Meer dan een etmaal geen concept, terwijl er wél persartikelen
     // binnenkomen. De tweede helft van die zin is wat de toets bruikbaar maakt:
     // een nacht zonder Frans nieuws dat twee kranten haalt is legitiem nul, een

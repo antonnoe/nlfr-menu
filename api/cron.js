@@ -54,6 +54,8 @@ import {
   eersteNul,
   duiding,
   blokkadeVoor,
+  aanroepStoring,
+  storingRegel,
 } from "../lib/persmeting.js";
 import { structureelGeldig } from "../lib/poort.js";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
@@ -521,10 +523,27 @@ export default async function handler(req, res) {
       // Een mislukte synthese is tot nu toe alleen in het (ongelezen) antwoord
       // beland. Hij hoort ook in het log: dit is de enige uitgang waar een
       // storing bij de modelaanroep zichtbaar wordt.
+      //
+      // MET DE REDEN, NIET ALLEEN DE TELLING. Op 6 september stond er
+      // "mislukt=5" en verder niets; dat las als vijf clusters die inhoudelijk
+      // stukliepen, terwijl het vijf keer dezelfde geweigerde sleutel was.
       meting.geweigerd.mislukt += 1;
-      const reden = e instanceof Error ? e.message : String(e);
-      console.error(`[pers] synthese mislukt voor cluster ${id}: ${reden}`);
-      persVerwerkt.push({ id, status: "mislukt", reden });
+      const storing = aanroepStoring(e);
+      console.error(storingRegel(storing, id));
+      persVerwerkt.push({ id, status: "mislukt", reden: storing.reden, status_http: storing.status });
+
+      // Een geweigerde sleutel geldt voor élke aanroep in deze ronde. De
+      // volgende kandidaten leveren gegarandeerd dezelfde fout op, dus die
+      // worden niet meer aangeroepen: dat scheelt vier zinloze verzoeken en
+      // vier regels die de echte oorzaak toedekken.
+      if (storing.fataal) {
+        meting.storing = { soort: storing.soort, status: storing.status, reden: storing.reden };
+        const rest = kandidaten.length - (meting.beoordeeld || 0);
+        console.error(
+          `[pers] de ronde stopt hier; ${rest > 0 ? rest : 0} kandidaat(en) niet meer aangeroepen`
+        );
+        break;
+      }
     }
   }
   drukMeting(meting);
@@ -569,6 +588,11 @@ export default async function handler(req, res) {
     keten: meting,
     eersteNul: eersteNul(meting),
     duiding: duiding(meting),
+    // Een ronde-brede storing gaat mee de bewaking in, zodat de sonde hem als
+    // eigen bevinding kan melden in plaats van te wachten tot I15 na een etmaal
+    // stilte afgaat. Blijft null zodra de volgende ronde weer normaal draait:
+    // het blok wordt elke ronde opnieuw opgebouwd.
+    storing: meting.storing || null,
     tegels: vorigJournaal.tegels || {},
   };
 

@@ -87,10 +87,40 @@ function kleurVan(selector) {
 const PANEEL = "#fdfbfa"; // .paneel
 const KAART = "#ffffff";  // .ladekaart
 
+// De tegels staan op HALFDOORZICHTIG bordeaux, dezelfde kleur als op de
+// categoriepagina's. Daar moet eerst doorheen gerekend worden: meten tegen
+// #fdfbfa zou tegen een kleur meten die op dat vlak nergens staat, en de
+// uitkomst valt de goede kant op — dus de fout blijft onzichtbaar.
+function meng(voor, alfa, achterHex) {
+  let h = achterHex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const achter = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return "#" + voor.map((c, i) => Math.round(c * alfa + achter[i] * (1 - alfa))
+    .toString(16).padStart(2, "0")).join("");
+}
+
+const TEGELVLAK = (() => {
+  const m = css.match(/\.tegel, \.teaser \{ background: rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+  assert.ok(m, "de tegelachtergrond staat niet als rgba in index.html");
+  return meng([+m[1], +m[2], +m[3]], parseFloat(m[4]), PANEEL);
+})();
+
 test("de achtergronden waar tegen gemeten wordt, staan er ook echt zo", () => {
   // Anders rekent alles hieronder tegen een achtergrond die niet bestaat.
   assert.match(css, /\.paneel \{[^}]*background: #fdfbfa/);
   assert.match(css, /\.ladekaart \{[^}]*background: #fff\b/);
+  // En de gemengde tegelkleur is werkelijk lichter dan het paneel noch donker:
+  // een uitgerekende waarde die nergens mee wordt vergeleken, is geen toets.
+  assert.match(TEGELVLAK, /^#[0-9a-f]{6}$/, "de tegelkleur laat zich uitrekenen");
+  assert.ok(contrast(TEGELVLAK, PANEEL) < 1.2,
+    "de tegel hoort een tint op het paneel te zijn, geen eigen vlak: " + TEGELVLAK);
+});
+
+test("de tegels dragen de kleuren van de categoriepagina's", () => {
+  // Menu en categoriepagina horen als één geheel te ogen. Deze drie waarden
+  // komen van nederlanders.fr; wijken ze af, dan valt het menu er weer buiten.
+  assert.match(css, /\.tegel, \.teaser \{ background: rgba\(128,0,0,\.05\); border: 1px solid rgba\(128,0,0,\.16\)/);
+  assert.equal(kleurVan(".deurkop .dn"), "#800000", "de kolomkoppen staan op de primaire kleur");
 });
 
 const EIS = 4.5; // WCAG AA, gewone tekst
@@ -104,6 +134,11 @@ for (const [naam, selector, achter] of [
   ["links in de laden", ".lade .ladekaart > a", KAART],
   ["lege lade", ".lade .leeg", KAART],
   ["uitleg bij Plaats bericht", ".plaatskolom p", KAART],
+  ["beschrijving in de tegel", ".tegel .tt", TEGELVLAK],
+  ["opsomming in de tegel", ".tegel .tpi", TEGELVLAK],
+  ["accent in de opsomming", ".tegel .tp-accent", TEGELVLAK],
+  ["ondertitel in de wervingstegel", ".teaser .tsub", TEGELVLAK],
+  ["punten in de wervingstegel", ".teaser .perk", TEGELVLAK],
 ]) {
   test(`${naam} halen WCAG AA (${EIS}:1)`, () => {
     const kleur = kleurVan(selector);

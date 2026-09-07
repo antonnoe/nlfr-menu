@@ -107,7 +107,14 @@ test("hyphens:auto wordt niet gebruikt, de afbreekpunten staan in de labels", ()
 
 test("elk lang menulabel heeft een afbreekpunt op de samenstellingsgrens", () => {
   const zonder = [];
-  for (const m of SCRIPT.matchAll(/\[\s*"([^"\\]*(?:\\u00ad[^"\\]*)*)"\s*,/g)) {
+  // Elk label in een array, niet alleen het eerste: de opsommingen in
+  // DEUREN_LINK zijn arrays van louter tekst, en daar zat het gat.
+  //   ["A", "B", "C"]  ->  A, B en C worden alle drie bekeken
+  //   [["Label", url]] ->  Label wordt bekeken, de url niet (die begint met
+  //                        http of staat achter U(), dus niet direct na [ of ,)
+  const kandidaten = [];
+  for (const m of SCRIPT.matchAll(/[[,]\s*"([^"\\]*(?:\\u00ad[^"\\]*)*)"\s*[,\]]/g)) kandidaten.push(m);
+  for (const m of kandidaten) {
     for (const woord of m[1].split(/[\s ]+/)) {
       // Het langste stuk tussen twee afbreekpunten is wat werkelijk moet passen.
       const langste = Math.max(...woord.split("\\u00ad").map((d) => d.replace(/[^A-Za-zÀ-ÿ]/g, "").length));

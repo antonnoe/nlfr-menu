@@ -2,8 +2,17 @@
 // tabbalk van Ning is alleen voor beheerders zichtbaar. Een link die bij een
 // herbouw sneuvelt, is dus een pagina die voor bezoekers onbereikbaar wordt.
 // Daarom staat de volledige URL-inventaris van het oude menu vast in
-// test/fixtures/menu-urls-oud.json en bewaakt deze test dat elke URL daaruit
-// terugkomt — op de drie na die bewust zijn geschrapt of samengevoegd.
+// test/fixtures/menu-urls-oud.json.
+//
+// SINDS 07-09-2026 DEKT HET MENU DIE INVENTARIS NIET MEER ZELF. Lezen,
+// Meedoen, Vinden en Nieuws zijn vier links naar openbare categoriepagina's
+// geworden; de 72 links die in hun laden zaten staan nu op die pagina's, op
+// nederlanders.fr, buiten dit bestand. Wat waar hoort te staan ligt vast in
+// test/fixtures/menu-urls-verhuisd.json. Deze test bewaakt dus nog maar de
+// helft van de oude belofte: dat er geen URL ZOEK is geraakt zonder dat
+// iemand heeft opgeschreven waar hij heen ging. Of die pagina hem werkelijk
+// bevat, kan een test hier niet zien — daarvoor is een sonde nodig die de
+// vier pagina's ophaalt.
 //
 // De tests lezen de datablokken uit index.html en voeren ze uit, zodat ze de
 // echte inhoud toetsen en niet een tweede kopie die kan gaan afwijken.
@@ -14,6 +23,7 @@ import fs from "node:fs";
 
 const HTML = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const OUD = JSON.parse(fs.readFileSync(new URL("./fixtures/menu-urls-oud.json", import.meta.url), "utf8"));
+const VERHUISD = JSON.parse(fs.readFileSync(new URL("./fixtures/menu-urls-verhuisd.json", import.meta.url), "utf8"));
 
 const NL = "https://www.nederlanders.fr";
 
@@ -37,15 +47,15 @@ function menuData() {
     return HTML.slice(a, b);
   };
   const bron =
-    pak("var DOORS = {", "// Mijn NLFR is de vijfde kolom") +
+    pak("var DEUREN_LINK = {", "// Mijn NLFR is de vijfde kolom") +
     pak("function memberGroups()", "var ADMIN_LINKS") +
-    pak("var ADMIN_LINKS =", "var PERKS") +
-    pak("var PERKS =", "var ZUSTERS") +
+    pak("var ADMIN_LINKS =", "var WERVING") +
+    pak("var WERVING =", "var ZUSTERS") +
     pak("var ZUSTERS =", "var DEUR_VOLGORDE") +
     pak("var DEUR_VOLGORDE =", "var ACTUEEL = null");
 
   const fn = new Function("U", "myPage", "uid",
-    bron + "\nreturn { DOORS, memberGroups, ADMIN_LINKS, PERKS, ZUSTERS, PANEELKNOPPEN, PLAATS_KOLOMMEN, DEUR_VOLGORDE };");
+    bron + "\nreturn { DEUREN_LINK, memberGroups, ADMIN_LINKS, WERVING, ZUSTERS, PANEELKNOPPEN, PLAATS_KOLOMMEN, DEUR_VOLGORDE };");
   return fn((p) => NL + p, NL + "/profiles/settings/editProfileInfo", "UID");
 }
 
@@ -56,9 +66,7 @@ function nieuweUrls() {
   const set = new Set();
   const voegToe = (u) => { if (u) set.add(String(u).replace(/&amp;/g, "&")); };
 
-  for (const deur of Object.values(d.DOORS)) {
-    for (const [, links] of deur.groups) for (const l of links) voegToe(l[1]);
-  }
+  for (const deur of Object.values(d.DEUREN_LINK)) voegToe(deur.url);
   for (const [, links] of d.memberGroups()) for (const l of links) voegToe(l[1]);
   for (const l of d.ADMIN_LINKS) voegToe(l[1]);
   for (const z of d.ZUSTERS) voegToe(z[1]);
@@ -71,17 +79,38 @@ function nieuweUrls() {
   return set;
 }
 
-test("elke URL uit het oude menu komt terug in het nieuwe", () => {
+// Elke URL uit het oude menu staat OF nog in het menu, OF in de verhuislijst
+// met de categoriepagina die hem hoort te dragen. Wat in geen van beide staat,
+// is stilletjes verdwenen — en dat is precies het geval dat niemand merkt.
+test("geen enkele URL uit het oude menu is spoorloos", () => {
   const nieuw = nieuweUrls();
+  const verhuisd = new Set(VERHUISD.map((v) => v.url));
   const mist = [];
   for (const { url, label } of OUD) {
     if (BEWUST_WEG.has(url)) continue;
     // De ledenlinks bevatten het profiel-id; vergelijk op het vaste deel.
     const kaal = url.replace("UID", "");
-    const gevonden = nieuw.has(url) || [...nieuw].some((u) => u.replace("UID", "") === kaal);
+    const gevonden =
+      nieuw.has(url) || [...nieuw].some((u) => u.replace("UID", "") === kaal) ||
+      verhuisd.has(url) || [...verhuisd].some((u) => u.replace("UID", "") === kaal);
     if (!gevonden) mist.push(url + "  <- stond in: " + label);
   }
   assert.deepEqual(mist, [], "deze pagina's zijn onbereikbaar geworden");
+});
+
+test("elke verhuisde URL noemt de pagina die hem hoort te bevatten", () => {
+  const paginas = new Set([
+    NL + "/page/lezen", NL + "/page/meedoen", NL + "/page/vinden", NL + "/page/frankrijknieuws",
+  ]);
+  assert.ok(VERHUISD.length > 0, "de verhuislijst hoort gevuld te zijn");
+  for (const v of VERHUISD) {
+    assert.ok(v.url && v.label, "elke regel noemt zijn URL en waar hij stond: " + JSON.stringify(v));
+    assert.ok(paginas.has(v.pagina), "onbekende doelpagina: " + v.pagina);
+  }
+  // En het menu wijst naar alle vier die pagina's, anders is de verhuizing een
+  // doodlopende weg.
+  const nieuw = nieuweUrls();
+  for (const pagina of paginas) assert.ok(nieuw.has(pagina), "het menu wijst niet naar " + pagina);
 });
 
 test("de drie bewust geschrapte URL's staan er ook echt niet meer in", () => {
@@ -93,38 +122,42 @@ test("de drie bewust geschrapte URL's staan er ook echt niet meer in", () => {
   assert.ok(!HTML.includes("/page/rubrieken\""), "ook niet als letterlijke URL");
 });
 
-test("de TOPICS-items zijn naar hun nieuwe deur verhuisd", () => {
+test("de TOPICS-items staan op de pagina waar ze thuishoren", () => {
   const d = menuData();
-  const inGroep = (deur, groep, url) => {
-    const g = d.DOORS[deur].groups.find((x) => x[0].replace(/&amp;/g, "&") === groep);
-    assert.ok(g, "groep niet gevonden: " + deur + " > " + groep);
-    return g[1].some((l) => l[1] === url);
-  };
-  assert.ok(inGroep("lezen", "Marktplaats", NL + "/profiles/blog/list?tag=Woningen+Aangeboden"), "Huizen aangeboden");
-  assert.ok(inGroep("lezen", "Marktplaats", "https://www.facebook.com/groups/kringloopfrankrijk/"), "Kringloopwinkel");
-  assert.ok(inGroep("lezen", "Leren & taal", NL + "/profiles/blog/list?tag=Correspondentie"), "Correspondentie");
-  assert.ok(inGroep("lezen", "Ontmoeten & cultuur", NL + "/profiles/blog/list?tag=Korte+Verhalen"), "Korte verhalen");
+  const op = (url) => VERHUISD.find((v) => v.url === url);
+  const lezen = NL + "/page/lezen";
+  for (const url of [
+    NL + "/profiles/blog/list?tag=Woningen+Aangeboden",     // Huizen aangeboden
+    "https://www.facebook.com/groups/kringloopfrankrijk/",  // Kringloopwinkel
+    NL + "/profiles/blog/list?tag=Correspondentie",         // Correspondentie
+    NL + "/profiles/blog/list?tag=Korte+Verhalen",          // Korte verhalen
+  ]) {
+    const v = op(url);
+    assert.ok(v, "niet in de verhuislijst: " + url);
+    assert.equal(v.pagina, lezen, url + " hoorde onder Lezen te vallen");
+  }
   assert.ok(d.ZUSTERS.some((z) => z[1] === "https://www.communitiesabroad.com"), "Communities Abroad hoort bij de zusterplatforms");
 });
 
-test("de nieuwe links uit de opdracht staan erin", () => {
-  const d = menuData();
-  const urls = new Set();
-  for (const deur of Object.values(d.DOORS)) for (const [, links] of deur.groups) for (const l of links) urls.add(l[1]);
-  assert.ok(urls.has(NL + "/profiles/blogs/waarom-zou-u-lid-worden-van-nederlanders-fr"), "Waarom aanmelden");
-  assert.ok([...urls].some((u) => u.includes("/profiles/message/newFromProfile?screenName=3pjypz5h1ilpc")), "Contact beheerder");
-  const uitgelicht = d.DOORS.vinden.groups.find((g) => g[0] === "Uitgelicht");
-  assert.ok(uitgelicht[1].some((l) => l[1] === NL + "/profiles/blog/list?promoted=1"), "In de schijnwerpers in Vinden > Uitgelicht");
+test("de links uit de vorige opdracht zijn mee verhuisd, niet geschrapt", () => {
+  const op = (fn) => VERHUISD.find((v) => fn(v.url));
+  assert.equal(op((u) => u === NL + "/profiles/blogs/waarom-zou-u-lid-worden-van-nederlanders-fr").pagina,
+    NL + "/page/meedoen", "Waarom aanmelden");
+  assert.equal(op((u) => u.includes("/profiles/message/newFromProfile?screenName=3pjypz5h1ilpc")).pagina,
+    NL + "/page/vinden", "Contact beheerder");
+  assert.equal(op((u) => u === NL + "/profiles/blog/list?promoted=1").pagina,
+    NL + "/page/lezen", "In de schijnwerpers");
 });
 
 test("de dubbele URL's zijn samengevoegd tot één adres", () => {
-  const nieuw = nieuweUrls();
-  assert.ok(nieuw.has(NL + "/page/lift-en-transportcentrale"), "Vervoershub");
-  assert.ok(!nieuw.has(NL + "/group/vervoerspagina"), "geen tweede vervoers-URL");
-  assert.ok(nieuw.has(NL + "/page/nederlandse-verenigingen-in-frankrijk"), "Verenigingen");
-  assert.ok(!nieuw.has(NL + "/profiles/blogs/overzicht-van-nederlandse-verenigingen-in-frankrijk"), "geen tweede verenigingen-URL");
-  assert.ok(nieuw.has("https://laposta.nl/f/ssysinmqgflb"), "nieuwsbrief");
-  const brieven = [...nieuw].filter((u) => /nieuwsbrief|laposta/i.test(u));
+  // Menu plus verhuislijst samen: dat is wat er van het oude menu over is.
+  const alles = new Set([...nieuweUrls(), ...VERHUISD.map((v) => v.url)]);
+  assert.ok(alles.has(NL + "/page/lift-en-transportcentrale"), "Vervoershub");
+  assert.ok(!alles.has(NL + "/group/vervoerspagina"), "geen tweede vervoers-URL");
+  assert.ok(alles.has(NL + "/page/nederlandse-verenigingen-in-frankrijk"), "Verenigingen");
+  assert.ok(!alles.has(NL + "/profiles/blogs/overzicht-van-nederlandse-verenigingen-in-frankrijk"), "geen tweede verenigingen-URL");
+  assert.ok(alles.has("https://laposta.nl/f/ssysinmqgflb"), "nieuwsbrief");
+  const brieven = [...alles].filter((u) => /nieuwsbrief|laposta/i.test(u));
   assert.equal(brieven.length, 1, "de nieuwsbrief hoort maar op één adres te staan: " + brieven.join(", "));
 });
 
@@ -169,23 +202,26 @@ test("geen enkele uitklapper is een position:absolute-overlay", () => {
 });
 
 test("de link-targetregels zijn ongewijzigd", () => {
-  const d = menuData();
-  // nederlanders.fr -> _parent, extern -> _blank rel=noopener, abonnement -> _top
-  const abo = d.DOORS.doen.groups.find((g) => g[0] === "Steunen")[1]
-    .find((l) => l[1] === "https://infofrankrijk.com/abonnement/");
-  assert.ok(abo, "Word abonnee ontbreekt");
-  assert.equal(abo[2], "_top", "het abonnement opent de hele pagina");
+  // nederlanders.fr -> _parent, extern -> _blank rel=noopener.
   assert.ok(HTML.includes('target="_parent"'), "eigen site opent in _parent");
   assert.ok(HTML.includes('rel="noopener"'), "externe links krijgen rel=noopener");
+  // "Word abonnee" stond met target _top in Meedoen en is mee verhuisd naar
+  // /page/meedoen. Die pagina staat op nederlanders.fr en bepaalt zijn eigen
+  // targets; hier ligt alleen nog vast waar hij heen ging.
+  const abo = VERHUISD.find((v) => v.url === "https://infofrankrijk.com/abonnement/");
+  assert.ok(abo, "Word abonnee is uit de inventaris verdwenen");
+  assert.equal(abo.pagina, NL + "/page/meedoen");
 });
 
 test("de vijf kolommen staan in de goede volgorde", () => {
   const d = menuData();
   assert.deepEqual(d.DEUR_VOLGORDE, ["lezen", "doen", "vinden", "mijn", "nieuws"]);
-  assert.equal(d.DOORS.lezen.naam, "Lezen");
-  assert.equal(d.DOORS.doen.naam, "Meedoen");
-  assert.equal(d.DOORS.vinden.naam, "Vinden");
-  assert.equal(d.DOORS.nieuws.naam, "Nieuws");
+  assert.equal(d.DEUREN_LINK.lezen.naam, "Lezen");
+  assert.equal(d.DEUREN_LINK.doen.naam, "Meedoen");
+  assert.equal(d.DEUREN_LINK.vinden.naam, "Vinden");
+  assert.equal(d.DEUREN_LINK.nieuws.naam, "Nieuws");
+  // Mijn NLFR is de enige die geen link is; hij staat niet in DEUREN_LINK.
+  assert.ok(!d.DEUREN_LINK.mijn, "Mijn NLFR hoort zijn lade te houden");
 });
 
 test("de beheerlade begint met Banner beheren", () => {

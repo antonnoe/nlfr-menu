@@ -34,18 +34,24 @@
   dubbel. Weggehaald in alle modi; de banner is nu het eerste element en
   daaronder komt meteen de strip.
 
+  WEGWIJZER, GEEN INHOUDSOPGAVE (07-09-2026). Lezen, Meedoen, Vinden en Nieuws
+  droegen samen 72 links in vier laden. Die inhoud staat nu op openbare
+  categoriepagina's op nederlanders.fr zelf; deze vier ingangen zijn nog maar
+  een link daarnaartoe. Mijn NLFR houdt zijn lade: die verschilt per bezoeker
+  en kan dus geen openbare pagina zijn. Wat er uit het menu is verdwenen ligt
+  URL voor URL vast in test/fixtures/menu-urls-verhuisd.json.
+
   WAT ER T.O.V. DE VORIGE VERSIE IS VERVALLEN
     Het "Onderwerpen"-uitklapmenu met TOPICS en CTAS, de vijf losse deurknoppen
     met subtitels, de onderbalk, MOBILE_QUICK/MOBILE_HIDE en de
-    accent/support/emph-klassen. Alle links hebben nu hetzelfde gewicht. De
-    unieke TOPICS-items zijn naar een deur verhuisd (zie DOORS hieronder);
+    accent/support/emph-klassen. Alle links hebben nu hetzelfde gewicht.
     /page/rubrieken is vervallen.
 
   ONDERHOUD — alles wat je normaal wijzigt staat in het <script>-blok:
-    - DOORS ........ de inhoud van de vijf kolommen
+    - DEUREN_LINK .. de vier ingangen die rechtstreeks doorverwijzen
     - memberGroups   het ledenmenu (Mijn NLFR, ingelogd)
     - ADMIN_LINKS .. de beheerlade achter het tandwiel
-    - PERKS ........ de teaser voor wie niet is ingelogd
+    - WERVING ...... de wervende tekst voor wie niet is ingelogd
     - ZUSTERS ...... de rij zusterplatforms onderin het paneel
     - PANEELKNOPPEN  de knoppen links onderin het paneel
     De knop "Nu actueel" toont linkjes die LIVE uit actueel.json komen; de
@@ -167,26 +173,57 @@
   /* ---- Paneel ---- */
   .paneel { display: none; background: #fdfbfa; border-top: 1px solid rgba(128,0,0,.10); padding: 24px; }
   .paneel.open { display: block; }
-  /* Zes sporen bij de iframe-breedte van 955px. Lezen heeft 43 links en zou als
-     één kolom drie keer zo hoog worden als de vier andere; hij pakt daarom twee
-     sporen en verdeelt zijn groepen daarbinnen over twee kolommen, met één
-     deurkop erboven. Het paneel is daardoor zo hoog als de langste van die
-     twee, niet als de hele lijst. */
-  .kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 18px; align-items: start; }
-  .deur { background: #fdfbfa; min-width: 0; }
-  .deur[data-deur="lezen"] { grid-column: span 2; }
-  .deurbody.tweekolommen { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; align-items: start; }
-  .deurbody.tweekolommen > .kolom { min-width: 0; }
+  /* Vijf gelijke sporen. Het dubbele spoor voor Lezen en de twee kolommen
+     daarbinnen zijn vervallen met zijn lade: die bestonden alleen omdat Lezen
+     43 links droeg en anders drie keer zo hoog werd als de vier andere. */
+  /* STRETCH, GEEN START. De vijf ingangen horen even hoog te zijn: vier korte
+     tegels naast één lange leest als vier half afgemaakte kolommen. De deur is
+     daarom een flexkolom waarvan de tegel de resthoogte opvult. */
+  .kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 18px; align-items: stretch; }
+  .deur { background: #fdfbfa; min-width: 0; display: flex; flex-direction: column; }
   .deurkop { display: block; background: #fdfbfa; border-bottom: 1px solid rgba(128,0,0,.10);
              padding-bottom: 7px; margin-bottom: 10px; }
-  .deurkop .dn { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; color: var(--brand-dark); }
+  /* #800000, niet #5c0f0f: de koppen op de categoriepagina's staan op de
+     primaire huisstijlkleur, en het menu hoort daar één geheel mee te vormen.
+     Contrast op #fdfbfa: 10,61:1 (zie test/menu-contrast.test.mjs). */
+  .deurkop .dn { display: block; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; color: var(--brand); }
   /* Ondertitel onder de kolomkop. Stond op #a99e9a (2,53:1) en was daarmee
      niet te lezen; nu #666666, de subtiele tekstkleur uit de huisstijl, op
      5,57:1. Een halve punt groter, want 11,5px is klein voor een regel die
      alleen betekenis heeft als je hem ook werkelijk leest. */
   .deurkop .ds { display: block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 12px; color: #666; }
   .deurkop .dc, .deurkop .dcaret { display: none; }
-  .deurbody { display: block; background: #fdfbfa; }
+  /* De vier ingangen die doorverwijzen. Op desktop is de kop zelf de link; het
+     pijltje staat er alleen op mobiel bij, waar de kop een volle regel is. */
+  /* De vier ingangen die doorverwijzen. De <a> is de hele tegel; het pijltje
+     staat er alleen op mobiel bij, waar de kop een volle regel is. */
+  a.deur-link { text-decoration: none; color: inherit; }
+  a.deur-link:hover .dn { text-decoration: underline; }
+  a.deur-link:hover .tegel { border-color: rgba(128,0,0,.30); }
+  a.deur-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .deurkop.deurlink { display: block; }
+  .deurlink .dpijl { display: none; }
+  /* DEZELFDE DOOS ALS OP DE CATEGORIEPAGINA'S. De tegels op nederlanders.fr
+     staan op rgba(128,0,0,.05) met een rand van rgba(128,0,0,.16); menu en
+     pagina horen als één geheel te ogen, dus die waarden staan hier ook. De
+     wervingstegel deelt ze, anders valt hij als vreemde eend uit de rij. */
+  .tegel, .teaser { background: rgba(128,0,0,.05); border: 1px solid rgba(128,0,0,.16); }
+  .tegel { display: flex; flex-direction: column; border-radius: 12px; padding: 12px;
+           transition: border-color 140ms ease; }
+  .tegel .tt { display: block; font-size: 12.5px; color: #333; line-height: 1.35; }
+  /* De opsomming staat ONDER ELKAAR, één regel per onderwerp. Als doorlopende
+     regel met scheidingstekens leest een kolom van 130px als één lange zin. */
+  .tegel .tp { display: block; margin-top: 8px; padding-top: 8px;
+               border-top: 1px solid rgba(128,0,0,.14); }
+  .tegel .tpi { display: block; font-size: 12px; color: #666; line-height: 1.45; }
+  /* Het kernonderdeel van een ingang: bordeaux en halfvet, de rest blijft grijs. */
+  .tegel .tp-accent { color: var(--brand); font-weight: 600; }
+  /* Ingesprongen: deze regel hangt onder de regel erboven. */
+  .tegel .tp-in { padding-left: 12px; }
+  /* Flex, geen block: de tegel erin moet de resthoogte van de kolom opvullen,
+     anders zijn de KOLOMMEN even hoog en de TEGELS niet. */
+  .deurbody { display: flex; flex-direction: column; flex: 1; background: #fdfbfa; }
+  .deurbody > .teaser, .deurbody > .tegel { flex: 1; }
   /* WITRUIMTE TUSSEN GROEPEN, niet tussen regels. Tussen twee items zit 10px
      (2 x 5px padding); tussen twee groepen zat 12px, en dat verschil ziet
      niemand — veertien groepen lopen dan als één lijst in elkaar over. Nu 24px,
@@ -213,7 +250,7 @@
      12,25:1. Rood blijft van nu af voorbehouden aan koppen. */
   /* LANGE WOORDEN AFBREKEN. De kolom is bij het iframe van 955px maar 134px
      breed, en die breedte ligt vast: er moeten zes sporen passen omdat de
-     kolom Lezen er dubbel in staat. "Ondernemersnieuws" is 155px op 15px en
+     kolom Lezen er dubbel in staat. "Ondernemers\u00adnieuws" is 155px op 15px en
      stak dus buiten zijn kolom, over de buurkolom heen. Dat deed het op 13,5px
      trouwens al, 140px in een kolom van 134px, dus dit is een bestaand gebrek
      dat met de grotere letter alleen zichtbaarder werd.
@@ -230,14 +267,11 @@
   .grp a:hover { color: var(--brand); }
 
   /* Abonneerknop onderin de Nieuws-kolom */
-  .abonneer { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; margin-top: 4px;
-              padding: 0 12px; border: 1px solid rgba(128,0,0,.22); border-radius: 9px; background: #fff;
-              color: var(--brand); font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
-  .abonneer:hover { background: rgba(128,0,0,.06); }
 
   /* Teaser in de kolom Mijn NLFR (niet ingelogd) */
-  .teaser { background: #fff; border: 1px solid rgba(128,0,0,.14); border-radius: 12px; padding: 12px; }
+  .teaser { border-radius: 12px; padding: 12px; }
   .teaser h3 { margin: 0 0 6px; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 13.5px; color: var(--brand); }
+  .teaser .tsub { margin: 0 0 8px; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 12.5px; color: #666; line-height: 1.3; }
   .teaser .perk { display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: #333; line-height: 1.3; margin-bottom: 5px; }
   .teaser .perk svg { flex: none; margin-top: 3px; }
   .teaser .btns { display: grid; gap: 6px; margin-top: 10px; }
@@ -301,25 +335,26 @@
   html.compact .deur.open .deurbody { display: block; }
   html.compact .grp { background: #fff; margin-bottom: 0; border-top: 1px solid rgba(128,0,0,.08); }
   html.compact .grp:first-child { border-top: 0; }
-  /* Tweede accordeon, binnen de deur: de groepen zelf klappen open en dicht,
-     één tegelijk, de eerste open — zoals het oude menu deed. */
-  html.compact .gk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0;
-                     cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  html.compact .gk .gn { flex: 1; }
-  /* Teller en caret stonden op #a99e9a: 2,61:1 op wit. Een teller is tekst
-     (eis 4,5:1) en een caret is een betekenisdragend icoon (eis 3:1); beide
-     zakten. Nu #666666, op 5,74:1. */
-  html.compact .gk .gc { display: inline-block; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-                         font-size: 12px; letter-spacing: 0; text-transform: none; color: #666; }
-  html.compact .gk .gcaret { display: inline-flex; color: #666; transition: transform 180ms ease; }
-  html.compact .grp.open .gk .gcaret { transform: rotate(180deg); }
-  html.compact .gl { display: none; padding-bottom: 6px; }
-  html.compact .grp.open .gl { display: block; }
+  /* BINNEN EEN GEOPENDE INGANG STAAT ALLES OPEN. Hier zat een tweede accordeon
+     onder de eerste: je tikte "Lezen" open en kreeg zestien dichte groepen
+     waarvan er één openstond. Twee tikken per link, en geen overzicht van wat
+     er in die ingang zit. Eén laag klapwerk is genoeg, en die zit op de vijf
+     ingangen zelf.
+     De groepskop is daarmee weer een kop: geen tikvlak, geen caret, geen
+     teller. Een pijltje naast een kop die niet opengaat belooft iets wat er
+     niet is. */
+  html.compact .gk { margin: 0; padding: 2px 0; }
+  html.compact .gl { display: block; padding-bottom: 6px; }
   html.compact .grp a { min-height: 44px; display: flex; align-items: center; }
-  /* De twee sporen van Lezen zijn een desktopmiddel; op mobiel staat alles
-     gewoon onder elkaar in de accordeon. */
-  html.compact .deur[data-deur="lezen"] { grid-column: auto; }
-  html.compact .deurbody.tweekolommen { display: block; }
+  /* De vier ingangen die doorverwijzen zijn op mobiel gewone regels van 52px,
+     met een pijl naar rechts in plaats van een caret naar beneden. Hun tegel
+     staat dicht: html.compact .deurbody is display:none en een link-ingang
+     krijgt nooit de klasse .open. De tegels zijn een desktopmiddel — daar
+     stonden vier kolommen leeg naast één gevulde. Op een telefoon staan de vijf
+     regels onder elkaar zoals ze stonden; alle vijf de beschrijvingen tonen zou
+     het paneel weer met ruim 400px verlengen. */
+  html.compact .deurkop.deurlink { display: flex; }
+  html.compact .deurlink .dpijl { display: inline-flex; color: #666; }
   /* De lade mag op een telefoon de volle breedte nemen; dan is er ook geen
      knop om een pijltje naar te richten. */
   html.compact .lade { padding: 10px 12px 12px; }
@@ -450,44 +485,67 @@
   // ---- Data ----
   var U = function(p){ return NL + p; };
 
-  // De vijf kolommen. Elk item is [label, url] — geen derde element meer voor
-  // een accentklasse: alle links hebben hetzelfde gewicht.
+  // ---- De vier ingangen die rechtstreeks doorverwijzen ----------------
   //
-  // Uit het oude "Onderwerpen"-menu (TOPICS) zijn hierheen verhuisd:
-  //   Huizen aangeboden  -> Lezen › Marktplaats
-  //   Kringloopwinkel    -> Lezen › Marktplaats
-  //   Correspondentie    -> Lezen › Leren & taal
-  //   Korte verhalen     -> Lezen › Ontmoeten & cultuur
-  //   Communities Abroad -> de rij zusterplatforms (ZUSTERS)
-  // "Rubrieken" (/page/rubrieken) is vervallen. De dubbele URL's zijn
-  // samengevoegd: Vervoershub alleen /page/lift-en-transportcentrale,
-  // Verenigingen alleen /page/nederlandse-verenigingen-in-frankrijk, de
-  // nieuwsbrief alleen via laposta.
-  var DOORS = {
-    lezen: { naam: "Lezen", sub: "rubrieken", groups: [
-      ["Wonen &amp; klussen", [["Woningen algemeen",U("/profiles/blog/list?tag=Woningen+Algemeen")],["Woningbeheer &amp; huishouding",U("/profiles/blog/list?tag=Woningbeheer+en+Huishouding")],["Bouw",U("/profiles/blog/list?tag=Bouw")],["Inrichting",U("/profiles/blog/list?tag=Inrichting")],["Exterieur",U("/profiles/blog/list?tag=Exterieur")],["Tele\u00adcommuni\u00adcatie",U("/page/telecommunicatie")],["Tele\u00adcommuni\u00adcatie in het forum",U("/profiles/blog/list?tag=Telecommunicatie")]]],
-      ["Werk &amp; ondernemen", [["Werk algemeen",U("/profiles/blog/list?tag=Werk+Algemeen")],["Midden- en kleinbedrijf",U("/profiles/blog/list?tag=Midden-+en+Kleinbedrijf")],["Horeca en toerisme",U("/profiles/blog/list?tag=Horeca+en+Toerisme")],["Vervoer",U("/profiles/blog/list?tag=Vervoer")],["Overige diensten",U("/profiles/blog/list?tag=Overige+Diensten")]]],
-      ["Geld, overheid &amp; migratie", [["Geldzaken",U("/profiles/blog/list?tag=Geldzaken")],["Overheid",U("/profiles/blog/list?tag=Overheid")],["Migratie",U("/profiles/blog/list?tag=Migratie")]]],
-      ["Leren &amp; taal", [["Onderwijs",U("/profiles/blog/list?tag=Onderwijs")],["Cursussen en opleidingen",U("/profiles/blog/list?tag=Cursussen+en+Opleidingen")],["Kinderen",U("/profiles/blog/list?tag=Kinderen")],["Vertaling",U("/profiles/blog/list?tag=Vertaling")],["Woorden\u00adlijsten",U("/profiles/blog/list?tag=Lexicon")],["Correspon\u00addentie",U("/profiles/blog/list?tag=Correspondentie")]]],
-      ["Leven &amp; zorg", [["Gezondheid, sport &amp; spel",U("/profiles/blog/list?tag=Gezondheid%2C+Sport+en+Spel")],["Ouder\u00adverzorging",U("/profiles/blog/list?tag=Ouderverzorging")],["Dieren",U("/profiles/blog/list?tag=Dieren")],["Recepten",U("/profiles/blog/list?tag=Recepten")]]],
-      ["Ontmoeten &amp; cultuur", [["Clubs, verenigingen &amp; bijeenkomsten",U("/profiles/blog/list?tag=Clubs%2C+Verenigingen+en+Bij%C3%A9%C3%A9nkomsten")],["Contact gezocht",U("/profiles/blog/list?tag=Contact+Gezocht")],["Kunst &amp; cultuur",U("/profiles/blog/list?tag=Kunst+en+Cultuur")],["Korte verhalen",U("/profiles/blog/list?tag=Korte+Verhalen")]]],
-      ["Marktplaats", [["Vastgoed van leden",U("/page/onroerend-goed")],["Huizen aangeboden",U("/profiles/blog/list?tag=Woningen+Aangeboden")],["Roerende goederen te koop",U("/profiles/blog/list?tag=Te+Koop+Aangeboden")],["Te koop gevraagd",U("/profiles/blog/list?tag=Te+Koop+Gevraagd")],["Werk aangeboden",U("/profiles/blog/list?tag=Werk+Aangeboden")],["Werk gevraagd",U("/profiles/blog/list?tag=Werk+Gevraagd")],["Woningen gevraagd",U("/profiles/blog/list?tag=Woningen+Gevraagd")],["Vakantie\u00adwoningen",U("/profiles/blog/list?tag=Vakantiehuis")],["Woningruil",U("/profiles/blog/list?tag=Woningruil")],["Kringloop\u00adwinkel","https://www.facebook.com/groups/kringloopfrankrijk/"]]],
-      ["Meer in het forum", [["In de schijnwerpers",U("/profiles/blog/list?promoted=1")],["Alle berichten",U("/profiles/blog/list")],["Alle foto's",U("/photo")],["Alle video's",U("/video/video")]]]
-    ]},
-    doen: { naam: "Meedoen", sub: "plaatsen &amp; steunen", groups: [
-      ["Plaatsen", [["Plaats bericht",U("/profiles/blog/new")],["Plaats advertentie",U("/page/betaalpagina-berichten")],["Plaats een foto",U("/photo/photo/new")],["Plaats een video",U("/video/video/new")]]],
-      ["Steunen", [["Waarom aanmelden",U("/profiles/blogs/waarom-zou-u-lid-worden-van-nederlanders-fr")],["Doneer",U("/page/fundraising-en-donaties")],["Word sponsor",U("/page/sponsorprogramma")],["Word abonnee","https://infofrankrijk.com/abonnement/","_top"]]]
-    ]},
-    vinden: { naam: "Vinden", sub: "tools &amp; hulp", groups: [
-      ["Tools &amp; bestemmingen", [["Vervoershub",U("/page/lift-en-transportcentrale")],["Verenigingen in Frankrijk",U("/page/nederlandse-verenigingen-in-frankrijk")],["Frans leren",U("/page/frantastique-1")]]],
-      ["Regels &amp; hulp", [["Huisregels",U("/page/huisregels")],["Hulp vinden",U("/page/hulpverlening-in-frankrijk")],["Contact beheerder",U("/profiles/message/newFromProfile?screenName=3pjypz5h1ilpc&amp;target=https%3A%2F%2Fwww.nederlanders.fr%2Fprofiles%2Fprofile%2Fshow%3Fid%3DAntonNoe%26")]]],
-      ["Adressen", [["Wegwijs Franse overheid",U("/profiles/blogs/wegwijs-franse-overheid")],["Handige sites",U("/page/handige-sites")],["Nedergids","https://nedergids.nl/"]]],
-      ["Uitgelicht", [["In de schijnwerpers",U("/profiles/blog/list?promoted=1")],["Groepen",U("/groups")],["Onze sponsors",U("/page/sponsors")],["Auteurs",U("/profiles/friend/listFeatured")]]]
-    ]},
-    nieuws: { naam: "Nieuws", sub: "&amp; feeds", groups: [
-      ["Lezen", [["Dagelijks Frankrijk\u00adnieuws",U("/page/dagelijks-frankrijknieuws")],["Ondernemers\u00adnieuws",U("/page/dagelijks-ondernemersnieuws-uit-frankrijk")],["Reizen in Frankrijk",U("/page/reizen-in-frankrijk")],["Bosbranden",U("/page/bosbranden")]]],
-      ["Abonneren", [["Dagelijkse nieuwsbrief","https://laposta.nl/f/ssysinmqgflb"],["RSS — berichten",U("/profiles/blog/feed?xn_auth=no")],["RSS — activiteit",U("/activity/log/list?fmt=rss")]]]
-    ]}
+  // Lezen, Meedoen, Vinden en Nieuws hadden elk een lade met groepen links:
+  // 72 links bij elkaar, waarvan 43 alleen al onder Lezen. Die inhoud staat nu
+  // op twaalf openbare categoriepagina's op nederlanders.fr zelf, en het menu
+  // wijst er alleen nog naartoe. Lezen verwijst op zijn beurt door naar zijn
+  // acht subonderwerpen, dus alles blijft in twee klikken bereikbaar.
+  //
+  // Wat er uit het menu is verdwenen staat URL voor URL in
+  // test/fixtures/menu-urls-verhuisd.json, met de pagina die hem hoort te
+  // bevatten. Dat bestand is de enige plek waar nog vastligt wat die vier
+  // pagina's moeten dekken; het menu bewaakt dat niet meer, want het kent de
+  // inhoud van die pagina's niet.
+  //
+  // Uit het oude "Onderwerpen"-menu (TOPICS) is Communities Abroad naar de rij
+  // zusterplatforms (ZUSTERS) gegaan; de vier andere items zaten in Lezen en
+  // staan daarmee nu op /page/lezen.
+  //
+  // Elke ingang draagt een tegel: een beschrijving van een of twee regels en
+  // daaronder de subonderwerpen als opsomming ZONDER link. Die opsomming toont
+  // wat er achter de ingang zit; klikken doe je op de tegel als geheel, die één
+  // link is naar de categoriepagina. Losse links per subonderwerp zouden de
+  // lade terugbrengen die we net hebben weggehaald, en zouden op twee plekken
+  // onderhouden moeten worden.
+  // Elk punt is [label] of [label, markeringen]. Twee markeringen:
+  //   "accent"  het kernonderdeel van die ingang: bordeaux en halfvet.
+  //   "in"      ingesprongen, omdat het onder de regel erboven hangt.
+  // Ze staan als tweede element en niet in het label zelf, zodat de toets die
+  // lange labels op hun afbreekstreepje controleert het label blijft zien
+  // (test/menu-lettergrootte.test.mjs kijkt naar tekst direct na [ of ,).
+  var DEUREN_LINK = {
+    lezen: {
+      naam: "Lezen", sub: "rubrieken", url: U("/page/lezen"),
+      tekst: "Alles wat leden in 24 jaar hebben gevraagd en beantwoord, geordend per onderwerp.",
+      punten: [["Wonen &amp; klussen"], ["Werk &amp; ondernemen"], ["Geld, overheid &amp; migratie"],
+               ["Leren &amp; taal"], ["Leven &amp; zorg"], ["Ontmoeten &amp; cultuur"],
+               ["Marktplaats"], ["Meer in het forum"]]
+    },
+    doen: {
+      naam: "Meedoen", sub: "plaatsen &amp; steunen", url: U("/page/meedoen"),
+      tekst: "Uw vraag stellen, uw ervaring delen, en het forum steunen.",
+      punten: [["Plaats bericht", "accent"], ["Plaats advertentie"], ["Foto's en video's"],
+               ["Groepen", "accent"], ["Doneer"], ["Word sponsor"]]
+    },
+    vinden: {
+      naam: "Vinden", sub: "tools &amp; hulp", url: U("/page/vinden"),
+      tekst: "Hulpmiddelen, adressen en de weg naar de Franse instanties.",
+      punten: [["Vervoershub", "accent"], ["Verenigingen in Frankrijk", "accent"], ["Frans leren"],
+               ["Wegwijs Franse overheid"], ["Handige sites"], ["Nedergids", "accent"],
+               ["Huisregels"], ["Contact beheerder"]]
+    },
+    nieuws: {
+      naam: "Nieuws", sub: "&amp; feeds", url: U("/page/frankrijknieuws"),
+      tekst: "Offici\u00eble berichten uit Frankrijk, in het Nederlands samengevat.",
+      // De drie ingesprongen regels zijn de rubrieken die IN de dagelijkse
+      // nieuwsbrief staan. Ze hebben elk ook een eigen pagina, maar horen in
+      // dit overzicht onder de nieuwsbrief te hangen.
+      punten: [["Actueel Frankrijk\u00adnieuws"], ["Dagelijkse nieuwsbrief", "accent"],
+               ["Dagelijks Frankrijk\u00adnieuws", "in"], ["Ondernemers\u00adnieuws", "in"],
+               ["Reizen in Frankrijk", "in"], ["RSS-feeds"]]
+    }
   };
 
   // Mijn NLFR is de vijfde kolom, maar hangt aan de ingelogde gebruiker en
@@ -512,7 +570,21 @@
   // volgorde ligt vast in test/menu.test.mjs, en een bestaande afspraak omgooien
   // voor een voorkeur van het moment is de moeite niet waard.
   var ADMIN_LINKS = [["Banner beheren","/banner-beheer","_blank"],["Redactie — Actueel","/review","_blank"],["Dashboard",U("/main/dashboard")],["Tags",U("/page/tags")],["Standaard teksten",U("/page/standard-berichten")],["Bestands\u00adbeheer",U("/main/filemanager/list")],["Mijn pagina's",U("/page/page/listForContributor")]];
-  var PERKS = ["Uw eigen profielpagina","Chat met leden die online zijn","Ledenlijst &amp; leden zoeken in uw regio","Gratis berichten en advertenties plaatsen"];
+  // De wervende tekst die een NIET-ingelogde bezoeker onder "Mijn NLFR" ziet.
+  // Ingelogde leden zien daar hun eigen links (memberGroups) en dit blok dus
+  // niet. De volgorde van de punten ligt vast in test/menu.test.mjs: hij loopt
+  // van wat er al is (24 jaar antwoorden) naar wat de bezoeker zelf kan doen.
+  var WERVING = {
+    kop: "Word gratis lid",
+    onder: "Vraag het aan wie het al heeft meegemaakt",
+    punten: [
+      "24 jaar aan vragen en antwoorden, van meer dan 25.000 leden",
+      "Stel uw eigen vraag aan Nederlandstaligen die hier wonen",
+      "Vind landgenoten en verenigingen bij u in de buurt",
+      "Dagelijks officieel Frankrijknieuws, in het Nederlands samengevat"
+    ],
+    knop: "Word lid, gratis"
+  };
 
   var ZUSTERS = [["Infofrankrijk","https://infofrankrijk.com/"],["Café Claude","https://www.cafeclaude.fr/"],["Nedergids","https://nedergids.nl/"],["Communities Abroad","https://www.communitiesabroad.com"]];
   var PANEELKNOPPEN = [["Plaats bericht",U("/profiles/blog/new")],["Plaats advertentie",U("/page/betaalpagina-berichten")],["Diensten",U("/diensten")]];
@@ -552,6 +624,9 @@
   var adminbtn = document.getElementById("adminbtn");
 
   var caretSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>';
+  // Het pijltje op een ingang die doorverwijst. Bewust een ander teken dan de
+  // caret van Mijn NLFR: die klapt open, deze gaat naar een andere pagina.
+  var pijlSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg>';
 
   // ---- Hoogte melden ----------------------------------------------------
   // Meet de werkelijke hoogte van #alles (banner + kaart), niet
@@ -590,79 +665,85 @@
 
   // Eén groep: kop met teller en caret (alleen zichtbaar op mobiel, waar de
   // groepen accordeons zijn), daaronder de links.
+  // DE GROEPSKOP IS EEN KOP, GEEN KNOP. Binnen een geopende ingang staat alles
+  // open: alle groepen, alle items. Er zat hier een tweede accordeon onder de
+  // eerste — je tikte "Lezen" open en kreeg zestien dichte groepen waarvan er
+  // één openstond, dus twee tikken per link en geen overzicht van wat er in die
+  // ingang zit. Eén laag klapwerk is genoeg; die zit op de vijf ingangen.
+  //
+  // Zonder klapwerk hoort er ook geen caret en geen teller bij: een pijltje
+  // naast een kop die niet opengaat belooft iets wat er niet is, en een aantal
+  // naast een lijst die er volledig onder staat telt wat je al ziet.
   function groepHTML(g){
     return '<div class="grp">' +
-      '<div class="gk" role="button" tabindex="0" aria-expanded="false">' +
-        '<span class="gn">' + g[0] + '</span>' +
-        '<span class="gc">' + g[1].length + '</span>' +
-        '<span class="gcaret">' + caretSvg + '</span>' +
-      '</div>' +
+      '<div class="gk"><span class="gn">' + g[0] + '</span></div>' +
       '<div class="gl">' + g[1].map(function(l){ return link(l[1], l[0], l[2]); }).join("") + '</div>' +
     '</div>';
   }
 
-  // De groepen van Lezen over twee kolommen, evenwichtig op aantal links.
-  // Elke groep weegt zijn links plus zijn kop; een groep gaat naar de eerste
-  // kolom zolang zijn MIDDEN nog vóór de helft ligt. Zo blijft een groep
-  // heel — hem opsplitsen zou de kop van zijn links scheiden.
-  function verdeelGroepen(groups){
-    var gewicht = function(g){ return g[1].length + 1; };
-    var totaal = 0;
-    groups.forEach(function(g){ totaal += gewicht(g); });
-    var helft = totaal / 2, som = 0, a = [], b = [];
-    groups.forEach(function(g){
-      var w = gewicht(g);
-      if (b.length === 0 && som + w / 2 <= helft) { a.push(g); som += w; }
-      else b.push(g);
-    });
-    // Nooit een lege tweede kolom: dan is één kolom eerlijker.
-    if (!b.length) { b.push(a.pop()); }
-    return [a, b];
+  // ---- Eén kolom in het paneel -----------------------------------------
+  //
+  // Vier van de vijf ingangen zijn een LINK: een kop zonder body. Alleen
+  // Mijn NLFR heeft nog inhoud die openklapt, want die verschilt per bezoeker
+  // en kan daarom geen openbare pagina zijn.
+  //
+  // De link-ingang krijgt een <a> als kop, geen role="button". Een kop die
+  // navigeert en een kop die openklapt zijn twee verschillende dingen, en een
+  // schermlezer hoort dat verschil te krijgen: geen aria-expanded op iets dat
+  // niet open- en dichtgaat.
+  // Eén regel uit de opsomming. Geen opsommingsteken: de regels staan al onder
+  // elkaar en een bolletje ervoor kost breedte in een kolom van 130px.
+  function puntHTML(p){
+    var m = (p[1] || "").split(" ");
+    var kl = "tpi";
+    for (var i = 0; i < m.length; i++) if (m[i]) kl += " tp-" + m[i];
+    return '<span class="' + kl + '">' + p[0] + '</span>';
+  }
+
+  function linkKolomHTML(sleutel){
+    var d = DEUREN_LINK[sleutel];
+    var t = tgt(d.url), rel = (t === "_blank") ? ' rel="noopener"' : '';
+    // DE HELE TEGEL IS DE LINK, dus de <a> staat buitenom. Alles daarbinnen is
+    // een <span>: een tweede <a> in een <a> mag niet en zou de tegel in stukken
+    // knippen die elk apart aanklikbaar zijn.
+    return '<a class="deur deur-link" data-deur="'+sleutel+'" href="'+d.url+'" target="'+t+'"'+rel+'>' +
+           '<span class="deurkop deurlink">' +
+           '<span class="dn">'+d.naam+'</span><span class="ds">'+d.sub+'</span>' +
+           '<span class="dpijl">'+pijlSvg+'</span></span>' +
+           '<span class="deurbody"><span class="tegel">' +
+           '<span class="tt">'+d.tekst+'</span>' +
+           '<span class="tp">'+d.punten.map(puntHTML).join("")+'</span>' +
+           '</span></span></a>';
   }
 
   function kolomHTML(sleutel){
-    var groups, naam, sub;
-    if (sleutel === "mijn") {
-      naam = "Mijn NLFR"; sub = "leden";
-      groups = isMember ? memberGroups() : null;
-    } else {
-      var d = DOORS[sleutel];
-      naam = d.naam; sub = d.sub; groups = d.groups;
-    }
+    if (DEUREN_LINK[sleutel]) return linkKolomHTML(sleutel);
 
+    // Mijn NLFR: de enige ingang die nog openklapt.
+    var groups = isMember ? memberGroups() : null;
     var aantal = 0;
     if (groups) groups.forEach(function(g){ aantal += g[1].length; });
 
     var h = '<div class="deur" data-deur="'+sleutel+'">';
     h += '<div class="deurkop" role="button" tabindex="0" aria-expanded="false">' +
-         '<span class="dn">'+naam+'</span><span class="ds">'+sub+'</span>' +
+         '<span class="dn">Mijn NLFR</span><span class="ds">leden</span>' +
          '<span class="dc">'+(groups ? aantal : "")+'</span>' +
          '<span class="dcaret">'+caretSvg+'</span></div>';
-    // Lezen verdeelt zijn groepen over twee kolommen binnen dezelfde deur.
-    var tweekolommen = (sleutel === "lezen") && groups;
-    h += '<div class="deurbody' + (tweekolommen ? " tweekolommen" : "") + '">';
+    h += '<div class="deurbody">';
 
     if (!groups) {
-      // Niet ingelogd: de teaser staat compact in deze kolom.
-      var p = PERKS.map(function(x){
+      // Niet ingelogd: de wervende tekst staat compact in deze kolom.
+      var p = WERVING.punten.map(function(x){
         return '<div class="perk"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'+x+'</div>';
       }).join("");
-      h += '<div class="teaser"><h3>Word gratis lid</h3>'+p+
+      h += '<div class="teaser"><h3>'+WERVING.kop+'</h3>' +
+           '<p class="tsub">'+WERVING.onder+'</p>'+p+
            '<div class="btns">'+
-           '<a class="btn-p" href="'+U("/main/authorization/signUp")+'" target="_parent">Word lid — gratis</a>'+
+           '<a class="btn-p" href="'+U("/main/authorization/signUp")+'" target="_parent">'+WERVING.knop+'</a>'+
            '<a class="btn-o" href="'+U("/main/authorization/signIn")+'" target="_parent">Meld je aan</a>'+
            '</div></div>';
-    } else if (tweekolommen) {
-      verdeelGroepen(groups).forEach(function(kolom){
-        h += '<div class="kolom">' + kolom.map(groepHTML).join("") + '</div>';
-      });
     } else {
       h += groups.map(groepHTML).join("");
-      if (sleutel === "nieuws") {
-        h += '<a class="abonneer" href="'+U("/profiles/blog/feed?xn_auth=no")+'" target="_parent">' +
-             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none"/></svg>' +
-             'Abonneren</a>';
-      }
     }
     return h + '</div></div>';
   }
@@ -687,8 +768,12 @@
 
   // Accordeon: op mobiel één deur open tegelijk. Op desktop staan alle vijf de
   // kolommen open en doet de klasse niets (zie CSS).
+  //
+  // ALLEEN div.deurkop, niet a.deurkop. De vier link-ingangen dragen dezelfde
+  // klasse voor de vormgeving, maar zijn een <a>: die moet navigeren en niet
+  // ook nog een klapbeweging maken onder de vinger van de bezoeker.
   function bindDeuren(){
-    Array.prototype.forEach.call(paneel.querySelectorAll(".deur > .deurkop"), function(kop){
+    Array.prototype.forEach.call(paneel.querySelectorAll(".deur > div.deurkop"), function(kop){
       function toggle(){
         var deur = kop.parentNode, wasOpen = deur.classList.contains("open");
         Array.prototype.forEach.call(paneel.querySelectorAll(".deur"), function(d){
@@ -699,7 +784,6 @@
         if (!wasOpen) {
           deur.classList.add("open");
           kop.setAttribute("aria-expanded", "true");
-          openEersteGroep(deur);
         }
         report();
       }
@@ -708,41 +792,6 @@
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
       });
     });
-    bindGroepen();
-  }
-
-  // Tweede accordeon, binnen de deur: op mobiel klappen de groepen zelf ook
-  // open en dicht, één tegelijk binnen dezelfde deur. Op desktop staan ze
-  // allemaal open en doet de klasse niets (zie CSS).
-  function bindGroepen(){
-    Array.prototype.forEach.call(paneel.querySelectorAll(".grp > .gk"), function(kop){
-      function toggle(){
-        var grp = kop.parentNode, wasOpen = grp.classList.contains("open");
-        var deur = grp.closest ? grp.closest(".deur") : null;
-        var buren = (deur || paneel).querySelectorAll(".grp");
-        Array.prototype.forEach.call(buren, function(g){
-          g.classList.remove("open");
-          var k = g.querySelector(".gk");
-          if (k) k.setAttribute("aria-expanded", "false");
-        });
-        if (!wasOpen) { grp.classList.add("open"); kop.setAttribute("aria-expanded", "true"); }
-        report();
-      }
-      kop.addEventListener("click", toggle);
-      kop.addEventListener("keydown", function(e){
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
-      });
-    });
-  }
-
-  function openEersteGroep(deur){
-    if (!isNarrow() || !deur) return;
-    if (deur.querySelector(".grp.open")) return;
-    var eerste = deur.querySelector(".grp");
-    if (!eerste) return;
-    eerste.classList.add("open");
-    var k = eerste.querySelector(".gk");
-    if (k) k.setAttribute("aria-expanded", "true");
   }
 
   function zetPaneel(open){
@@ -750,16 +799,12 @@
     paneel.classList.toggle("open", open);
     menubtn.classList.toggle("active", open);
     menubtn.setAttribute("aria-expanded", open ? "true" : "false");
-    if (open && isNarrow()) {
-      // Op mobiel begint de accordeon dicht; de eerste deur alvast open zodat
-      // er iets te zien is.
-      var eerste = paneel.querySelector(".deur");
-      if (eerste && !paneel.querySelector(".deur.open")) {
-        eerste.classList.add("open");
-        eerste.querySelector(".deurkop").setAttribute("aria-expanded", "true");
-        openEersteGroep(eerste);
-      }
-    }
+    // OP MOBIEL BEGINT ALLES DICHT. Hier stond: open de eerste ingang alvast,
+    // zodat er iets te zien is. Dat was zinnig toen Lezen daar met zijn links
+    // stond. Nu is de eerste ingang die nog openklapt Mijn NLFR, en die toont
+    // een niet-ingelogde bezoeker 440 pixels wervende tekst — waardoor Nieuws
+    // een halve schermlengte onder de vouw belandt. Vijf korte regels ZIJN het
+    // overzicht; daar hoeft er geen van open te staan.
     report();
   }
 
@@ -1061,8 +1106,22 @@
     var bijWissel = function(){
       applyCompact();
       var wasOpen = paneel.classList.contains("open");
+      // WELKE INGANG STOND OPEN. bouwPaneel() tekent het paneel opnieuw, en
+      // daarmee verdween de stand van de accordeon: wie zijn telefoon draaide
+      // terwijl "Vinden" openstond, keek daarna naar vijf dichte regels en moest
+      // opnieuw zoeken waar hij was. Draaien mag de stand niet verstoren.
+      var deurEl = paneel.querySelector(".deur.open");
+      var openDeur = deurEl ? deurEl.getAttribute("data-deur") : null;
       bouwPaneel();
       if (wasOpen) paneel.classList.add("open");
+      if (openDeur) {
+        var terug = paneel.querySelector('.deur[data-deur="' + openDeur + '"]');
+        if (terug) {
+          terug.classList.add("open");
+          var kop = terug.querySelector(".deurkop");
+          if (kop) kop.setAttribute("aria-expanded", "true");
+        }
+      }
       richtLade();
       report();
     };

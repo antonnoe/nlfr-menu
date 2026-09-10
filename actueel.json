@@ -1,5 +1,5 @@
 {
-  "_uitleg": "Inhoud van de knop 'Nu actueel' in de onderbalk van het hoofdmenu. Pas de items hieronder aan; het menu haalt dit bestand live op (er hoeft niets aan index.html te veranderen) en toont ze als één compacte rij linkjes. Velden per item: titel (de zichtbare linktekst), tekst (verschijnt als tooltip/title, niet zichtbaar), href (de link), accent (behouden veld) en live (true = pulserend stipje op de balkknop). Alle items worden getoond.",
+  "_uitleg": "Inhoud van de knop 'Nu actueel' in de onderbalk van het hoofdmenu. Pas de items hieronder aan; het menu haalt dit bestand live op (er hoeft niets aan index.html te veranderen) en toont ze als één compacte rij linkjes. Velden per item: titel (de zichtbare linktekst), tekst (verschijnt als tooltip/title, niet zichtbaar), href (de link), accent (behouden veld) en live (true = pulserend stipje op de balkknop). Alle items in 'kaarten' worden getoond. Items in '_geparkeerd' worden niet getoond en kunnen, ongewijzigd, naar 'kaarten' worden teruggezet zodra ze weer actueel zijn.",
   "kaarten": [
     {
       "titel": "Recente activiteiten",
@@ -15,15 +15,17 @@
       "live": true
     },
     {
-      "titel": "Bosbranden in Frankrijk",
-      "tekst": "Actueel overzicht en veiligheidsinformatie bij natuurbranden.",
-      "href": "https://www.nederlanders.fr/page/bosbranden",
-      "live": true
-    },
-    {
       "titel": "Frankrijknieuws",
       "tekst": "Live Frankrijknieuws: overheid, pers en verenigingen op één pagina.",
       "href": "https://www.nederlanders.fr/page/actueel-frankrijknieuws",
+      "live": true
+    }
+  ],
+  "_geparkeerd": [
+    {
+      "titel": "Bosbranden in Frankrijk",
+      "tekst": "Actueel overzicht en veiligheidsinformatie bij natuurbranden.",
+      "href": "https://www.nederlanders.fr/page/bosbranden",
       "live": true
     }
   ]

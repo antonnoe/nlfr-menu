@@ -155,6 +155,42 @@
   .lade .ladekaart > a:hover { color: var(--brand); }
   .lade .leeg { font-size: 13px; color: #666; } /* was #8a7f7c: 3,88:1, onder de eis */
 
+  /* ---- "Nu actueel": pill-knoppen met een tekstlinkje eronder ----
+     Alles hier staat binnen .ladekaart.actueel, zodat de andere laden hun
+     gewone tekstlinkjes houden. De generieke regel .lade .ladekaart > a
+     (44px hoog, #333, padding 5px 0) mag op deze lade NIET gelden: de pill is
+     klein en bordeaux. Drie klassen wegen zwaarder dan twee klassen plus een
+     element, dus deze regels winnen zonder !important — mits ze elke
+     eigenschap die de generieke regel zet ook zelf zetten. Vandaar de
+     min-height, de padding en de achtergrond die er anders overbodig uitzien. */
+  .ladekaart.actueel { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .ladekaart.actueel .h { margin-bottom: 10px; }
+  .ladekaart.actueel .nap { position: relative; display: inline-flex; align-items: center; gap: 8px;
+                            min-height: 0; padding: 7px 15px; border-radius: 999px;
+                            background: var(--brand); color: #fff;
+                            font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+                            font-size: 13px; font-weight: 600; line-height: 1; text-decoration: none; }
+  .ladekaart.actueel .nap:hover { background: var(--brand-dark); color: #fff; }
+  .ladekaart.actueel .nap:focus-visible { outline: 2px solid var(--brand-dark); outline-offset: 2px; }
+  /* Het stipje is hier kleiner dan op de balk; de witte ring blijft, want die
+     zet het groen af tegen het bordeaux van de pill. */
+  .ladekaart.actueel .nap .dot { width: 8px; height: 8px; }
+  .ladekaart.actueel .nal { position: relative; display: inline-block;
+                            min-height: 0; padding: 0; margin: 2px 0 0 4px; background: transparent;
+                            font-size: 12.5px; color: var(--brand);
+                            text-decoration: underline; text-underline-offset: 2px; }
+  .ladekaart.actueel .nal:hover { color: var(--brand-dark); }
+  .ladekaart.actueel .nal:focus-visible { outline: 2px solid var(--brand-dark); outline-offset: 2px; }
+  /* Tikoppervlak van 44px zonder de pill zelf te vergroten: een onzichtbaar
+     vlak dat 8px boven en onder de link uitsteekt (height: 100% + 2x8px). Een
+     pill van 27px komt daarmee op 43px, één pixel te kort, en het tekstlinkje
+     blijft er ver onder — vandaar de min-height van 44px. Het vlak heeft geen
+     achtergrond en verandert niets aan wat je ziet. */
+  .ladekaart.actueel .nap::before,
+  .ladekaart.actueel .nal::before { content: ""; position: absolute; left: 0; right: 0; top: 50%;
+                                    transform: translateY(-50%);
+                                    height: calc(100% + 16px); min-height: 44px; }
+
   /* De twee kolommen achter "Plaats bericht" */
   .plaatskolommen { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .plaatskolom { min-width: 0; }
@@ -976,12 +1012,21 @@
     return null;
   }
 
-  // ---- "Nu actueel" — compacte rij linkjes uit actueel.json --------------
+  // ---- "Nu actueel" — pill-knoppen uit actueel.json ----------------------
+  // Twee vormen, gestuurd door het veld "vorm" in actueel.json: een ontbrekend
+  // veld of "pill" geeft een bordeaux knop, "tekst" een klein tekstlinkje
+  // eronder. Het stipje hoort bij de knop en niet bij het linkje: het meldt dat
+  // er achter die knop iets bijgewerkt is, en een tekstlinkje naar een
+  // aanmeldformulier heeft niets wat live kan zijn.
   function actueelLink(k){
     var href = (k && k.href) ? String(k.href) : "#";
     var t = tgt(href), rel = (t === "_blank") ? ' rel="noopener"' : '';
     var titel = (k && k.tekst) ? ' title="' + esc(k.tekst) + '"' : '';
-    return '<a href="' + esc(href) + '" target="' + t + '"' + rel + titel + '>' + ((k && k.titel) || "") + '</a>';
+    var tekstvorm = !!(k && k.vorm === "tekst");
+    var klasse = tekstvorm ? "nal" : "nap";
+    var stip = (!tekstvorm && k && k.live) ? '<span class="dot live" aria-hidden="true"></span>' : '';
+    return '<a class="' + klasse + '" href="' + esc(href) + '" target="' + t + '"' + rel + titel + '>' +
+           stip + ((k && k.titel) || "") + '</a>';
   }
   function actueelHTML(){
     var kop = '<span class="h">Nu actueel</span>';

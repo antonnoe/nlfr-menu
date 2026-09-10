@@ -50,7 +50,19 @@ test("de lade is een kaart met een pijlpunt, geen volle-breedte balk", () => {
 test("de kaart blijft in de documentstroom", () => {
   // Dit iframe is precies zo hoog als het meldt; alles daarbuiten wordt
   // afgeknipt. position:relative mag: dat haalt niets uit de stroom.
-  assert.ok(!/position:\s*absolute/.test(CSS_KAAL), "geen position:absolute in de menu-CSS");
+  //
+  // ÉÉN uitzondering, en die staat hier met naam omdat een uitzondering die
+  // niemand opschrijft er morgen twee zijn: het tikoppervlak van de pills in
+  // "Nu actueel". Dat is een leeg ::before zonder achtergrond dat binnen de
+  // padding van de ladekaart valt. Het toont niets, dus er valt niets aan af te
+  // knippen, en het telt niet mee in de hoogte die het iframe meldt. Alles wat
+  // wél iets laat zien, hoort in de stroom te blijven.
+  const absoluut = CSS_KAAL.match(/[^{}]+\{[^}]*position:\s*absolute[^}]*\}/g) || [];
+  assert.equal(absoluut.length, 1,
+    "onverwachte position:absolute in de menu-CSS: " + absoluut.map((r) => r.trim().slice(0, 80)).join(" | "));
+  assert.match(absoluut[0], /::before/, "alleen een pseudo-element mag hier absoluut staan");
+  assert.ok(!/background|border|content:\s*"[^"]/.test(absoluut[0]),
+    "en dat vlak hoort leeg en onzichtbaar te blijven: " + absoluut[0].trim());
   assert.ok(!/position:\s*fixed/.test(CSS_KAAL), "en geen position:fixed");
   assert.match(CSS_KAAL, /\.ladepijl \{[^}]*position: relative/, "de pijl staat relatief, dus in de stroom");
   assert.ok(!/style\.position\s*=/.test(HTML), "en het script haalt niets uit de stroom");

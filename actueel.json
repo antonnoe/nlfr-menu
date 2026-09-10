@@ -1,5 +1,5 @@
 {
-  "_uitleg": "Inhoud van de knop 'Nu actueel' in de onderbalk van het hoofdmenu. Pas de items hieronder aan; het menu haalt dit bestand live op (er hoeft niets aan index.html te veranderen) en toont ze als één compacte rij linkjes. Velden per item: titel (de zichtbare linktekst), tekst (verschijnt als tooltip/title, niet zichtbaar), href (de link), accent (behouden veld) en live (true = pulserend stipje op de balkknop). Alle items in 'kaarten' worden getoond. Items in '_geparkeerd' worden niet getoond en kunnen, ongewijzigd, naar 'kaarten' worden teruggezet zodra ze weer actueel zijn.",
+  "_uitleg": "Inhoud van de knop 'Nu actueel' in de onderbalk van het hoofdmenu. Pas de items hieronder aan; het menu haalt dit bestand live op (er hoeft niets aan index.html te veranderen) en toont ze onder elkaar. Velden per item: titel (de zichtbare linktekst), tekst (verschijnt als tooltip/title, niet zichtbaar), href (de link), vorm en live. Het veld 'vorm' bepaalt de verschijning: ontbreekt het of staat er 'pill', dan wordt het item een bordeaux pill-knop; staat er 'tekst', dan wordt het een klein tekstlinkje in bordeaux. Het veld 'live' (true) zet bij een pill een groen pulserend stipje vóór de titel; bij een tekstlinkje heeft het geen zichtbaar gevolg. Alle items in 'kaarten' worden getoond. Items in '_geparkeerd' worden niet getoond en kunnen, ongewijzigd, naar 'kaarten' worden teruggezet zodra ze weer actueel zijn.",
   "kaarten": [
     {
       "titel": "Recente activiteiten",
@@ -8,17 +8,23 @@
       "live": true
     },
     {
-      "titel": "Laatste nieuwsbrief",
-      "tekst": "Lees de meest recente nieuwsbrief van Nederlanders.fr online.",
-      "href": "https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief",
-      "accent": true,
-      "live": true
-    },
-    {
       "titel": "Frankrijknieuws",
       "tekst": "Live Frankrijknieuws: overheid, pers en verenigingen op één pagina.",
       "href": "https://www.nederlanders.fr/page/actueel-frankrijknieuws",
       "live": true
+    },
+    {
+      "titel": "Nieuwsbrief van vandaag",
+      "tekst": "Lees de nieuwsbrief van vandaag online; verzending dagelijks om 04:00.",
+      "href": "https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief",
+      "live": false
+    },
+    {
+      "titel": "Meld je aan voor de nieuwsbrief",
+      "tekst": "Gratis dagelijkse nieuwsbrief in je mailbox.",
+      "href": "https://communities-abroad-c.email-provider.eu/memberforms/subscribe/standalone/form/?a=0f1aywezl2&l=ysinmqgflb",
+      "vorm": "tekst",
+      "live": false
     }
   ],
   "_geparkeerd": [

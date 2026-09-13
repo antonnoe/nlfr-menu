@@ -1296,6 +1296,11 @@
     if (a.closest(".paneel")) return "paneel";
     if (a.closest(".subbalk")) return "subbalk";
     if (a.closest(".strip")) return "strip";
+    // De banner staat buiten al die vlakken en is wél een ingang met een eigen
+    // bedoeling. Zonder een eigen zone zou hij in "overig" belanden, en dat is
+    // de bak voor wat we niet thuis kunnen brengen: dan telt een wervende knop
+    // mee in het doorklikcijfer zonder dat iemand weet dat hij erin zit.
+    if (a.closest("#bannerhost")) return "banner";
     return "overig";
   }
 

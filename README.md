@@ -629,7 +629,7 @@ mensen in dat menu aanklikken. Deze meting beantwoordt die vraag voortaan wel.
 | --- | --- |
 | `weergave` | het menu is getoond. Dit is de **noemer**: zonder haar is een daling van de kliks niet te onderscheiden van gewoon minder bezoek. |
 | `lade:<naam>` | een lade of het paneel is opengeklapt (`actueel`, `plaats`, `admin`, `paneel`). Scheidt "niemand opent het menu" van "ze openen het wel en kiezen niets". |
-| `klik:<zone>/<bestemming>` | een ingang is aangeklikt. De zone is `strip`, `paneel`, `subbalk` of `lade-<naam>`; de bestemming is `nlfr<pad>` voor de eigen site en `<host><pad>` daarbuiten. |
+| `klik:<zone>/<bestemming>` | een ingang is aangeklikt. De zone is `strip`, `paneel`, `subbalk`, `banner` of `lade-<naam>`, met `overig` als restbak voor wat daar niet onder valt; de bestemming is `nlfr<pad>` voor de eigen site en `<host><pad>` daarbuiten. |
 
 **Wat er NIET geteld wordt, en dat is een ontwerpkeuze:** geen cookie, geen
 sessie-id, geen bezoeker-id, niet de pagina waarop het menu stond, en geen

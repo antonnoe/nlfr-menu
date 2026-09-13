@@ -86,8 +86,14 @@ function tokenGeldig(req) {
   const verwacht = (verwachtRuw == null ? "" : String(verwachtRuw)).trim();
   const geleverdRuw = req && req.headers ? req.headers["x-meting-token"] : undefined;
   const geleverd = (geleverdRuw == null ? "" : String(geleverdRuw)).trim();
-  if (!verwacht || !geleverd || verwacht.length !== geleverd.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(verwacht), Buffer.from(geleverd));
+  // In BYTES vergelijken, niet in tekens: timingSafeEqual werkt op buffers en
+  // gooit een fout bij verschillende lengtes. Een token met een accent erin is
+  // in tekens even lang maar in bytes langer, en dan zou een fout token een 500
+  // opleveren in plaats van een nette 401.
+  const a = Buffer.from(verwacht, "utf8");
+  const b = Buffer.from(geleverd, "utf8");
+  if (!a.length || !b.length || a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 // ---- Tellen -----------------------------------------------------------------
@@ -192,6 +198,18 @@ async function lever(req, res) {
     uitslag = await pipeline(dagen.map((d) => ["HGETALL", KEY_METING(d, proef)]));
   } catch (e) {
     return res.status(502).json({ ok: false, fout: "KV lezen mislukt: " + (e && e.message) });
+  }
+
+  // Een pipeline kan HTTP 200 geven met een fout in één opdracht. Ongemerkt
+  // doorlezen maakt daar nullen van, en dan meldt deze route 200 met kv:true
+  // terwijl er in werkelijkheid niets gelezen is: een vals "niet geklikt" is
+  // precies het signaal dat de bewaking niet mag krijgen.
+  const kapot = uitslag.find((r) => r && r.error);
+  if (kapot || uitslag.length !== dagen.length) {
+    return res.status(502).json({
+      ok: false,
+      fout: "KV lezen mislukt: " + (kapot ? String(kapot.error) : "onvolledig antwoord"),
+    });
   }
 
   const rijen = dagen.map((dag, i) => {

@@ -66,6 +66,17 @@ test("wat geen http-link is, wordt niet geteld", () => {
   assert.equal(meetDoel("#"), "", "en een kale # nergens heen");
 });
 
+test("de banner heeft een eigen zone en valt niet in 'overig'", () => {
+  // De banner staat buiten de strip, het paneel, de subbalk en de laden. Zonder
+  // eigen zone belandt een wervende knop in de restbak en telt hij ongemerkt
+  // mee in het doorklikcijfer.
+  const zone = pak("  function meetZone(a){", "  function meet(soort, id){");
+  assert.match(zone, /if \(a\.closest\("#bannerhost"\)\) return "banner";/);
+  const bannerRegel = zone.indexOf('"#bannerhost"');
+  const restRegel = zone.indexOf('return "overig";');
+  assert.ok(bannerRegel >= 0 && bannerRegel < restRegel, "de banner hoort vóór de restbak gecontroleerd te worden");
+});
+
 // ---- De privacygrens --------------------------------------------------------
 
 test("de meting draagt geen identiteit met zich mee", () => {

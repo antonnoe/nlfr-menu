@@ -330,6 +330,44 @@ test("het aantal dagen is begrensd, ook als er meer gevraagd wordt", async () =>
   assert.equal(rondes[0].opdrachten.length, 90);
 });
 
+test("een token met een accent erin levert 401, geen 500", async () => {
+  // timingSafeEqual werkt op bytes en gooit bij verschillende lengtes. Een token
+  // met een accent is in tekens even lang maar in bytes langer; werd er in
+  // tekens vergeleken, dan viel de route om met een 500 in plaats van 401.
+  process.env.METING_TOKEN = "geheim-voorbeeld-token";
+  const handler = await laadRoute();
+  const res = nepRes();
+  await handler(nepReq("GET", { headers: { "x-meting-token": "geheim-voorbeeld-tokén" } }), res);
+  assert.equal(res._status, 401);
+});
+
+test("een fout in één opdracht van de pipeline is een leesfout, geen lege dag", async () => {
+  // Upstash kan HTTP 200 geven met een fout in één opdracht. Ongemerkt
+  // doorlezen maakt daar nullen van, en dan meldt de route 200 met kv:true
+  // terwijl er niets gelezen is: precies het valse "niet geklikt" waar de
+  // bewaking op af zou gaan.
+  process.env.METING_TOKEN = "geheim-voorbeeld-token";
+  vangKV([(opdrachten) => opdrachten.map((_, i) => (i === 1 ? { error: "WRONGTYPE" } : { result: [] }))]);
+  const handler = await laadRoute();
+  const res = nepRes();
+  await handler(nepReq("GET", { headers: { "x-meting-token": "geheim-voorbeeld-token" }, query: { dagen: "3" } }), res);
+
+  assert.equal(res._status, 502);
+  assert.match(res._json.fout, /WRONGTYPE/);
+});
+
+test("een pipeline-antwoord dat geen lijst is, komt naar boven als leesfout", async () => {
+  // Stil een lege lijst teruggeven zou elke dag als leeg laten lezen.
+  process.env.METING_TOKEN = "geheim-voorbeeld-token";
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ onzin: true }) });
+  const handler = await laadRoute();
+  const res = nepRes();
+  await handler(nepReq("GET", { headers: { "x-meting-token": "geheim-voorbeeld-token" } }), res);
+
+  assert.equal(res._status, 502);
+  assert.equal(res._json.ok, false);
+});
+
 test("een onbereikbare KV bij het lezen is een fout, geen lege reeks", async () => {
   // Aan de leeskant zit de Cockpit. Die moet het verschil zien tussen "geen
   // kliks" en "ik kon er niet bij", anders slaat er geen alarm af als het

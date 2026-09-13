@@ -34,6 +34,7 @@ import {
   dagUitHash,
   doorklik,
   VELD_MAX,
+  BODY_MAX,
 } from "../lib/meting.js";
 
 // Preview- en ontwikkeldeploys schrijven in een eigen sleutel met een korte
@@ -47,6 +48,7 @@ function isProef() {
 async function leesBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
   if (typeof req.body === "string" && req.body) {
+    if (req.body.length > BODY_MAX) return null;
     try {
       return JSON.parse(req.body);
     } catch {
@@ -56,8 +58,20 @@ async function leesBody(req) {
   // sendBeacon stuurt een Blob met type text/plain (dat is een CORS-veilig
   // type; met application/json zou de browser een preflight willen die
   // sendBeacon niet kan sturen). Vercel parseert die body dus niet voor ons.
+  //
+  // DE GROOTTE WORDT TWEE KEER GECONTROLEERD, en dat is geen dubbelop: een
+  // opgegeven Content-Length scheelt het inlezen helemaal, maar hij is niet
+  // verplicht en niet te vertrouwen. Daarom telt het lezen zelf ook mee en
+  // stopt het zodra de grens voorbij is, vóór Buffer.concat en JSON.parse.
+  const gemeld = Number(req.headers && req.headers["content-length"]);
+  if (Number.isFinite(gemeld) && gemeld > BODY_MAX) return null;
   const stukken = [];
-  for await (const stuk of req) stukken.push(stuk);
+  let totaal = 0;
+  for await (const stuk of req) {
+    totaal += stuk.length;
+    if (totaal > BODY_MAX) return null;
+    stukken.push(stuk);
+  }
   const tekst = Buffer.concat(stukken).toString("utf8");
   if (!tekst) return null;
   try {
@@ -165,6 +179,10 @@ async function lever(req, res) {
       kv: false,
       waarschuwing: "KV is niet geconfigureerd; er wordt niets geteld en niets bewaard.",
       bijgewerkt: new Date().toISOString(),
+      // Ook hier, want de Cockpit hoort niet twee antwoordvormen te kennen: een
+      // ontbrekend veld dwingt hem tot een uitzondering precies in het geval
+      // waarin hij juist een helder signaal nodig heeft.
+      laatsteDagMetData: null,
       dagen: [],
     });
   }
@@ -185,7 +203,17 @@ async function lever(req, res) {
   // Het versheidssignaal waar het kader om vraagt: de laatste dag waarop er
   // werkelijk iets binnenkwam. Blijft die achter, dan is het instrument stuk —
   // en dat is iets anders dan een dag waarop niemand op het menu klikte.
-  const laatsteMetData = rijen.find((r) => r.weergaven > 0 || Object.keys(r.kliks).length > 0);
+  //
+  // ELKE soort telt hier mee, ook een lade-opening of een veld uit een oudere
+  // menuversie. Kijk je alleen naar weergaven en kliks, dan geldt een dag met
+  // uitsluitend lade-openingen als leeg en slaat de bewaking alarm terwijl het
+  // instrument gewoon werkt.
+  const heeftData = (r) =>
+    r.weergaven > 0 ||
+    Object.keys(r.kliks).length > 0 ||
+    Object.keys(r.laden).length > 0 ||
+    Object.keys(r.overig).length > 0;
+  const laatsteMetData = rijen.find(heeftData);
 
   return res.status(200).json({
     bron: "nlfr-menu",

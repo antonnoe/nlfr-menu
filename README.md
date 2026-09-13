@@ -610,8 +610,11 @@ in de uitleg (36 uur, 14 dagen, twaalf maanden) kloppen met `lib/config.js`.
 
 `ANTHROPIC_API_KEY`, `REVIEW_TOKEN`, `BANNER_TOKEN`, `CRON_SECRET`, `METING_TOKEN`, en een gekoppelde Vercel KV
 (`KV_REST_API_URL` / `KV_REST_API_TOKEN`). De feedpagina werkt ook zonder deze
-vars; alleen de AI-synthese, de reviewtool en het opslaan van de banner hebben
-ze nodig. Zonder KV valt `/api/banner` terug op `banner.json` uit de repo.
+vars; de AI-synthese, de reviewtool, het opslaan van de banner en de levering
+van de menumeting aan de Cockpit hebben ze nodig. Zonder KV valt `/api/banner`
+terug op `banner.json` uit de repo, en telt `/api/meting` niets: de levering
+meldt dat dan met `kv: false` in plaats van nullen te tonen. Zonder
+`METING_TOKEN` gaat die levering helemaal dicht (503).
 
 ## Meting van het menugebruik (`/api/meting`)
 

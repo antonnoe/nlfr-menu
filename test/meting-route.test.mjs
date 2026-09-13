@@ -20,7 +20,7 @@ process.env.KV_REST_API_TOKEN = "test-token";
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { VELD_MAX } from "../lib/meting.js";
+import { VELD_MAX, BODY_MAX } from "../lib/meting.js";
 import { METING_TTL_S, METING_PROEF_TTL_S } from "../lib/config.js";
 
 function nepRes() {
@@ -221,6 +221,40 @@ test("een nieuwe ingang die twee keer in één verzoek staat, telt ook als nieuw
   assert.deepEqual(rondes[1].opdrachten[0].slice(2), ["klik:verzonnen/ingang"]);
 });
 
+test("een body boven de grens wordt niet ingelezen en niet geparseerd", async () => {
+  // GEBEURTENIS_MAX kapt pas af NA het inlezen en parsen. Bij een endpoint dat
+  // voor iedereen openstaat is dat een gratis hefboom: een body van megabytes
+  // kost geheugen en rekentijd voordat er ook maar iets is afgewezen.
+  const rondes = vangKV([]);
+  const handler = await laadRoute();
+
+  // Met een opgegeven Content-Length: er valt dan niets in te lezen.
+  const res = nepRes();
+  await handler(nepReq("POST", {
+    headers: { ...NLFR, "content-length": String(BODY_MAX + 1) },
+    stroom: JSON.stringify({ gebeurtenissen: [{ soort: "weergave" }] }),
+  }), res);
+  assert.equal(rondes.length, 0, "een te grote body hoort niet geteld te worden");
+  assert.equal(res._status, 204);
+
+  // En zonder Content-Length, want die header is niet verplicht en niet te
+  // vertrouwen: dan moet het lezen zelf de grens bewaken.
+  const groot = "x".repeat(BODY_MAX + 100);
+  await handler(nepReq("POST", { headers: NLFR, stroom: groot }), nepRes());
+  assert.equal(rondes.length, 0, "ook zonder Content-Length hoort het lezen te stoppen");
+});
+
+test("een body binnen de grens gaat gewoon door", async () => {
+  // De grens mag geen gewone telling opeten.
+  const rondes = vangKV([]);
+  const handler = await laadRoute();
+  await handler(nepReq("POST", {
+    headers: { ...NLFR, "content-length": "60" },
+    stroom: JSON.stringify({ gebeurtenissen: [{ soort: "weergave" }] }),
+  }), nepRes());
+  assert.equal(rondes.length, 1);
+});
+
 // ---- Leveren ----------------------------------------------------------------
 
 test("zonder METING_TOKEN in de runtime gaat de levering dicht, niet open", async () => {
@@ -270,6 +304,19 @@ test("met het juiste token komen de dagtotalen eruit, nieuwste eerst", async () 
   assert.equal(res._json.laatsteDagMetData, res._json.dagen[0].dag, "het versheidssignaal voor de Cockpit");
   assert.equal(res._json.omgeving, "productie");
   assert.equal(rondes[0].opdrachten.length, 3, "één HGETALL per dag, in één round-trip");
+});
+
+test("een dag met alleen een lade-opening telt als data, niet als leeg", async () => {
+  // Anders geldt zo'n dag als "niets binnengekomen" en slaat de bewaking alarm
+  // terwijl het instrument gewoon werkt.
+  process.env.METING_TOKEN = "geheim-voorbeeld-token";
+  vangKV([(opdrachten) => opdrachten.map((_, i) => (i === 0 ? { result: ["lade:actueel", "3"] } : { result: [] }))]);
+  const handler = await laadRoute();
+  const res = nepRes();
+  await handler(nepReq("GET", { headers: { "x-meting-token": "geheim-voorbeeld-token" }, query: { dagen: "2" } }), res);
+
+  assert.equal(res._json.dagen[0].weergaven, 0);
+  assert.equal(res._json.laatsteDagMetData, res._json.dagen[0].dag);
 });
 
 test("het aantal dagen is begrensd, ook als er meer gevraagd wordt", async () => {

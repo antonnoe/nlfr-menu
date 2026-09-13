@@ -56,4 +56,9 @@ test("de levering meldt met zoveel woorden dat er niets geteld wordt", async () 
   assert.equal(res._json.kv, false, "de Cockpit moet dit als storing kunnen zien");
   assert.match(res._json.waarschuwing, /niet geconfigureerd/i);
   assert.deepEqual(res._json.dagen, [], "en krijgt geen verzonnen nullen voorgeschoteld");
+  // Dezelfde antwoordvorm als bij een werkende KV: een ontbrekend veld zou de
+  // Cockpit dwingen tot een uitzondering precies in het geval waarin hij juist
+  // een helder signaal nodig heeft.
+  assert.ok("laatsteDagMetData" in res._json, "het versheidssignaal hoort er ook hier te staan");
+  assert.equal(res._json.laatsteDagMetData, null);
 });

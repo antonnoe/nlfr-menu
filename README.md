@@ -17,6 +17,9 @@ Ning-editor code beschadigt bij opslaan.
   in KV staat.
 - `banner-beheer.html` — de beheerpagina van de banner (`/banner-beheer`).
 - `api/banner.js` — `GET` (publiek) en `POST` (met `BANNER_TOKEN`).
+- `lib/meting.js` + `api/meting.js` — de meting van het menugebruik: `POST`
+  telt (publiek, vanuit het menu), `GET` levert dagtotalen aan Anton's Cockpit
+  (met `METING_TOKEN`). Zie "Meting van het menugebruik" hieronder.
 - `actueel.json` — de inhoud van de knop **"Nu actueel"** in de strip (één
   compacte rij linkjes). Het menu haalt dit bestand live op; je past het los
   aan, zonder `index.html` aan te raken. Zie "'Nu actueel' bijwerken" hieronder.
@@ -605,10 +608,57 @@ in de uitleg (36 uur, 14 dagen, twaalf maanden) kloppen met `lib/config.js`.
 
 ### Env-vars (in Vercel instellen, zie `.env.example`)
 
-`ANTHROPIC_API_KEY`, `REVIEW_TOKEN`, `BANNER_TOKEN`, `CRON_SECRET`, en een gekoppelde Vercel KV
+`ANTHROPIC_API_KEY`, `REVIEW_TOKEN`, `BANNER_TOKEN`, `CRON_SECRET`, `METING_TOKEN`, en een gekoppelde Vercel KV
 (`KV_REST_API_URL` / `KV_REST_API_TOKEN`). De feedpagina werkt ook zonder deze
 vars; alleen de AI-synthese, de reviewtool en het opslaan van de banner hebben
 ze nodig. Zonder KV valt `/api/banner` terug op `banner.json` uit de repo.
+
+## Meting van het menugebruik (`/api/meting`)
+
+Het menu draait in een iframe op elke pagina van nederlanders.fr en mat tot
+september 2026 niets. Toen het bezoek terugliep was de vraag "komt dat door het
+nieuwe menu?" daardoor niet te beantwoorden: er was geen enkel cijfer over wat
+mensen in dat menu aanklikken. Deze meting beantwoordt die vraag voortaan wel.
+
+**Wat er geteld wordt**, per dag, als tellers in één Redis-hash per dag:
+
+| veld | betekenis |
+| --- | --- |
+| `weergave` | het menu is getoond. Dit is de **noemer**: zonder haar is een daling van de kliks niet te onderscheiden van gewoon minder bezoek. |
+| `lade:<naam>` | een lade of het paneel is opengeklapt (`actueel`, `plaats`, `admin`, `paneel`). Scheidt "niemand opent het menu" van "ze openen het wel en kiezen niets". |
+| `klik:<zone>/<bestemming>` | een ingang is aangeklikt. De zone is `strip`, `paneel`, `subbalk` of `lade-<naam>`; de bestemming is `nlfr<pad>` voor de eigen site en `<host><pad>` daarbuiten. |
+
+**Wat er NIET geteld wordt, en dat is een ontwerpkeuze:** geen cookie, geen
+sessie-id, geen bezoeker-id, niet de pagina waarop het menu stond, en geen
+tijdstippen binnen de dag. Wat overblijft is een teller per ingang per dag. Dat
+zijn geen persoonsgegevens, en het is genoeg om de vraag te beantwoorden.
+`test/meting-client.test.mjs` bewaakt die grens in code: de toets wordt rood
+zodra er een cookie, een localStorage-sleutel, een willekeurig id of
+`document.referrer` bij komt.
+
+**Tellen** gaat met `navigator.sendBeacon` naar `POST /api/meting`: een klik
+navigeert weg, en dat is het enige verzoek dat zo'n navigatie overleeft. De body
+gaat als `text/plain` de deur uit — `application/json` is geen CORS-veilig type
+en zou een preflight vragen die `sendBeacon` niet kan sturen. De route antwoordt
+**altijd 204**, ook als KV plat ligt: aan de andere kant zit een bezoeker die een
+link aanklikt, en voor hem valt er niets te herstellen.
+
+**Lezen** doet Anton's Cockpit met `GET /api/meting?dagen=14` en de header
+`x-meting-token`. Staat `METING_TOKEN` niet in de runtime, dan gaat de levering
+dicht (503), niet open. Het antwoord draagt per dag `weergaven`, `laden`,
+`kliks`, `overig` en `doorklik` (kliks gedeeld door weergaven, `null` als er geen
+weergaven zijn: "niet te zeggen" is iets anders dan "nul procent"). Daarnaast
+staan er twee signalen in voor de bewaking: `kv` (staat de opslag er?) en
+`laatsteDagMetData`. Blijft dat laatste achter, dan is het instrument stuk — en
+dat is iets anders dan een dag waarop niemand op het menu klikte.
+
+Dit is een **meetbron**, geen dashboard: het menu toont zelf niets en alarmeert
+zelf niets. Dat hoort in de Cockpit thuis.
+
+**Preview-deploys schrijven apart.** Ze draaien met dezelfde KV-gegevens als
+productie; zonder scheiding zou elke geopende preview de echte cijfers
+vervuilen. De sleutel is `actueel:meting:<dag>` in productie (400 dagen) en
+`actueel:meting-proef:<dag>` daarbuiten (7 dagen), gestuurd door `VERCEL_ENV`.
 
 ## Bewaking: tests en sonde (GitHub Actions)
 

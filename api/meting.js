@@ -95,11 +95,17 @@ async function tel(req) {
   const sleutel = KEY_METING(dagStempel(new Date()), proef);
   const ttl = proef ? METING_PROEF_TTL_S : METING_TTL_S;
 
-  const opdrachten = [];
-  const namen = [];
-  for (const [veld, aantal] of velden) {
-    namen.push(veld);
-    opdrachten.push(["HINCRBY", sleutel, veld, String(aantal)]);
+  // HEXISTS gaat VOOR de tellingen de deur uit, in dezelfde pipeline en dus in
+  // deze volgorde: zo staat zwart op wit welke velden er al waren. Dat kan niet
+  // uit de uitkomst van HINCRBY worden afgeleid — komt dezelfde nieuwe ingang
+  // twee keer in één verzoek voor, dan telt hij in één keer met 2 op en geeft
+  // HINCRBY dus 2 terug, precies als een veld dat er al stond. Iemand die elke
+  // verzonnen ingang twee keer stuurt, zou de dagsleutel daarmee ongelimiteerd
+  // kunnen laten groeien langs de grens hieronder.
+  const namen = [...velden.keys()];
+  const opdrachten = namen.map((veld) => ["HEXISTS", sleutel, veld]);
+  for (const veld of namen) {
+    opdrachten.push(["HINCRBY", sleutel, veld, String(velden.get(veld))]);
   }
   // EXPIRE elke keer meesturen in plaats van alleen bij de eerste telling van de
   // dag: dat kost niets extra's in dezelfde pipeline en het scheelt een tweede
@@ -116,11 +122,12 @@ async function tel(req) {
   }
 
   // Overloopgrens. De teller staat open voor iedereen; zonder grens kan iemand
-  // de dagsleutel volschrijven met verzonnen ingangen. Nieuwe velden (HINCRBY
-  // gaf 1 terug) gaan er weer uit zodra de sleutel over de grens raakt.
+  // de dagsleutel volschrijven met verzonnen ingangen. Velden die er vóór dit
+  // verzoek nog niet waren (HEXISTS gaf 0) gaan er weer uit zodra de sleutel
+  // over de grens raakt; wat er al stond, blijft staan.
   const lengte = Number(uitslag[uitslag.length - 1] && uitslag[uitslag.length - 1].result);
   if (Number.isFinite(lengte) && lengte > VELD_MAX) {
-    const nieuw = namen.filter((_, i) => Number(uitslag[i] && uitslag[i].result) === 1);
+    const nieuw = namen.filter((_, i) => Number(uitslag[i] && uitslag[i].result) === 0);
     if (nieuw.length) {
       try {
         await pipeline([["HDEL", sleutel, ...nieuw]]);

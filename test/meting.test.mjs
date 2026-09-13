@@ -56,6 +56,31 @@ test("de reeks loopt aaneengesloten terug, ook in de week van de klokwissel", ()
   assert.deepEqual(dagen, ["2025-10-27", "2025-10-26", "2025-10-25", "2025-10-24"]);
 });
 
+test("de reeks slaat geen dag over in de nacht van de voorjaarswissel", () => {
+  // REGRESSIE. De eerste versie telde terug met stappen van 24 uur vanaf nu. Op
+  // 2026-03-29T22:30Z is het in Frankrijk 00:30 op 30 maart; 24 uur eerder is
+  // het daar 23:30 op 28 maart. 29 maart bestond daardoor niet in de reeks, en
+  // de Cockpit kreeg een gat dat er in de opslag niet is.
+  const dagen = laatsteDagen(4, new Date("2026-03-29T22:30:00Z"));
+  assert.deepEqual(dagen, ["2026-03-30", "2026-03-29", "2026-03-28", "2026-03-27"]);
+});
+
+test("de reeks komt niet een dag tekort bij de najaarswissel", () => {
+  // REGRESSIE, dezelfde oorzaak, andere kant op: daar leverde de som twee keer
+  // dezelfde dag en bleef er één over van de vier gevraagde.
+  const dagen = laatsteDagen(4, new Date("2026-10-25T22:30:00Z"));
+  assert.equal(dagen.length, 4, "vier gevraagd is vier geleverd");
+  assert.deepEqual(dagen, ["2026-10-25", "2026-10-24", "2026-10-23", "2026-10-22"]);
+});
+
+test("er komen altijd precies zoveel dagen terug als er gevraagd zijn", () => {
+  // De Cockpit leest deze lijst als een reeks; een korte lijst is daar een gat
+  // in de geschiedenis, niet een dag zonder kliks.
+  for (const stip of ["2026-03-29T22:30:00Z", "2026-10-25T22:30:00Z", "2026-07-01T12:00:00Z"]) {
+    assert.equal(laatsteDagen(14, new Date(stip)).length, 14, "bij " + stip);
+  }
+});
+
 test("laatsteDagen geeft de nieuwste dag eerst en nooit een dubbele", () => {
   const dagen = laatsteDagen(31, new Date("2026-03-02T12:00:00Z"));
   assert.equal(dagen[0], "2026-03-02", "nieuwste eerst");

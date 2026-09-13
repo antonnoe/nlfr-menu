@@ -86,9 +86,10 @@ test("een telling gaat als HINCRBY naar de dagsleutel, met een verloopdatum", as
   assert.equal(rondes.length, 1, "alles in één round-trip, niet één per teller");
   const opdrachten = rondes[0].opdrachten;
   assert.match(rondes[0].url, /\/pipeline$/);
-  assert.deepEqual(opdrachten[0].slice(0, 1), ["HINCRBY"]);
-  assert.match(opdrachten[0][1], /^actueel:meting:\d{4}-\d{2}-\d{2}$/, "productie schrijft in de echte sleutel");
-  assert.deepEqual(opdrachten.map((o) => o[2]).slice(0, 2), ["weergave", "lade:actueel"]);
+  const tellingen = opdrachten.filter((o) => o[0] === "HINCRBY");
+  assert.equal(tellingen.length, 2, "één telling per gebeurtenis");
+  assert.match(tellingen[0][1], /^actueel:meting:\d{4}-\d{2}-\d{2}$/, "productie schrijft in de echte sleutel");
+  assert.deepEqual(tellingen.map((o) => o[2]), ["weergave", "lade:actueel"]);
   const expire = opdrachten.find((o) => o[0] === "EXPIRE");
   assert.ok(expire, "zonder EXPIRE groeit de reeks eindeloos door");
   assert.equal(expire[2], String(METING_TTL_S));
@@ -163,7 +164,8 @@ test("boven de veldgrens gaan de nieuw aangemaakte ingangen er weer uit", async 
   // dagsleutel vol met verzonnen ingangen, en die blijven staan.
   process.env.VERCEL_ENV = "production";
   const rondes = vangKV([
-    (opdrachten) => opdrachten.map((o) => (o[0] === "HLEN" ? { result: VELD_MAX + 1 } : { result: 1 })),
+    (opdrachten) => opdrachten.map((o) =>
+      (o[0] === "HLEN" ? { result: VELD_MAX + 1 } : o[0] === "HEXISTS" ? { result: 0 } : { result: 1 })),
     () => [{ result: 1 }],
   ]);
   const handler = await laadRoute();
@@ -180,12 +182,11 @@ test("boven de veldgrens gaan de nieuw aangemaakte ingangen er weer uit", async 
 });
 
 test("een bestaande ingang blijft staan als de grens wordt geraakt", async () => {
-  // HINCRBY geeft 1 terug bij een nieuw veld. Een teller die op 2 of hoger
-  // staat, bestond al en hoort niet opgeruimd te worden — anders wist de grens
-  // de cijfers van gisteren.
+  // HEXISTS geeft 1 voor een veld dat er al stond. Dat hoort niet opgeruimd te
+  // worden, anders wist de grens de cijfers van gisteren.
   process.env.VERCEL_ENV = "production";
   const rondes = vangKV([
-    (opdrachten) => opdrachten.map((o) => (o[0] === "HLEN" ? { result: VELD_MAX + 1 } : { result: 9 })),
+    (opdrachten) => opdrachten.map((o) => (o[0] === "HLEN" ? { result: VELD_MAX + 1 } : { result: 1 })),
   ]);
   const handler = await laadRoute();
   await handler(nepReq("POST", {
@@ -194,6 +195,30 @@ test("een bestaande ingang blijft staan als de grens wordt geraakt", async () =>
   }), nepRes());
 
   assert.equal(rondes.length, 1, "er valt niets op te ruimen, dus geen tweede ronde");
+});
+
+test("een nieuwe ingang die twee keer in één verzoek staat, telt ook als nieuw", async () => {
+  // REGRESSIE. Nieuwheid werd afgeleid uit de uitkomst van HINCRBY: 1 betekende
+  // nieuw. Maar twee dezelfde gebeurtenissen in één verzoek tellen in één keer
+  // met 2 op, en dan geeft HINCRBY 2 — niet te onderscheiden van een veld dat er
+  // al stond. Wie elke verzonnen ingang twee keer stuurt, liep zo langs de grens
+  // heen en kon de dagsleutel ongelimiteerd laten groeien. HEXISTS gaat nu vóór
+  // de telling de deur uit en zegt het onafhankelijk.
+  process.env.VERCEL_ENV = "production";
+  const rondes = vangKV([
+    (opdrachten) => opdrachten.map((o) =>
+      (o[0] === "HLEN" ? { result: VELD_MAX + 1 } : o[0] === "HEXISTS" ? { result: 0 } : { result: 2 })),
+    () => [{ result: 1 }],
+  ]);
+  const handler = await laadRoute();
+  await handler(nepReq("POST", {
+    headers: NLFR,
+    body: { gebeurtenissen: [{ soort: "klik", id: "verzonnen/ingang" }, { soort: "klik", id: "verzonnen/ingang" }] },
+  }), nepRes());
+
+  assert.equal(rondes[0].opdrachten[0][0], "HEXISTS", "de bestaanscheck gaat vóór de telling");
+  assert.equal(rondes.length, 2, "de verzonnen ingang hoort alsnog opgeruimd te worden");
+  assert.deepEqual(rondes[1].opdrachten[0].slice(2), ["klik:verzonnen/ingang"]);
 });
 
 // ---- Leveren ----------------------------------------------------------------

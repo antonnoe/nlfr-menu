@@ -904,6 +904,7 @@
 
   function zetPaneel(open){
     if (open) sluitLade();
+    if (open) meet("lade", "paneel"); // zie de meting onderaan dit script
     paneel.classList.toggle("open", open);
     menubtn.classList.toggle("active", open);
     menubtn.setAttribute("aria-expanded", open ? "true" : "false");
@@ -971,6 +972,7 @@
     if (!naam || ladeNu === naam) { sluitLade(); report(); return; }
     sluitLade();
     if (naam !== "msite") zetPaneel(false);
+    meet("lade", naam); // alleen bij OPENEN; sluiten valt hierboven al af
     ladeNu = naam;
     ladeKnop = knop || null;
     lade.innerHTML = ladeHTML(naam);
@@ -1246,7 +1248,99 @@
     else if (mq.addListener) mq.addListener(bijWissel);
   }
 
+  // ---- Meting: wat er in dit menu gebruikt wordt --------------------------
+  // Drie dingen gaan naar /api/meting: dat het menu getoond is, dat een lade of
+  // het paneel openging, en welke ingang is aangeklikt. Dagtotalen, meer niet.
+  // Geen cookie, geen sessie, geen identiteit, en ook niet op welke pagina het
+  // menu stond. Zie lib/meting.js voor wat er aan de andere kant mee gebeurt.
+  //
+  // De weergave is de noemer en daarom het belangrijkste getal: zonder haar is
+  // een daling van de kliks niet te onderscheiden van gewoon minder bezoek.
+  //
+  // Meten mag dit menu nooit breken. Alles hieronder staat in een try, en een
+  // mislukte verzending blijft stil: voor de bezoeker valt er niets te
+  // herstellen, en dit iframe staat op elke pagina van de site.
+  var MEET_URL = "/api/meting";
+  var meetRij = [];
+
+  function meetDoel(href){
+    // Een lege href verwijst naar de pagina zelf en een kale "#" nergens heen.
+    // Zonder deze afslag zou zo'n link als bestemming het menu-iframe zelf
+    // opleveren, en dat is geen ingang die iemand gekozen heeft.
+    var ruw = String(href == null ? "" : href).trim();
+    if (!ruw || ruw.charAt(0) === "#") return "";
+    var u;
+    try { u = new URL(ruw, location.href); } catch (e) { return ""; }
+    if (u.protocol !== "http:" && u.protocol !== "https:") return "";
+    var host = u.hostname.replace(/^www\./, "");
+    var pad = u.pathname.replace(/\/+$/, "");
+    if (host === "nederlanders.fr") {
+      // De ankerlink naar de activiteitenstroom is een eigen bestemming; zonder
+      // het anker zouden alle homepage-ingangen op één hoop belanden.
+      return "nlfr" + pad + (u.hash ? "~" + u.hash.slice(1) : "");
+    }
+    // Bij externe bestemmingen is de host het antwoord op "waar ging hij heen";
+    // twee padstukken erbij houdt het herkenbaar zonder de id op te blazen.
+    return host + pad.split("/").slice(0, 3).join("/");
+  }
+
+  function meetZone(a){
+    var kaart = a.closest(".ladekaart");
+    if (kaart) {
+      var naam = "";
+      for (var i = 0; i < kaart.classList.length; i += 1) {
+        if (kaart.classList[i] !== "ladekaart") { naam = kaart.classList[i]; break; }
+      }
+      return "lade-" + (naam || "onbekend");
+    }
+    if (a.closest(".paneel")) return "paneel";
+    if (a.closest(".subbalk")) return "subbalk";
+    if (a.closest(".strip")) return "strip";
+    // De banner staat buiten al die vlakken en is wél een ingang met een eigen
+    // bedoeling. Zonder een eigen zone zou hij in "overig" belanden, en dat is
+    // de bak voor wat we niet thuis kunnen brengen: dan telt een wervende knop
+    // mee in het doorklikcijfer zonder dat iemand weet dat hij erin zit.
+    if (a.closest("#bannerhost")) return "banner";
+    return "overig";
+  }
+
+  function meet(soort, id){
+    try { meetRij.push({ soort: soort, id: id }); } catch (e) { /* stil */ }
+  }
+
+  function meetSpoel(){
+    if (!meetRij.length) return;
+    var lading = JSON.stringify({ gebeurtenissen: meetRij });
+    meetRij = [];
+    try {
+      // text/plain, geen application/json: dat laatste is geen CORS-veilig type
+      // en zou een preflight vragen die sendBeacon niet kan sturen. De route
+      // leest de body zelf, ongeacht wat er boven staat.
+      var blok = new Blob([lading], { type: "text/plain;charset=UTF-8" });
+      if (navigator.sendBeacon && navigator.sendBeacon(MEET_URL, blok)) return;
+      fetch(MEET_URL, { method: "POST", body: lading, keepalive: true }).catch(function(){});
+    } catch (e) { /* meten mag het menu niet in de weg zitten */ }
+  }
+
+  // Een klik betekent meestal wegnavigeren, dus die gaat er meteen uit;
+  // sendBeacon overleeft dat. De rest gaat mee als de pagina verdwijnt.
+  document.addEventListener("click", function(e){
+    var el = e && e.target;
+    if (!el || typeof el.closest !== "function") return;
+    var a = el.closest("a[href]");
+    if (!a) return;
+    var doel = meetDoel(a.getAttribute("href"));
+    if (!doel) return;
+    meet("klik", meetZone(a) + "/" + doel);
+    meetSpoel();
+  });
+  window.addEventListener("pagehide", meetSpoel);
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "hidden") meetSpoel();
+  });
+
   // ---- Opstarten ---------------------------------------------------------
+  meet("weergave");
   bouwSubbalk();
   bouwPaneel();
   laadActueel();

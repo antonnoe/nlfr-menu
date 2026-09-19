@@ -101,7 +101,8 @@ vensterhoogte gecapt te worden: hij is altijd kort.
 - Gepubliceerde redactiesyntheses verschijnen automatisch bovenaan de feed met
   het label *"Redactie NLFR — automatisch samengesteld, bronnen onderaan"*.
 - Concepten worden nooit vanzelf live gezet. Beoordeel ze op
-  `https://nlfr-menu.vercel.app/review?token=…` (het token is de Vercel-env-var
-  `REVIEW_TOKEN`; deel de link niet publiek). De reviewtool is mobielvriendelijk:
+  `https://nlfr-menu.vercel.app/review`. Die pagina zit achter een login: de
+  eerste keer een inloglink per mail, daarna een vingerafdruk of gezichtsscan op
+  het apparaat zelf (zie `docs/login.md`). De reviewtool is mobielvriendelijk:
   per concept de tekst + bronnenlijst met de knoppen **Publiceer** / **Weg** en
   inline tekst bewerken.

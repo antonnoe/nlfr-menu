@@ -1,5 +1,13 @@
 # Onderzoek — "Nu actueel" zelf aan- en uitzetten vanuit het tandwiel
 
+> **Achterhaald op 19 september 2026.** Dit stuk beschrijft de toenmalige
+> afscherming met `REVIEW_TOKEN` en stelt een tweede gedeeld token
+> (`MENU_BEHEER_TOKEN`) voor. `REVIEW_TOKEN` bestaat niet meer: `/review` draait
+> sindsdien op Supabase Auth met magic link en passkeys. Een nieuw beheerpaneel
+> hoort die loginlaag te gebruiken en geen nieuw gedeeld geheim. Zie
+> `docs/login.md`. De rest van dit document (de analyse van het menu zelf) blijft
+> bruikbaar.
+
 Status: **onderzoek**. Er is in deze commit geen enkele regel functionele code
 gewijzigd; alleen dit document is toegevoegd. Alles hieronder is vastgesteld uit
 de code in deze repo (`index.html`, `actueel.json`, `api/`, `lib/`,

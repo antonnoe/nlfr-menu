@@ -22,14 +22,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { startNepKv, roeper } from "./fixtures/nep-kv.mjs";
+import { startNepSessie } from "./fixtures/nep-supabase.mjs";
 
 // De namaak-KV staat in test/fixtures/nep-kv.mjs: dezelfde REST-vorm als
 // Upstash, in het geheugen, zodat de ECHTE route en de echte sleutelnamen
 // meedraaien. startNepKv() zet ook de env-vars, en dat moet vóór de import van
 // lib/store.js gebeuren — vandaar de dynamische imports hieronder.
 const { db, sluit } = await startNepKv();
-process.env.REVIEW_TOKEN = "geheim";
+const { cookie, sluit: sluitSb } = await startNepSessie();
 test.after(sluit);
+test.after(sluitSb);
 
 const C = await import("../lib/config.js");
 const review = (await import("../api/review.js")).default;
@@ -82,7 +84,7 @@ function zetVulling() {
   db.set(C.KEY_ACTUEEL_ARCHIEF_SNAPSHOT, JSON.stringify(voorDeKlik.archief));
 }
 
-const roep = roeper(review, "geheim");
+const roep = roeper(review, cookie);
 
 // ---- De keten, schakel voor schakel ---------------------------------------
 

@@ -7,10 +7,12 @@
 //   POST  alleen met "Authorization: Bearer <BANNER_TOKEN>". Valideert het hele
 //         record (lib/banner.js) en schrijft het naar KV.
 //
-// BANNER_TOKEN is een nieuwe env-var in Vercel, los van REVIEW_TOKEN: wie de
-// banner beheert hoeft niet ook bij de redactietool te kunnen.
+// BANNER_TOKEN is een eigen env-var in Vercel, los van de Supabase-login op
+// /review: wie de banner beheert hoeft niet ook bij de redactietool te kunnen.
+// Deze route kan later dezelfde loginlaag krijgen (zie docs/login.md); dat is
+// bewust buiten die wijziging gehouden.
 //
-// Bewust GEEN token in de querystring (zoals de reviewtool die nog kent): een
+// Bewust GEEN token in de querystring: een
 // URL komt in serverlogs en in de geschiedenis van de browser terecht. De
 // beheerpagina bewaart hem in localStorage en stuurt hem als header mee.
 

@@ -54,15 +54,19 @@ export async function startNepKv() {
 }
 
 // Roept een route-handler aan met een minimale req/res, en geeft de uitkomst.
-export function roeper(handler, token) {
+// `cookie` is de sessiecookie zoals een ingelogde browser hem stuurt; zie
+// test/fixtures/nep-supabase.mjs. Hiervóór stond hier een beheertoken in een
+// header — dat token bestaat niet meer, de sessie heeft zijn plaats ingenomen.
+export function roeper(handler, cookie) {
   return async function roep(method, body) {
     const res = { code: 0, body: null, headers: {} };
     res.setHeader = (k, v) => { res.headers[k] = v; };
+    res.getHeader = (k) => res.headers[k];
     res.status = (c) => { res.code = c; return res; };
     res.json = (j) => { res.body = j; return res; };
     res.end = () => res;
     await handler(
-      { method, url: `/api/review?token=${token}`, headers: { "x-review-token": token }, body },
+      { method, url: "/api/review", headers: { cookie, host: "nlfr-menu.test" }, body },
       res
     );
     return res;

@@ -32,6 +32,18 @@ test.after(sluit);
 
 const { default: middleware, config } = await import("../middleware.js");
 
+// Leest de sessie terug uit een Set-Cookie-regel, zoals @supabase/ssr hem
+// schrijft: "naam=base64-<base64url van de JSON>; Path=/; …".
+function leesSessieUitCookie(regel) {
+  const waarde = regel.split(";")[0].split("=").slice(1).join("=");
+  if (!waarde.startsWith("base64-")) return waarde;
+  try {
+    return Buffer.from(waarde.slice("base64-".length), "base64url").toString("utf8");
+  } catch {
+    return waarde;
+  }
+}
+
 function verzoek(pad, cookie) {
   const kop = new Headers();
   if (cookie) kop.set("cookie", cookie);
@@ -69,8 +81,73 @@ test("een cookie met een token dat Supabase niet kent, helpt niet", async () => 
 
 test("een geldige sessie op de lijst laat het verzoek door", async () => {
   const uit = await middleware(verzoek("/review", cookieKop(sessieRedactie)));
-  // undefined = doorlaten; er komt geen Response.
-  assert.equal(uit, undefined);
+  // next() geeft een Response met x-middleware-next: 1 — "ga door naar het
+  // statische bestand". Geen 302, geen eigen inhoud.
+  assert.equal(uit.status, 200);
+  assert.equal(uit.headers.get("x-middleware-next"), "1");
+});
+
+// ---- De ververste sessie ----------------------------------------------------
+// DE FOUT DIE HIER ONDER LIGT (Codex op PR #51, zie docs/login.md §4.1).
+// getUser() doet meer dan lezen: bij een verlopen access token ververst hij de
+// sessie en roept setAll aan. Die setAll was leeg, dus de nieuwe cookies
+// verdwenen terwijl de pagina doorging — en Supabase had het oude refresh token
+// intussen wél verbruikt. De redacteur vloog er dan even later uit, midden in
+// zijn werk, zonder dat ergens te zien was waaraan het lag.
+
+test("een verlopen access token met geldig refresh token wordt ververst én doorgegeven", async () => {
+  const verlopen = nepSessie(REDACTIE, { token: "oud-token", refresh: "refresh-oud", verlopen: true });
+  const vers = nepSessie(REDACTIE, { token: "vers-token", refresh: "refresh-vers" });
+  const { sluit: sluitVers } = await startNepSupabase(
+    { "vers-token": vers.user },
+    { "refresh-oud": vers }
+  );
+  try {
+    const uit = await middleware(verzoek("/review", cookieKop(verlopen)));
+    assert.equal(uit.status, 200, "de sessie is geldig, dus de pagina hoort door te gaan");
+    assert.equal(uit.headers.get("x-middleware-next"), "1");
+
+    const koekjes = uit.headers.getSetCookie();
+    assert.ok(koekjes.length >= 1, "de ververste sessie hoort op het antwoord te staan");
+    const inhoud = koekjes.map(leesSessieUitCookie).join(" ");
+    assert.match(inhoud, /vers-token/, "de cookie hoort het NIEUWE access token te dragen");
+    assert.doesNotMatch(inhoud, /oud-token/, "en niet het verbruikte oude");
+  } finally {
+    await sluitVers();
+  }
+});
+
+test("ook op de weg naar /login gaan ververste cookies mee", async () => {
+  // Zelfde verversing, maar het adres staat niet op de lijst. De bezoeker gaat
+  // naar /login — en hoort daar niet aan te komen met een refresh token dat
+  // Supabase al heeft ingewisseld.
+  const verlopen = nepSessie(VREEMDE, { token: "oud-v", refresh: "refresh-v", verlopen: true });
+  const vers = nepSessie(VREEMDE, { token: "vers-v", refresh: "refresh-v2" });
+  const { sluit: sluitVers } = await startNepSupabase({ "vers-v": vers.user }, { "refresh-v": vers });
+  try {
+    const uit = await middleware(verzoek("/review", cookieKop(verlopen)));
+    assert.equal(uit.status, 302);
+    assert.match(uit.headers.get("location"), /reden=geenrecht/);
+    assert.ok(uit.headers.getSetCookie().length >= 1, "de ververste cookie hoort ook hier mee te gaan");
+  } finally {
+    await sluitVers();
+  }
+});
+
+test("de cookies die de middleware zet zijn Secure en gelden voor de hele site", async () => {
+  const verlopen = nepSessie(REDACTIE, { token: "oud-s", refresh: "refresh-s", verlopen: true });
+  const vers = nepSessie(REDACTIE, { token: "vers-s", refresh: "refresh-s2" });
+  const { sluit: sluitVers } = await startNepSupabase({ "vers-s": vers.user }, { "refresh-s": vers });
+  try {
+    const uit = await middleware(verzoek("/review", cookieKop(verlopen)));
+    for (const regel of uit.headers.getSetCookie()) {
+      assert.match(regel, /Path=\//);
+      assert.match(regel, /Secure/, "het verzoek kwam over https binnen");
+      assert.match(regel, /SameSite=Lax/);
+    }
+  } finally {
+    await sluitVers();
+  }
 });
 
 test("ook /review.html wordt bewaakt, niet alleen /review", async () => {

@@ -163,8 +163,11 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
   (`KEY_CRON_RONDE`) met de telling per stap van de persketen. Zie "De
   persketen meet zichzelf" hieronder.
   `?diagnose=1` meet de keten zonder iets te schrijven en zonder modelaanroep.
-- `/review?token=…` — mobielvriendelijke reviewtool. Publiceer / Weg / inline
-  bewerken. Concepten verlopen automatisch na `CONCEPT_TTL_S` (nu 36 uur).
+- `/review` — mobielvriendelijke reviewtool, achter de login (zie
+  `docs/login.md`). Publiceer / Weg / inline bewerken. Concepten verlopen
+  automatisch na `CONCEPT_TTL_S` (nu 36 uur).
+- `/login` — inloglink per mail of passkey. `/auth/callback` wisselt de link in
+  voor een sessie.
 
 ### De persketen meet zichzelf
 
@@ -707,123 +710,24 @@ Een sonde die permanent rood staat bewaakt niets: de volgende echte bevinding
 verdwijnt in de ruis die er elke dag al stond. Dat gold meteen voor I14 en I15,
 die er juist zijn omdat de persketen veertig uur onzichtbaar stil kon liggen.
 
-### Het beheertoken bewaren, en wat er op mobiel misging
+### Het beheertoken bewaren — vervallen
 
-**Opslagvorm.** Het token staat als kale tekenreeks in `localStorage` onder
-`nlfr_review_token`, weggeschreven door een script op de pagina zelf.
-`/banner-beheer` doet hetzelfde met een eigen sleutel.
+Hier stond ruim honderd regels over het bewaren van `REVIEW_TOKEN` in de browser:
+het baken `nlfr_review_baken`, de vingerafdruk `nlfr_review_tokenvorm`, de
+KV-ring `KEY_OPSLAGMELDING`, het oordeel per toestel in `lib/opslagmelding.js`,
+en de tabel met codes (`opslag-werkt`, `schrijven-mislukt`,
+`gewist-tussen-bezoeken`, `eerste-bezoek`).
 
-**Wat er misging.** Op desktop werkte het; op mobiel moest het token bij elk
-bezoek opnieuw worden ingevoerd, terwijl het scherm zei *"Het beheertoken is in
-deze browser bewaard."* Die zin stond er zodra het token in het **geheugen**
-zat. Het wegschrijven zag er zo uit:
+Dat is allemaal verwijderd. De vraag die het beantwoordde — *heeft deze browser
+mijn token nog?* — bestaat niet meer: `/review` draait op een Supabase-sessie in
+een cookie, die de server zelf kan zien en zelf kan verversen. Zie
+**`docs/login.md`**.
 
-```js
-try { localStorage.setItem(TOKENSLEUTEL, t); } catch(e){}
-```
-
-Een lege catch. Weigert de browser te schrijven, dan gebeurde er niets en zei de
-pagina dat het gelukt was. Juist die onwaarheid maakte het onvindbaar: er was
-geen zichtbaar verschil tussen bewaard en weggegooid.
-
-**Wat er nu gebeurt.** De opslaglaag controleert zichzelf:
-
-1. **Terugleen.** Een schrijfactie geldt pas als geslaagd wanneer hetzelfde
-   eruit komt als erin ging. Dat vangt ook de browsers die niet gooien maar de
-   waarde stil laten vallen.
-2. **Terugval op `sessionStorage`** als `localStorage` niet werkt — die
-   overleeft het sluiten van het tabblad niet, maar wel het navigeren binnen het
-   bezoek. De pagina zegt dat er dan ook bij.
-3. **De fout bij naam.** `QuotaExceededError` (privémodus op iOS),
-   `SecurityError` (geblokkeerde site-gegevens), of "schrijft niets weg". Op een
-   telefoon is er geen ontwikkelaarsgereedschap; de diagnose staat daarom op de
-   pagina zelf, in overtikbare vorm.
-4. **Een baken.** Bij elk bezoek wordt `nlfr_review_baken` weggeschreven. Dat
-   beantwoordt de vraag die het token alleen niet kan beantwoorden: staat het
-   baken er nog maar het token niet, dan is het token gericht verdwenen; is
-   alles weg terwijl de opslag verder werkt, dan heeft de browser de
-   site-gegevens opgeruimd.
-5. **De ingebedde context.** Staat `/review` in een kader binnen een andere
-   pagina, dan houden mobiele browsers die opslag apart van dezelfde site op
-   zichzelf, of weigeren hem. De pagina herkent dat (`window.top !==
-   window.self`) en zegt het.
-
-**Wat er bewaard is, en wat er verstuurd wordt.** Op 6 september bleek bij een
-tweede bezoek een token van 32 tekens te vertrekken terwijl er 22 was
-opgeslagen. Er wordt dus wél iets bewaard en meegestuurd, maar niet wat erin
-ging — en met alleen *"er ging een token van 32 tekens mee"* is niet te zien
-welke kant je op moet zoeken.
-
-Bij het opslaan wordt daarom de **vorm** van het token vastgelegd onder
-`nlfr_review_tokenvorm`: lengte plus een korte, niet-omkeerbare vingerafdruk.
-Bij een volgend bezoek wordt het teruggelezen token daarmee vergeleken.
-
-- Verschillen ze → `token-veranderd`. Geen verlopen token maar een **andere
-  waarde op die plek**: een oude snelkoppeling met `?token=…` (die overschrijft
-  het bewaarde token bij élk bezoek), autovullen bij het opslaan, of iets anders
-  dat over deze sleutel heen schrijft.
-- Komen ze overeen maar klopt de lengte niet met wat je hebt geplakt → dan stond
-  er bij het **opslaan** al iets anders in het veld.
-
-**Nooit het token zelf.** Deze waarden gaan het scherm op en de KV-ring in, en
-een verkeerd token kan van alles zijn — een wachtwoord uit een kluis
-bijvoorbeeld. Voor de vraag *"is dit hetzelfde token als toen"* is een hash
-genoeg, en meer is te veel.
-
-**De melding blijft staan, en gaat ook naar de server.** Op Android verscheen de
-diagnose en verdween hij binnen een fractie van een seconde: te snel om te
-lezen, te snel voor een schermafdruk. Twee dingen zijn daarom veranderd.
-
-1. **Hij verdwijnt niet meer vanzelf.** Wat er eenmaal stond, blijft staan tot de
-   lezer op **Sluiten** tikt. Een poging tot verbergen wordt geteld
-   (`zouVerbergen`) en gaat mee in de melding — het gedrag wegnemen zonder het
-   te tellen zou de vraag *waarom* hij knipperde onbeantwoord laten.
-2. **Elke melding gaat mee met het beheertoken naar KV** (`KEY_OPSLAGMELDING`,
-   een ring van twaalf, TTL dertig dagen) en is in `/review` na te lezen op een
-   groot scherm. Mét het token en niet zonder: dat token wordt tóch elk bezoek
-   ingetikt, en een open schrijfroute zou een vreemde in staat stellen de ring
-   vol te duwen en de metingen eruit te drukken. De melding vertrekt pas ná een
-   geslaagde `GET`, niet ernaast — twee verzoeken tegelijk met hetzelfde token
-   betekende dat een 401 op de één het antwoord van de ander als verouderd
-   weggooide.
-
-**Het oordeel** (`lib/opslagmelding.js`) staat **per toestel**. De ring bevat de
-meldingen van elke browser die `/review` opent: de telefoon die onderzocht wordt
-én de desktop waarop het resultaat wordt gelezen. Die op één hoop beoordelen
-keek naar de nieuwste melding, en dat is bijna altijd de desktop waarop je zit
-te lezen.
-
-| code | wat het betekent | wat helpt |
-| --- | --- | --- |
-| `opslag-werkt` | De browser schrijft weg én vindt het bij een volgend bezoek terug. | Niets. Dit toestel mankeert niets — al zegt het niets over een browser die tussendoor helemaal wordt afgesloten. |
-| `schrijven-mislukt` | De browser weigert weg te schrijven. | Een servercookie lost dit **niet** op; er is geen plek om iets te bewaren. |
-| `gewist-tussen-bezoeken` | Het token wordt weggeschreven **én teruggelezen**, maar bij elk volgend bezoek is álles weg. | Een opruiming achteraf: de instelling die sitegegevens wist bij het afsluiten. In Samsung Internet: Instellingen → Persoonlijke browsegegevens → Persoonlijke gegevens verwijderen bij afsluiten. |
-| `eerste-bezoek` | Deze browser is hier één keer geweest. | Nog een keer `/review` openen op ditzelfde toestel. |
-
-`opslag-werkt` ontbrak aanvankelijk, en dat was de ergste omissie: een toestel
-waar alles goed ging viel door naar "onbekend", en dan stond er *"open /review
-nog een keer"* tegen iemand die het al zes keer had gedaan.
-
-Het oordeel hangt aan het **gemeten gedrag**, niet aan de naam van de browser:
-een user-agent is een zelfverklaring en kan liegen. Die naam noemt wél het
-toestel erbij (`Chrome op Android`, `Chrome op Windows`) — zonder platform heten
-een telefoon en een desktop allebei "Chrome", en dan staan er twee identieke
-regels boven twee heel verschillende metingen.
-
-**Waar het staat.** Onderaan `/review`, ónder het redactiewerk, achter één regel
-`Opslagmeldingen (n)` die je zelf openklapt. Het oordeel per toestel staat
-meteen zichtbaar; de kaarten met user-agent-strings zitten erachter. Ze stonden
-eerst pal boven Concepten, en dat is ontwikkelaarsgereedschap in een
-productiegereedschap.
-
-**Welke vorm blijft op mobiel wél staan.** Voor het geval dat het schrijven
-*slaagt* maar de waarde later verdwijnt, is de duurzamere vorm een cookie die de
-**server** zet (`Set-Cookie`, `HttpOnly; Secure; SameSite=Lax`): iOS Safari kapt
-opslag die door een script is gezet — `localStorage` én `document.cookie` — af na
-zeven dagen zonder interactie met de site, en die grens geldt niet voor een
-door de server gezette cookie. Dat is nog niet gebouwd: eerst moet de diagnose
-hierboven uitwijzen of het schrijven mislukt (dan helpt een cookie niet) of pas
-later wordt opgeruimd (dan wel).
+Eén ding uit dat hoofdstuk is het onthouden waard, want het geldt nog steeds:
+iOS Safari kapt opslag die door een script is gezet af na zeven dagen zonder
+interactie met de site. Dat raakt ook de sessiecookie. In de praktijk betekent
+het: wie een week niet op `/review` komt, logt daarna opnieuw in — met één
+aanraking, want het apparaat is ingesteld.
 
 ### De webhook-secret `SONDE_WEBHOOK_URL`
 

@@ -78,11 +78,56 @@ test("een adres buiten de lijst krijgt precies hetzelfde antwoord als een adres 
 });
 
 test("er wordt geen mail verstuurd voor een adres buiten de lijst", async () => {
-  // De namaakserver antwoordt op alles buiten /auth/v1/user met 400. Zou de
-  // route tóch signInWithOtp aanroepen, dan kwam er een 502 uit in plaats van
-  // de neutrale 200 hierboven.
   const res = await vraagLink("vreemde@elders.nl");
-  assert.equal(res.code, 200, "de route hoort Supabase niet eens aan te raken");
+  assert.equal(res.code, 200);
+  assert.equal(res.body.ok, true);
+});
+
+// ---- De lijst mag ook bij STORING niet uitlekken ---------------------------
+// DE FOUT DIE HIER ONDER LIGT (Copilot op PR #51, zie docs/login.md §4.4). Een
+// adres buiten de lijst kreeg 200, maar een adres erop kreeg 502 zodra Supabase
+// weigerde — en 503 wanneer de configuratie ontbrak. Daarmee is deze publieke
+// route alsnog een orakel: tik adressen in tijdens een storing en de statuscode
+// wijst aan wie er toegang heeft.
+//
+// De namaak-Supabase in deze toetsen kent /auth/v1/otp niet en antwoordt met
+// 400. Het adres ÓP de lijst loopt hier dus altijd tegen een storing aan — wat
+// deze toetsen precies bruikbaar maakt.
+
+test("een adres op de lijst krijgt bij een storing dezelfde 200 als een adres erbuiten", async () => {
+  const binnen = await vraagLink(REDACTIE);
+  const buiten = await vraagLink("vreemde@elders.nl");
+  assert.equal(binnen.code, buiten.code, "de statuscode mag de lijst niet verraden");
+  assert.equal(binnen.code, 200);
+  assert.deepEqual(binnen.body, buiten.body, "en het antwoord zelf evenmin");
+});
+
+test("ook zonder Supabase-configuratie zijn de twee antwoorden gelijk", async () => {
+  const bewaard = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "";
+  try {
+    const binnen = await vraagLink(REDACTIE);
+    const buiten = await vraagLink("vreemde@elders.nl");
+    assert.equal(binnen.code, 200, "een 503 hier wijst aan dat dit adres op de lijst staat");
+    assert.deepEqual(binnen.body, buiten.body);
+  } finally {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = bewaard;
+  }
+});
+
+test("de storing zelf komt wél in de logs terecht", async () => {
+  // Neutraal naar buiten is geen excuus om het binnen ook stil te houden: dan
+  // is een kapotte mailkoppeling niet van een lege mailbox te onderscheiden.
+  const echt = console.error;
+  const regels = [];
+  console.error = (...a) => regels.push(a.join(" "));
+  try {
+    await vraagLink(REDACTIE);
+  } finally {
+    console.error = echt;
+  }
+  assert.ok(regels.length, "een mislukte verzending hoort gelogd te worden");
+  assert.match(regels.join("\n"), /inloglink/);
 });
 
 test("een onbruikbaar adres krijgt wél een eigen melding", async () => {

@@ -11,6 +11,20 @@
 // adressen in tot er één "verstuurd" zegt. Wie niet op de lijst staat krijgt
 // dus dezelfde bevestiging — en geen mail.
 //
+// OOK BIJ STORING (Copilot op PR #51, zie docs/login.md §4.4). De eerste versie
+// gaf 502 bij een fout van Supabase en 503 bij ontbrekende configuratie. Allebei
+// alleen voor een adres dat OP de lijst staat, want een adres erbuiten kwam daar
+// niet eens aan toe — waarmee de route juist tijdens een storing verried wie er
+// toegang heeft. Nu gaat elke uitkomst behalve een onbruikbaar adres als
+// dezelfde 200 de deur uit, en gaat de echte reden naar de logs.
+//
+// WAT DAT KOST: bij een storing krijgt de redacteur "er staat een link in je
+// mailbox" terwijl er niets is verstuurd. Dat is vervelend, en het is de prijs.
+// De storing zelf staat in de Vercel-logs, en wie geen mail ziet komen vraagt
+// een tweede link aan — dat is precies het gedrag dat ook bij een trage
+// mailserver hoort. Een orakel dat de lijst prijsgeeft is niet te herstellen
+// met een tweede poging.
+//
 // SHOULDCREATEUSER STAAT AAN. Supabase maakt bij de eerste inlog een gebruiker
 // aan. Dat is hier gewenst: de allowlist in Vercel bepaalt wie er binnen mag,
 // en zonder die eerste aanmaak zou er handwerk in het Supabase-dashboard nodig
@@ -69,7 +83,8 @@ export default async function handler(req, res) {
 
   const client = maakServerClient(req, res);
   if (!client) {
-    return res.status(503).json({ ok: false, fout: "Inloggen is op deze omgeving niet ingesteld." });
+    console.error("[inloglink] Supabase is in deze runtime niet geconfigureerd — geen mail verstuurd");
+    return res.status(200).json({ ok: true, melding: NEUTRAAL });
   }
 
   // De bestemming van de link is AFGELEID VAN DEZE OMGEVING, niet vastgezet op
@@ -87,11 +102,11 @@ export default async function handler(req, res) {
   });
 
   if (error) {
-    // De reden gaat naar de logs, niet naar het scherm: hij kan verraden of het
-    // account bestaat. Op het scherm blijft de neutrale zin staan, behalve bij
-    // een duidelijke storing aan onze kant.
-    console.warn(`[inloglink] signInWithOtp mislukt: ${error.message}`);
-    return res.status(502).json({ ok: false, fout: "De inloglink kon niet worden verstuurd. Probeer het zo opnieuw." });
+    // De reden gaat naar de logs, niet naar het scherm. Op het scherm blijft de
+    // neutrale zin staan — zie de kop van dit bestand voor waarom ook een echte
+    // storing hier niet zichtbaar mag worden.
+    console.error(`[inloglink] signInWithOtp mislukt: ${error.message}`);
+    return res.status(200).json({ ok: true, melding: NEUTRAAL });
   }
 
   return res.status(200).json({ ok: true, melding: NEUTRAAL });

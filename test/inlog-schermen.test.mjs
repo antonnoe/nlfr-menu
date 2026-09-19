@@ -14,6 +14,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 const lees = (naam) => readFileSync(new URL(`../${naam}`, import.meta.url), "utf8");
 const login = lees("login.html");
@@ -25,9 +26,42 @@ const bundel = lees("assets/inlog.js");
 // ---- /login -----------------------------------------------------------------
 
 test("de loginpagina toont beide opties", () => {
-  assert.match(login, /Inloggen met vingerafdruk/, "de passkey-knop");
+  assert.match(login, /Inloggen met dit apparaat/, "de passkey-knop");
   assert.match(login, /Stuur inloglink/, "de knop voor de magic link");
   assert.match(login, /<input[^>]*type="email"/, "en het veld waar het adres in gaat");
+});
+
+test("geen enkele KNOP heet nog naar een vingerafdruk", () => {
+  // "Vingerafdruk" mag als UITLEG onder een knop staan — op een computer is het
+  // net zo vaak een pincode, en dat hoort er dan bij. Maar het is niet de naam
+  // van de handeling: wie geen vingerafdruklezer heeft, leest zo'n knoplabel als
+  // "niet voor mij".
+  for (const pagina of [login, review]) {
+    for (const m of pagina.matchAll(/<button[^>]*>([^<]*)<\/button>/g)) {
+      assert.doesNotMatch(m[1], /vingerafdruk/i, `knoplabel noemt een vingerafdruk: "${m[1]}"`);
+    }
+  }
+});
+
+test("de twee deuren zijn even prominent", () => {
+  // De inloglink is geen noodoplossing die je erbij zoekt: hij is de enige weg
+  // op een nieuw apparaat en wanneer je je telefoon kwijt bent. Een tweede optie
+  // die stiller is opgemaakt dan de eerste, wordt dan niet gevonden.
+  assert.match(login, /<button type="button" class="hoofd" id="passkeyknop">/);
+  assert.match(login, /<button type="submit" class="hoofd" id="mailknop">/);
+});
+
+test("de uitlegregel onder de apparaatknop noemt alle drie de vormen", () => {
+  for (const pagina of [login, review]) {
+    assert.match(pagina, /Vingerafdruk, gezicht of pincode van je telefoon of computer/);
+  }
+});
+
+test("het meldingenblok is een live region", () => {
+  // Zonder dit hoort een schermlezer niets wanneer de inloglink is verstuurd of
+  // een passkey mislukt: je drukt op een knop en er gebeurt, waarneembaar, niets.
+  assert.match(login, /<div class="melding" id="melding" role="status" aria-live="polite" hidden>/);
+  assert.match(review, /<div id="apparaatmelding" role="status" aria-live="polite">/);
 });
 
 test("de passkey-knop roept signInWithPasskey aan, de mailknop de eigen route", () => {
@@ -99,7 +133,15 @@ test("het apparaatblok kent alle drie de handelingen", () => {
   assert.match(review, /auth\.registerPasskey\(\)/, "instellen");
   assert.match(review, /auth\.passkey\.list\(\)/, "tonen");
   assert.match(review, /auth\.passkey\.delete\(\{ passkeyId: id \}\)/, "verwijderen");
-  assert.match(review, /auth\.signOut\(\)/, "uitloggen");
+  assert.match(review, /auth\.signOut\(\{ scope: "local" \}\)/, "uitloggen");
+});
+
+test("uitloggen geldt alleen voor dit apparaat", () => {
+  // De standaardscope van signOut() is "global": die herroept de sessie op ELK
+  // apparaat. In een scherm dat vlak erboven een lijst met apparaten toont, is
+  // dat het verkeerde gedrag (Codex op PR #51, zie docs/login.md §4.5).
+  assert.doesNotMatch(review, /auth\.signOut\(\)/, "signOut zonder scope logt overal uit");
+  assert.match(review, /Uitloggen op dit apparaat/, "en het label hoort dat te zeggen");
 });
 
 test("de lijst toont naam en datum van elk apparaat", () => {
@@ -137,7 +179,7 @@ test("de middleware stuurt naar /login en laat niets door zonder oordeel", () =>
   assert.match(middleware, /status: 302/);
   // Ontbrekende configuratie of een onbereikbare Supabase: deur dicht.
   assert.match(middleware, /if \(!compleet\) return naarLogin/);
-  assert.match(middleware, /return naarLogin\(request\.url, "onbereikbaar"\)/);
+  assert.match(middleware, /return naarLogin\(request\.url, "onbereikbaar", verseCookies\)/);
 });
 
 test("de middleware stuurt alleen naar een pad binnen deze site", () => {
@@ -150,6 +192,16 @@ test("de redirect naar de login wordt niet gecachet", () => {
   assert.match(middleware, /"Cache-Control": "no-store"/);
 });
 
+test("de middleware geeft ververste cookies door in plaats van ze weg te gooien", () => {
+  // De lege setAll die hier stond, gooide de vernieuwde sessie weg terwijl de
+  // pagina doorging (Codex op PR #51, zie docs/login.md §4.1). Het gedrag zelf
+  // wordt gemeten in test/inlog-middleware.test.mjs; deze regel legt vast dat de
+  // lege variant niet terugsluipt.
+  assert.doesNotMatch(middleware, /setAll\(\)\s*\{\s*\}/, "een lege setAll gooit de sessie weg");
+  assert.match(middleware, /import \{ next \} from "@vercel\/functions"/);
+  assert.match(middleware, /return next\(\{ headers: kop \}\)/);
+});
+
 // ---- de bundel --------------------------------------------------------------
 
 test("de bundel hoort bij de geïnstalleerde pakketten", async () => {
@@ -159,6 +211,48 @@ test("de bundel hoort bij de geïnstalleerde pakketten", async () => {
   const eis = (await import("node:module")).createRequire(import.meta.url);
   assert.equal(versies.ssr, eis("@supabase/ssr/package.json").version, "draai `npm run bouw:inlog`");
   assert.equal(versies.supabaseJs, eis("@supabase/supabase-js/package.json").version, "draai `npm run bouw:inlog`");
+});
+
+// ---- De vingerafdruk van de bouw -------------------------------------------
+// WAT DE VERSIECONTROLE HIERBOVEN NIET ZIET (Copilot op PR #51, zie
+// docs/login.md §4.10): een wijziging in src/inlog.js of lib/auth.js zonder
+// nieuwe bouw. De pakketversies blijven dan gelijk, de toets blijft groen, en
+// assets/inlog.js — het bestand dat de browser wérkelijk draait — loopt stil
+// achter op de repo. Bij een loginlaag is dat het slechtst denkbare soort
+// stilte: de code die je leest is niet de code die de deur bewaakt.
+
+function vingerafdruk(pad) {
+  return createHash("sha256")
+    .update(readFileSync(new URL(`../${pad}`, import.meta.url)))
+    .digest("hex")
+    .slice(0, 16);
+}
+
+test("elk bronbestand van de bundel komt overeen met de vastgelegde hash", () => {
+  const versies = JSON.parse(lees("assets/inlog.versies.json"));
+  assert.ok(versies.bronnen && Object.keys(versies.bronnen).length, "geen bronnen vastgelegd");
+  // De twee die er hoe dan ook in horen te zitten. Komt er een import bij, dan
+  // zet het bouwscript die er vanzelf bij (hij leest de metafile van esbuild);
+  // deze regel vangt het geval dat de lijst juist LEEG zou raken.
+  assert.ok(versies.bronnen["src/inlog.js"], "src/inlog.js hoort in de lijst te staan");
+  assert.ok(versies.bronnen["lib/auth.js"], "lib/auth.js wordt meegebundeld en hoort er dus ook in");
+
+  for (const [pad, verwacht] of Object.entries(versies.bronnen)) {
+    assert.equal(
+      vingerafdruk(pad),
+      verwacht,
+      `${pad} is gewijzigd zonder nieuwe bouw — draai \`npm run bouw:inlog\``
+    );
+  }
+});
+
+test("de bundel zelf is niet met de hand bewerkt", () => {
+  const versies = JSON.parse(lees("assets/inlog.versies.json"));
+  assert.equal(
+    vingerafdruk("assets/inlog.js"),
+    versies.bundel,
+    "assets/inlog.js wijkt af van wat het bouwscript heeft gemaakt — draai `npm run bouw:inlog`"
+  );
 });
 
 test("de bundel heeft de passkey-opt-in aan boord", () => {
@@ -173,4 +267,24 @@ test("de bundel bewaart de sessie in cookies, niet in localStorage", () => {
   assert.match(inlogbron, /createBrowserClient/);
   const code = inlogbron.split("\n").filter((r) => !r.trim().startsWith("//")).join("\n");
   assert.doesNotMatch(code, /localStorage|sessionStorage/);
+});
+
+// ---- De publieke uitleg ----------------------------------------------------
+// uitleg.html is de handleiding voor wie de redactie overneemt: de eerste
+// pagina die iemand leest die nog niets weet. Die stuurde de invaller naar
+// /review?token=… — een authenticatieweg die niet meer bestaat (Codex op
+// PR #51, zie docs/login.md §4.7).
+
+test("de uitlegpagina beschrijft de nieuwe route, niet het oude token", () => {
+  const uitleg = lees("uitleg.html");
+  assert.doesNotMatch(uitleg, /\?token=/, "de dode weg hoort weg te zijn");
+  assert.doesNotMatch(uitleg, /REVIEW_TOKEN/);
+  assert.match(uitleg, /Stuur inloglink/, "de eerste stap: een inloglink aanvragen");
+  assert.match(uitleg, /Dit apparaat instellen/, "de tweede: het apparaat instellen");
+});
+
+test("geen enkel uitgeleverd bestand stuurt nog naar een token-URL", () => {
+  for (const naam of ["index.html", "review.html", "login.html", "uitleg.html", "actueel.html"]) {
+    assert.doesNotMatch(lees(naam), /\?token=/, `${naam} draagt nog een token-URL`);
+  }
 });

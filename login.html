@@ -31,6 +31,11 @@
   button.hoofd { background:var(--brand); color:#fff; border-color:var(--brand); }
   button.hoofd:hover:not(:disabled) { background:#6a0000; }
   .knoprij { margin-top:12px; }
+  /* De regel onder de apparaatknop. "Vingerafdruk" alleen dekt de lading niet:
+     op een computer is het net zo vaak een pincode of Windows Hello, en wie
+     alleen "vingerafdruk" leest en geen vingerafdruklezer heeft, denkt dat de
+     knop niet voor hem is. */
+  .knophint { margin:8px 0 0; font-size:12.5px; color:#8a7f7c; text-align:center; }
   .scheiding { display:flex; align-items:center; gap:10px; color:#a89f9c; font-size:12px;
     font-family:'Poppins',sans-serif; margin:4px 0 14px; }
   .scheiding::before, .scheiding::after { content:""; flex:1; height:1px; background:rgba(128,0,0,.12); }
@@ -46,24 +51,38 @@
   <h1>Redactie actueel</h1>
   <p class="sub">Deze tool is afgeschermd. Log in om verder te gaan.</p>
 
-  <div class="melding" id="melding" hidden></div>
+  <!-- role="status" maakt hier een live region van (Copilot op PR #51, zie
+       docs/login.md §4.6). Zonder dat hoort een schermlezer niets wanneer de
+       inloglink is verstuurd, een passkey mislukt of een link verlopen blijkt:
+       de gebruiker drukt op een knop en er gebeurt, voor zover hij kan
+       waarnemen, niets. "status" en niet "alert": de melding onderbreekt niet,
+       hij wordt voorgelezen zodra de schermlezer uitgesproken is. -->
+  <div class="melding" id="melding" role="status" aria-live="polite" hidden></div>
 
+  <!-- TWEE GELIJKWAARDIGE DEUREN. Beide vakken hebben dezelfde vorm en beide
+       knoppen dezelfde nadruk (.hoofd). De inloglink is geen noodoplossing die
+       je erbij zoekt: hij is de enige weg op een nieuw apparaat, op een
+       preview-omgeving en wanneer je je telefoon kwijt bent. Een tweede optie
+       die stiller is opgemaakt dan de eerste, wordt op het moment dat je hem
+       nodig hebt niet gevonden. -->
   <div class="vak" id="passkeyvak" hidden>
     <h2>Dit apparaat</h2>
-    <p>Log in met de vingerafdruk of gezichtsherkenning die je eerder op dit apparaat hebt ingesteld.</p>
-    <button type="button" class="hoofd" id="passkeyknop">Inloggen met vingerafdruk</button>
+    <p>Als je dit apparaat eerder hebt ingesteld, log je hiermee in één handeling in.</p>
+    <button type="button" class="hoofd" id="passkeyknop">Inloggen met dit apparaat</button>
+    <p class="knophint">Vingerafdruk, gezicht of pincode van je telefoon of computer</p>
   </div>
 
   <div class="scheiding" id="scheiding" hidden>of</div>
 
   <div class="vak">
     <h2>Inloglink per mail</h2>
-    <p>De eerste keer, of op een nieuw apparaat. Je krijgt een link die één keer werkt.</p>
+    <p>De eerste keer, op een nieuw apparaat, of als je je apparaat kwijt bent.</p>
     <form id="mailform" novalidate>
       <label for="adres">E-mailadres</label>
       <input type="email" id="adres" name="email" autocomplete="username webauthn"
              inputmode="email" spellcheck="false" autocapitalize="off" placeholder="naam@voorbeeld.nl">
-      <div class="knoprij"><button type="submit" id="mailknop">Stuur inloglink</button></div>
+      <div class="knoprij"><button type="submit" class="hoofd" id="mailknop">Stuur inloglink</button></div>
+      <p class="knophint">Je krijgt een link die één keer werkt</p>
     </form>
   </div>
 
@@ -90,13 +109,30 @@
   }
 
   // WAAR STUREN WE HEEN NA HET INLOGGEN. Uitsluitend een pad binnen deze site.
-  // Een volledige URL uit de querystring overnemen zou deze pagina tot een open
-  // redirect maken: dan is /login?terug=https://… een keurig ogende link die
-  // ergens anders uitkomt. "//ergens.nl" is ook een volledige URL en wordt hier
-  // dus geweigerd.
+  //
+  // DE EERSTE VERSIE HIERVAN WAS LEK (Copilot op PR #51, zie docs/login.md §4.3).
+  // Die luidde /^\/[^\/]/ — "begint met één schuine streep" — en liet daarmee
+  // /\evil.example door, want het tweede teken is geen schuine streep. De
+  // URL-parser van een browser behandelt een backslash in een absoluut pad
+  // echter als een schuine streep, dus location.replace() maakte daar
+  // //evil.example van: een volledige URL naar een ander domein. Een open
+  // redirect, op de ene pagina waar die het meest schaadt.
+  //
+  // De les: een patroon op de RUWE tekst kan nooit sluitend zijn, want het is de
+  // browser die bepaalt wat die tekst betekent. Dus laten we de browser hem
+  // eerst oplossen, en kijken we naar de ORIGIN van het resultaat. De backslash
+  // wordt daarnaast apart geweigerd — niet omdat de origincontrole hem mist,
+  // maar omdat een geldig pad op deze site er nooit een bevat, en wat hier
+  // binnenkomt met een backslash erin is geen typefout maar een poging.
   function bestemming(){
     var ruw = new URLSearchParams(location.search).get("terug") || "";
-    return (/^\/[^\/]/.test(ruw)) ? ruw : "/review";
+    if (!ruw || ruw.charAt(0) !== "/" || ruw.indexOf("\\") !== -1) return "/review";
+    var opgelost;
+    try { opgelost = new URL(ruw, location.origin); } catch(e){ return "/review"; }
+    if (opgelost.origin !== location.origin) return "/review";
+    // Alleen het deel binnen deze site teruggeven, nooit de hele URL: dan kan
+    // er ook via deze regel geen absolute bestemming ontsnappen.
+    return opgelost.pathname + opgelost.search + opgelost.hash;
   }
 
   // De reden waarmee de middleware of /auth/callback hierheen stuurde. Kort
@@ -172,18 +208,46 @@
   // voor: de browser had de pagina nog in de geschiedenis staan, of iemand
   // klikt de link in het menu aan terwijl de sessie al loopt.
   //
-  // NIET DOORSTUREN ALS ER EEN REDEN IN DE URL STAAT. Anders ontstaat er een
-  // lus die niet te doorbreken is: een account met een geldige sessie maar
-  // zonder recht op de redactie wordt door de middleware hierheen gestuurd met
-  // reden=geenrecht, deze regel ziet een sessie en stuurt terug naar /review,
-  // de middleware stuurt opnieuw hierheen — en de melding die uitlegt wat er
-  // aan de hand is, staat nooit lang genoeg op het scherm om gelezen te worden.
+  // TWEE VANGREGELS, VOOR TWEE VERSCHILLENDE LUSSEN.
+  //
+  // (1) `reden` in de URL. Een account met een geldige sessie maar zonder recht
+  //     op de redactie wordt door de middleware hierheen gestuurd met
+  //     reden=geenrecht. Die sessie is echt, dus ook een servercontrole keurt
+  //     hem goed — en dan zou deze regel hem terugsturen naar /review, waarna de
+  //     middleware hem opnieuw hierheen stuurt. De melding die uitlegt wat er
+  //     aan de hand is, komt dan nooit lang genoeg op het scherm om gelezen te
+  //     worden. Deze pagina kent de lijst met toegestane adressen niet en kan
+  //     dat oordeel dus niet zelf vellen; de reden in de URL is wat ze erover
+  //     te weten komt.
+  //
+  // (2) getUser() en niet getSession(). DIT WAS DE TWEEDE LUS (Codex en Copilot
+  //     op PR #51, zie docs/login.md §4.2). getSession() leest alleen de cookie
+  //     en gelooft die op zijn woord. Bij een vervalste cookie, of een sessie
+  //     waarvan de gebruiker is verwijderd, ziet getSession() een geldig ogende
+  //     sessie en stuurde deze regel door naar /review — waar de middleware met
+  //     getUser() tot een ander oordeel kwam en terugstuurde ZONDER reden, dus
+  //     langs vangregel (1) heen. Eindeloos heen en weer, alleen te doorbreken
+  //     door de cookie met de hand te wissen.
+  //
+  //     Nu vraagt deze pagina hetzelfde aan de server als de middleware. Wijst
+  //     die de sessie af, dan wordt de cookie hier opgeruimd en blijft het
+  //     inlogscherm staan — dat is het scherm waar iemand met een kapotte sessie
+  //     moet uitkomen.
   if (new URLSearchParams(location.search).get("reden")) return;
 
   NLFRAuth.client()
-    .then(function(sb){ return sb.auth.getSession(); })
-    .then(function(res){
-      if (res && res.data && res.data.session) location.replace(bestemming());
+    .then(function(sb){
+      return sb.auth.getUser().then(function(res){
+        if (res && res.data && res.data.user) { location.replace(bestemming()); return; }
+        // Geen geldige gebruiker. Is er wél een cookie, dan is die waardeloos en
+        // hoort hij weg: laat je hem staan, dan loopt elk volgend bezoek weer
+        // tegen dezelfde afwijzing aan. scope:"local" — er valt op de server
+        // niets in te trekken wat nog geldig is.
+        return sb.auth.getSession().then(function(ses){
+          if (!ses || !ses.data || !ses.data.session) return;
+          return sb.auth.signOut({ scope: "local" }).catch(function(){ /* weg is weg */ });
+        });
+      });
     })
     .catch(function(){ /* geen sessie, of configuratie ontbreekt — het scherm zegt het al */ });
 })();

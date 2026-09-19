@@ -374,7 +374,7 @@ function maakDom() {
   tabs[0].setAttribute("aria-selected", "true");
   tabs[1].setAttribute("data-tab", "overheid");
   tabs[1].setAttribute("aria-selected", "false");
-  // De tabbalk zelf: de tool verbergt hem zolang het beheertoken ontbreekt.
+  // De tabbalk zelf: de tool verbergt hem tot de server de sessie goedkeurt.
   const tabsBalk = maakEl("tabs");
   const document = {
     getElementById: haal,
@@ -407,7 +407,7 @@ async function startTool({ actueel = LEVERING } = {}) {
   // eslint-disable-next-line no-new-func
   new Function("document", "location", "fetch", "window", script)(
     document,
-    { search: "?token=geheim" },
+    { search: "", origin: "https://nlfr-menu.test" },
     fetchStub,
     { confirm: () => false }
   );

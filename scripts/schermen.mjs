@@ -81,7 +81,27 @@ async function schot(naam) {
 }
 
 // ---- Reviewtool -----------------------------------------------------------
-await page.goto(`${BASIS}/review?token=demo`, { waitUntil: "networkidle" });
+// /review zit achter de login (zie docs/login.md). Schermafdrukken maken vraagt
+// dus een sessiecookie; die zet je met NLFR_REVIEW_COOKIE uit een ingelogde
+// browser. Zonder die variabele komt dit script op /login uit en zijn de
+// afdrukken leeg — vandaar de harde stop.
+if (!process.env.NLFR_REVIEW_COOKIE) {
+  throw new Error(
+    "NLFR_REVIEW_COOKIE ontbreekt. Log in op /review, kopieer de cookie nlfr-auth " +
+      "uit de browser en geef hem mee: NLFR_REVIEW_COOKIE='nlfr-auth=…' node scripts/schermen.mjs"
+  );
+}
+await page.context().addCookies(
+  process.env.NLFR_REVIEW_COOKIE.split(";").map((stuk) => {
+    const is = stuk.indexOf("=");
+    return {
+      name: stuk.slice(0, is).trim(),
+      value: stuk.slice(is + 1).trim(),
+      url: BASIS,
+    };
+  })
+);
+await page.goto(`${BASIS}/review`, { waitUntil: "networkidle" });
 await schot("01-review-boven");
 
 // Scroll naar de conceptkaart

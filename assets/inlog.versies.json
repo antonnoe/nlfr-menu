@@ -1,4 +1,9 @@
 {
   "ssr": "0.12.7",
-  "supabaseJs": "2.116.0"
+  "supabaseJs": "2.116.0",
+  "bronnen": {
+    "lib/auth.js": "2954e71b8348eb7d",
+    "src/inlog.js": "0920f81b19558267"
+  },
+  "bundel": "18e0c7c0f28ba276"
 }

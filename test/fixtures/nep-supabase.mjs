@@ -23,14 +23,19 @@ function cookieWaarde(sessie) {
 
 // Een sessie die er voor supabase-js geldig uitziet: niet verlopen, zodat hij
 // niet eerst gaat verversen, en met een token dat onze namaakserver herkent.
-export function nepSessie(adres, { token = "nep-access-token" } = {}) {
+//
+// `verlopen: true` maakt het access token OUD terwijl het refresh token blijft
+// staan. Dat is de stand waarin supabase-js eerst gaat verversen voordat hij
+// iets anders doet, en precies de stand waarin de middleware de nieuwe cookies
+// moet doorgeven. Zie test/inlog-middleware.test.mjs.
+export function nepSessie(adres, { token = "nep-access-token", refresh = "nep-refresh-token", verlopen = false } = {}) {
   const nu = Math.floor(Date.now() / 1000);
   return {
     access_token: token,
-    refresh_token: "nep-refresh-token",
+    refresh_token: refresh,
     token_type: "bearer",
-    expires_in: 3600,
-    expires_at: nu + 3600,
+    expires_in: verlopen ? 0 : 3600,
+    expires_at: verlopen ? nu - 60 : nu + 3600,
     user: { id: "00000000-0000-4000-8000-000000000001", email: adres, aud: "authenticated" },
   };
 }
@@ -43,10 +48,30 @@ export function cookieKop(sessie) {
 // Start de namaakserver en zet de omgevingsvariabelen die lib/auth.js leest.
 // `gebruikers` koppelt een access token aan het profiel dat /auth/v1/user
 // teruggeeft; een token dat er niet in staat krijgt 401, net als bij Supabase.
-export async function startNepSupabase(gebruikers = {}) {
+//
+// `verversingen` koppelt een refresh token aan de sessie die
+// /auth/v1/token?grant_type=refresh_token teruggeeft. Laat je dat leeg, dan
+// gedraagt de server zich als Supabase met een ingetrokken refresh token.
+export async function startNepSupabase(gebruikers = {}, verversingen = {}) {
   const server = http.createServer((req, res) => {
     const pad = (req.url || "").split("?")[0];
     res.setHeader("Content-Type", "application/json");
+
+    if (pad === "/auth/v1/token") {
+      let ruw = "";
+      req.on("data", (b) => { ruw += b; });
+      return req.on("end", () => {
+        let body = {};
+        try { body = JSON.parse(ruw || "{}"); } catch { /* onleesbaar = ongeldig */ }
+        const nieuw = verversingen[body.refresh_token];
+        if (!nieuw) {
+          res.statusCode = 400;
+          return res.end(JSON.stringify({ error: "invalid_grant", error_description: "Invalid Refresh Token" }));
+        }
+        res.statusCode = 200;
+        res.end(JSON.stringify(nieuw));
+      });
+    }
 
     if (pad === "/auth/v1/user") {
       const auth = String(req.headers.authorization || "");

@@ -21,7 +21,9 @@
 //      vast in package-lock.json.
 //
 // Na een `npm update` van @supabase/* hoort `npm run bouw:inlog` opnieuw te
-// draaien; test/inlog-bundel.test.mjs slaat alarm als de bundel is vergeten.
+// draaien, en ook na elke wijziging in dit bestand zelf of in lib/auth.js.
+// test/inlog-schermen.test.mjs slaat alarm als dat is vergeten: het vergelijkt
+// de hashes in assets/inlog.versies.json met de bronnen op schijf.
 
 import { createBrowserClient } from "@supabase/ssr";
 import { COOKIE_NAAM } from "../lib/auth.js";

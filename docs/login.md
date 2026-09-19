@@ -119,7 +119,7 @@ is de **publieke** route (`/api/actueel`) — geen inlog, en dat blijft zo.
 | Deur | Waarvoor | Wat de gebruiker doet |
 | --- | --- | --- |
 | **Magic link** | Eerste keer, nieuw apparaat, apparaat kwijt | Adres invullen op `/login`, link in de mail aanklikken |
-| **Passkey** | Elke dag daarna | Knop "Inloggen met vingerafdruk" op `/login` |
+| **Passkey** | Elke dag daarna | Knop "Inloggen met dit apparaat" op `/login` |
 
 De passkey vervangt de magic link niet; hij maakt hem zeldzaam. De mail blijft
 de weg terug wanneer er geen passkey is, of geen apparaat.
@@ -195,7 +195,11 @@ niet is gezet, mag de deur niet openzetten.
 ### 2.6 Twee sloten, twee plekken
 
 * De **middleware** bewaakt de pagina. Wie zonder sessie `/review` opvraagt,
-  gaat naar `/login` in plaats van een lege schil te krijgen.
+  gaat naar `/login` in plaats van een lege schil te krijgen. Hij *schrijft* ook:
+  is het access token verlopen terwijl het refresh token nog geldig is, dan
+  ververst `getUser()` de sessie en gaan de nieuwe cookies mee op het antwoord —
+  via `next()` van `@vercel/functions` op de doorlaat, en op de redirect naar
+  `/login`. Zie §4.1.
 * `/api/review` bewaakt de **gegevens**, in zijn eigen runtime.
 
 Dat is geen dubbel werk. De gegevens horen beschermd te zijn op de plek waar ze
@@ -346,8 +350,7 @@ Dit is de belangrijkste procedure in dit document.
    *Ingesteld* staat elk apparaat met zijn naam (afgeleid van de authenticator:
    "iCloud Keychain", "Google Password Manager", …) en de datum waarop het is
    ingesteld. Klik *Verwijderen* bij het apparaat dat je kwijt bent.
-3. **Stel het nieuwe apparaat in.** In hetzelfde blok: *Vingerafdruk instellen op
-   dit apparaat*.
+3. **Stel het nieuwe apparaat in.** In hetzelfde blok: *Dit apparaat instellen*.
 
 Wat een vinder van het oude apparaat kan: niets, zolang hij het apparaat niet kan
 ontgrendelen — de passkey zit achter de vingerafdruk, de gezichtsscan of de
@@ -393,7 +396,7 @@ Twee dingen die je bij overname niet moet overslaan: de controle in de route
 zelf (niet alleen in de middleware), en `getUser()` in plaats van
 `getSession()`.
 
-### 3.7 De handmatige test van de vingerafdruk
+### 3.7 De handmatige test van de passkey
 
 **De WebAuthn-ceremonie zelf is niet geautomatiseerd te testen.** De
 vingerafdruk of gezichtsscan komt van de authenticator van het apparaat
@@ -407,17 +410,137 @@ WebAuthn, en dat de foutmeldingen Nederlands en kort zijn. De ceremonie zelf toe
 je met de hand, in drie stappen:
 
 1. **Instellen.** Log in met een magic link, ga naar `/review`, klap **Apparaat**
-   open en klik *Vingerafdruk instellen op dit apparaat*. Verwacht: de prompt van
+   open en klik *Dit apparaat instellen*. Verwacht: de prompt van
    het besturingssysteem, daarna de melding "Ingesteld" en een nieuwe regel onder
    *Ingesteld* met de naam van je authenticator en de datum van vandaag.
-2. **Inloggen.** Klik *Uitloggen*, en klik op `/login` op *Inloggen met
-   vingerafdruk*. Verwacht: de prompt, daarna direct `/review` met je concepten —
-   zonder mail en zonder adres in te tikken.
+2. **Inloggen.** Klik *Uitloggen op dit apparaat*, en klik op `/login` op
+   *Inloggen met dit apparaat*. Verwacht: de prompt, daarna direct `/review` met
+   je concepten — zonder mail en zonder adres in te tikken.
 3. **Intrekken.** Klap **Apparaat** open, klik *Verwijderen* bij de zojuist
    ingestelde regel en bevestig. Verwacht: de regel verdwijnt. Log uit en klik
-   opnieuw op *Inloggen met vingerafdruk*: dat hoort nu te mislukken met "Deze
+   opnieuw op *Inloggen met dit apparaat*: dat hoort nu te mislukken met "Deze
    vingerafdruk is hier niet bekend" of het uitblijven van een keuze in de
    prompt. De magic link werkt onveranderd.
 
 Stap 3 is de belangrijkste van de drie: dat is de procedure bij een verloren
 apparaat (§3.4), en die wil je een keer geoefend hebben voordat je hem nodig hebt.
+
+---
+
+## 4. Reviewronde 19-09-2026
+
+Codex en Copilot hebben PR #51 nagekeken. Elf opmerkingen, hieronder per punt het
+oordeel: heeft de reviewer gelijk, en waarom. Daarna is elk punt met een "ja"
+gerepareerd.
+
+### 4.1 Ververste cookies gaan verloren in de middleware — Codex, terecht
+
+`getUser()` ververst een verlopen access token zelf en roept dan `setAll` aan;
+dat was hier een lege functie, dus de nieuwe cookies verdwenen terwijl de pagina
+wél doorging. Nagemeten met een verlopen access token en een geldig refresh
+token: de middleware liet door, en er stond geen enkele cookie op het antwoord —
+de browser hield een refresh token dat Supabase al had verbruikt.
+
+### 4.2 `/login` stuurt door op `getSession()` — Codex en Copilot, terecht
+
+`getSession()` leest alleen de cookie en gelooft die; bij een vervalste of
+ingetrokken sessie stuurde `/login` door naar `/review`, waar de middleware hem
+afwees en zonder `reden` terugstuurde — een lus die alleen met de hand te
+doorbreken was. De `reden`-vangregel uit PR #51 dekte alleen het geval
+*account zonder recht*, niet het geval *cookie die de server niet accepteert*.
+
+### 4.3 Backslash omzeilt de bestemmingscontrole — Copilot, terecht
+
+`/^\/[^\/]/` liet `/\evil.example` door, want het tweede teken is geen schuine
+streep. De URL-parser van de browser behandelt `\` in een absoluut pad als `/`,
+dus `location.replace()` maakte daar `//evil.example` van: een open redirect op
+de loginpagina, de ene plek waar die het meest schaadt.
+
+### 4.4 `/api/inloglink` verraadt de lijst bij storing — Copilot, terecht
+
+Een adres buiten de lijst kreeg 200, een adres erop kreeg 502 bij een storing van
+Supabase en 503 bij ontbrekende configuratie. Daarmee is het endpoint alsnog een
+orakel op precies de momenten dat het dat niet mag zijn, in strijd met de regel
+die er in PR #51 zelf boven stond.
+
+### 4.5 `signOut()` logt op álle apparaten uit — Codex, terecht
+
+De standaardscope van `signOut()` is in supabase-js 2.116.0 `global`; dat
+herroept de sessie op elk apparaat. Nagekeken in de geïnstalleerde bron
+(`GoTrueClient.js`: `async signOut(options = { scope: 'global' })`) — in een
+scherm dat juist meerdere apparaten beheert is dat het verkeerde gedrag.
+
+### 4.6 Het meldingenblok op `/login` is geen live region — Copilot, terecht
+
+De meldingen ("inloglink verstuurd", "geannuleerd", "link verlopen") worden met
+JavaScript in een gewone `<div>` gezet. Zonder `role="status"` krijgt een
+schermlezer niets te horen: de gebruiker drukt op een knop en er gebeurt, voor
+zover hij kan waarnemen, niets.
+
+### 4.7 `uitleg.html` wijst nog naar `/review?token=…` — Codex, terecht
+
+De publieke uitlegpagina is juist de handleiding voor wie de redactie overneemt,
+en die stuurde de invaller naar een authenticatieweg die niet meer bestaat. De
+ernst zit niet in de regel zelf maar in de plek: dit is de eerste pagina die
+iemand leest die nog niets weet.
+
+### 4.8 README beschrijft nog de verwijderde opslagdiagnostiek — Copilot, terecht
+
+Het hoofdstuk "Het beheertoken bewaren, en wat er op mobiel misging" (ruim honderd
+regels) legde `KEY_OPSLAGMELDING` en `lib/opslagmelding.js` uit, allebei in PR #51
+verwijderd. Een handleiding die naar weggehaalde code verwijst is erger dan geen
+handleiding: je gaat zoeken naar iets dat er niet is.
+
+### 4.9 Commentaar in `src/inlog.js` noemt een testbestand dat niet bestaat — Copilot, terecht
+
+Er stond `test/inlog-bundel.test.mjs`; de controle zit in
+`test/inlog-schermen.test.mjs`. Klein, maar het is precies de verwijzing die je
+volgt als je je afvraagt waarom de bundel in de repo staat.
+
+### 4.10 De bundelcontrole keek alleen naar versienummers — Copilot, terecht
+
+De toets vergeleek `assets/inlog.versies.json` met de geïnstalleerde pakketten.
+Wijzigde `src/inlog.js` zonder `npm run bouw:inlog`, dan bleef de bundel oud
+terwijl de toets groen bleef — en dan draait de browser andere code dan de repo
+laat zien.
+
+### 4.11 Copilots overzichtsregels zonder eigen bevinding — geen actie
+
+Copilot herhaalt in zijn samenvatting zeven vindingen die hierboven al staan; de
+samenvatting zelf bevat geen achtste punt. Codex' vierde opmerking (over
+`README.md:619`) gaat over dezelfde `uitleg.html`-passage als §4.7 en is daar
+afgehandeld.
+
+### 4.12 Wat er per punt is veranderd
+
+| § | Bestand | Verandering | Toets |
+| --- | --- | --- | --- |
+| 4.1 | `middleware.js` | `setAll` verzamelt de ververste cookies; `next()` van `@vercel/functions` draagt ze op de doorlaat mee, `naarLogin()` op de redirect | `test/inlog-middleware.test.mjs` — verlopen access token met geldig refresh token |
+| 4.2 | `login.html` | Doorsturen pas na `getUser()`; wordt de sessie afgewezen, dan `signOut({scope:"local"})` en het inlogscherm blijft staan | `test/inlog-loginscherm.test.mjs` |
+| 4.3 | `login.html` | `bestemming()` weigert backslashes en controleert de origin van de opgeloste URL | `test/inlog-bestemming.test.mjs` |
+| 4.4 | `api/inloglink.js` | Storing en ontbrekende configuratie geven dezelfde neutrale 200; de reden gaat naar `console.error` | `test/inlog-routes.test.mjs` |
+| 4.5 | `review.html` | `signOut({ scope: "local" })`, label "Uitloggen op dit apparaat" | `test/inlog-schermen.test.mjs` |
+| 4.6 | `login.html`, `review.html` | `role="status" aria-live="polite"` op beide meldingenblokken | `test/inlog-schermen.test.mjs` |
+| 4.7 | `uitleg.html` | De passage over `/review?token=…` vervangen door inloglink + apparaat instellen | grep op `?token=` |
+| 4.8 | `README.md` | Het hoofdstuk over tokenopslag vervangen door een verwijzing naar dit document | grep op `KEY_OPSLAGMELDING` |
+| 4.9 | `src/inlog.js` | Verwijst nu naar `test/inlog-schermen.test.mjs` | — |
+| 4.10 | `scripts/bouw-inlog.mjs` | Legt een hash vast van elk eigen bronbestand uit de bundel (uit de esbuild-metafile) én van de bundel zelf | `test/inlog-schermen.test.mjs` |
+
+Daarnaast, niet uit de review maar uit dezelfde ronde:
+
+* **De knoppen heten naar het apparaat, niet naar een vingerafdruk.** "Inloggen
+  met dit apparaat", "Dit apparaat instellen". Het woord *vingerafdruk* staat
+  alleen nog in de uitlegregel eronder — "Vingerafdruk, gezicht of pincode van je
+  telefoon of computer" — want op een computer is het net zo vaak een pincode, en
+  wie geen vingerafdruklezer heeft leest zo'n knoplabel als "niet voor mij".
+* **De twee deuren zijn even prominent.** Beide knoppen dragen dezelfde opmaak.
+  De inloglink is geen noodoplossing die je erbij zoekt: hij is de enige weg op
+  een nieuw apparaat, op een preview-omgeving en wanneer je je telefoon kwijt
+  bent. Een tweede optie die stiller is opgemaakt, wordt op het moment dat je hem
+  nodig hebt niet gevonden.
+* **`scripts/schermen.mjs`** kan niet meer met `?token=demo` naar binnen en
+  vraagt nu om een sessiecookie in `NLFR_REVIEW_COOKIE`; zonder die variabele
+  stopt het script in plaats van lege afdrukken te maken.
+* **`SameSite` wordt genormaliseerd** naar één schrijfwijze. `@supabase/ssr`
+  levert `lax` aan en `lib/auth.js` schreef `Lax`; twee schrijfwijzen door elkaar
+  maakt elke controle op die regel een gok.

@@ -605,10 +605,20 @@ in de uitleg (36 uur, 14 dagen, twaalf maanden) kloppen met `lib/config.js`.
 
 ### Env-vars (in Vercel instellen, zie `.env.example`)
 
-`ANTHROPIC_API_KEY`, `REVIEW_TOKEN`, `BANNER_TOKEN`, `CRON_SECRET`, en een gekoppelde Vercel KV
-(`KV_REST_API_URL` / `KV_REST_API_TOKEN`). De feedpagina werkt ook zonder deze
-vars; alleen de AI-synthese, de reviewtool en het opslaan van de banner hebben
-ze nodig. Zonder KV valt `/api/banner` terug op `banner.json` uit de repo.
+`ANTHROPIC_API_KEY`, `BANNER_TOKEN`, `CRON_SECRET`, en een gekoppelde Vercel KV
+(`KV_REST_API_URL` / `KV_REST_API_TOKEN`). Voor de login op `/review` komen daar
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en
+`ALLOWED_LOGIN_EMAILS` bij — zie `docs/login.md`. De feedpagina werkt ook zonder
+deze vars; alleen de AI-synthese, de reviewtool en het opslaan van de banner
+hebben ze nodig. Zonder KV valt `/api/banner` terug op `banner.json` uit de repo.
+
+### Inloggen op /review
+
+`/review` is afgeschermd met Supabase Auth: een inloglink per mail als eerste
+deur, daarna een passkey (vingerafdruk of gezichtsherkenning) als vaste login.
+Het gedeelde `REVIEW_TOKEN` is vervallen. De volledige beschrijving — analyse,
+opbouw, variabelen, Supabase-instellingen en wat te doen bij een verloren
+apparaat — staat in **`docs/login.md`**.
 
 ## Bewaking: tests en sonde (GitHub Actions)
 

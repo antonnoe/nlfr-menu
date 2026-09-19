@@ -16,6 +16,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { startNepKv, roeper } from "./fixtures/nep-kv.mjs";
+import { startNepSessie } from "./fixtures/nep-supabase.mjs";
 
 const review = readFileSync(new URL("../review.html", import.meta.url), "utf8");
 
@@ -42,12 +43,13 @@ test("de stand noemt onbekend als er geen journaal is, en verzint geen nul", () 
 // ---- De route ---------------------------------------------------------------
 
 const { db, sluit } = await startNepKv();
-process.env.REVIEW_TOKEN = "geheim";
+const { cookie, sluit: sluitSb } = await startNepSessie();
 test.after(sluit);
+test.after(sluitSb);
 
 const C = await import("../lib/config.js");
 const handler = (await import("../api/review.js")).default;
-const roep = roeper(handler, "geheim");
+const roep = roeper(handler, cookie);
 
 test("GET /api/review levert het journaal van de laatste cronronde mee", async () => {
   const journaal = {

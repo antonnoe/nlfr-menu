@@ -14,10 +14,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { startNepSessie } from "./fixtures/nep-supabase.mjs";
 
 process.env.KV_REST_API_URL = "https://kv.test.invalid";
 process.env.KV_REST_API_TOKEN = "test-token";
-process.env.REVIEW_TOKEN = "geheim-token";
+
+// Eén ingelogde redacteur, precies zoals in productie: een sessiecookie die de
+// route zelf bij (namaak-)Supabase controleert. Er wordt niets weggemockt.
+const { cookie, sluit: sluitSb } = await startNepSessie();
+test.after(sluitSb);
 
 const { default: handler } = await import("../api/review.js");
 const {
@@ -66,6 +71,8 @@ function kvVoorraad() {
   ]);
 }
 
+const origineleFetch = globalThis.fetch;
+
 function voerKvUit(kv, args) {
   const commando = String(args[0]).toUpperCase();
   if (commando === "GET") return kv.has(args[1]) ? kv.get(args[1]) : null;
@@ -88,6 +95,13 @@ function voerKvUit(kv, args) {
 function zetWereldOp(kv) {
   const gezet = [];
   globalThis.fetch = async (url, opties = {}) => {
+    // ALLEEN KV WORDT HIER NAGEDAAN. Sinds de toegangscontrole een echte
+    // (namaak-)Supabase aanroept, loopt ook díé aanvraag door globalThis.fetch.
+    // Een stub die alles opslokt, gaf de route een KV-antwoord op een
+    // inlogvraag — en dus een 401 op elke toets hieronder.
+    if (!String(url).startsWith(process.env.KV_REST_API_URL)) {
+      return origineleFetch(url, opties);
+    }
     const args = JSON.parse(opties.body);
     if (String(args[0]).toUpperCase() === "SET") gezet.push(args);
     const result = voerKvUit(kv, args);
@@ -102,6 +116,7 @@ function nepRes() {
     statusCode: null,
     body: null,
     setHeader(k, v) { this.headers[k.toLowerCase()] = v; },
+    getHeader(k) { return this.headers[String(k).toLowerCase()]; },
     status(c) { this.statusCode = c; return this; },
     json(b) { this.body = b; return this; },
     end() { return this; },
@@ -109,9 +124,9 @@ function nepRes() {
 }
 
 const get = (query = "") =>
-  ({ method: "GET", headers: { "x-review-token": "geheim-token" }, url: `/api/review?token=geheim-token${query}` });
+  ({ method: "GET", headers: { cookie, host: "nlfr-menu.test" }, url: `/api/review${query ? "?" + query.replace(/^&/, "") : ""}` });
 const post = (body) =>
-  ({ method: "POST", headers: { "x-review-token": "geheim-token" }, url: "/api/review?token=geheim-token", body });
+  ({ method: "POST", headers: { cookie, host: "nlfr-menu.test" }, url: "/api/review", body });
 
 async function roep(req) {
   const res = nepRes();
@@ -119,7 +134,6 @@ async function roep(req) {
   return res;
 }
 
-const origineleFetch = globalThis.fetch;
 test.afterEach(() => {
   globalThis.fetch = origineleFetch;
 });
@@ -309,11 +323,11 @@ test("de hoofd-GET levert de gekozen verwijzingen en de auditlijst", async () =>
   assert.ok(Array.isArray(res.body.concepten));
 });
 
-test("zonder geldig token gebeurt er niets", async () => {
+test("zonder sessie gebeurt er niets", async () => {
   const kv = kvVoorraad();
   zetWereldOp(kv);
   const res = nepRes();
-  await handler({ method: "POST", headers: {}, url: "/api/review", body: { actie: "verwijs", id: "o1", ifId: 101 } }, res);
+  await handler({ method: "POST", headers: { host: "nlfr-menu.test" }, url: "/api/review", body: { actie: "verwijs", id: "o1", ifId: 101 } }, res);
   assert.equal(res.statusCode, 401);
   assert.ok(!kv.has(KEY_VERWIJZING("o1")));
 });

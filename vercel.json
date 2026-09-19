@@ -5,6 +5,9 @@
       "maxDuration": 60
     }
   },
+  "rewrites": [
+    { "source": "/auth/callback", "destination": "/api/auth-callback" }
+  ],
   "crons": [
     { "path": "/api/cron", "schedule": "*/15 * * * *" }
   ]

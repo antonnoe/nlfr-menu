@@ -43,8 +43,8 @@
      conceptenwachtrij) en staat daarom standaard open. Het tweede gaat over
      berichten die AL LIVE STAAN; daar is niets te publiceren en niets te
      weigeren, alleen een Infofrankrijk-verwijzing bij te zetten of weg te
-     halen. Bewust geen tweede pagina: het token staat in de URL, en een
-     tweede pagina zou dat opnieuw moeten meedragen.
+     halen. Bewust geen tweede pagina: alles draait op dezelfde sessie, en een
+     tweede pagina zou die alleen maar opnieuw moeten ophalen.
      Tikdoel 44px, net als elke andere knop hier — zie test/reviewtool.test.mjs. */
   .tabs { display:flex; gap:6px; margin:6px 0 14px; border-bottom:1px solid rgba(128,0,0,.15); }
   .tab { font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; min-height:44px; padding:8px 16px;
@@ -60,38 +60,39 @@
     padding-bottom:5px; border-bottom:1px solid rgba(128,0,0,.12); }
   .gouvtegel > h3 .telling { font-family:'Mulish',sans-serif; font-weight:400; font-size:12.5px; color:#8a7f7c; }
 
-  /* ---- Beheertoken -------------------------------------------------------
-     Zelfde aanpak als /banner-beheer: één keer invullen, daarna in deze
-     browser bewaard. Zo hoeft de link in het menu geen token te dragen — en
-     dat is precies de bedoeling, want die menubron is publiek opvraagbaar. */
-  .tokenvak { background:#fff; border:1px solid rgba(128,0,0,.25); border-radius:14px; padding:16px; margin-bottom:14px; max-width:520px; }
-  .tokenvak[hidden] { display:none; }
-  .tokenvak h2 { margin-top:0; }
-  .tokenvak label { display:block; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:var(--brand); margin-bottom:4px; }
-  .tokenvak input { width:100%; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:14px; padding:10px 12px;
-    border:1px solid rgba(128,0,0,.25); border-radius:9px; min-height:44px; }
-  .tokenvak .hint { font-size:12.5px; color:#8a7f7c; margin:8px 0 0; }
-  /* DE WEGHAALKNOP IS GEEN ACTIEKNOP. Hij stond in .ifknop: hetzelfde groen als
-     Verwijzen, Nakijken en Klaar, knoppen die je de hele dag indrukt. Boven aan
-     de pagina, waar het oog begint, nodigt die vorm uit tot een klik die je
-     toegang opheft. De uitleg ernaast stond op #8a7f7c, 2,9:1 op wit en dus
-     onleesbaar; de nadruk lag precies omgekeerd.
-     Nu een stille tekstlink op #666 (5,74:1), rechts uitgelijnd zodat hij buiten
-     het leespad valt, met een bevestiging ervoor.
-     HET TIKDOEL BLIJFT 44px. Een eerdere versie hiervan liet dat vallen, met als
-     redenering dat dit een beheerscherm op een desktop is. Dat is niet zo: deze
-     tool wordt op een telefoon gebruikt, en dat staat boven aan
-     test/reviewtool.test.mjs. Een tikdoel is ook geen rem: het is even moeilijk
-     te raken voor wie hem zoekt als voor wie hem mijdt. Wat de knop terughoudend
-     maakt is zijn kleur, zijn vorm, zijn plaats en de bevestiging, niet zijn
-     hoogte. inline-flex houdt de tekst klein terwijl het vlak 44px hoog is. */
-  .tokenstand { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap;
+  /* ---- Apparaat ----------------------------------------------------------
+     Het blok waarin je een vingerafdruk op dit apparaat instelt, de al
+     ingestelde apparaten ziet staan, en uitlogt. Staat DICHT tot je hem
+     openklapt: het is beheer, geen redactiewerk, en het hoort niet elke dag
+     tussen de concepten te staan. Zelfde vorm als de opruimlade hierboven. */
+  .apparaatknop { display:inline-flex; align-items:center; min-height:44px; font-family:'Mulish',sans-serif;
+    font-size:12.5px; color:#666; background:none; border:1px solid transparent; border-radius:999px;
+    padding:0 12px; cursor:pointer; }
+  .apparaatknop:hover, .apparaatknop:focus-visible { color:var(--brand); border-color:rgba(128,0,0,.2); }
+  .apparaatknop[aria-expanded="true"] { color:var(--brand); border-color:rgba(128,0,0,.2); }
+  .apparaatbalk { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap;
     margin-bottom:12px; font-size:12.5px; color:#666; }
-  .tokenstand[hidden] { display:none; }
-  .tokenweg { display:inline-flex; align-items:center; min-height:44px; font-family:'Mulish',sans-serif;
+  .apparaatbalk[hidden] { display:none; }
+  .apparaatlade { max-width:520px; margin:0 0 14px; padding:14px 16px; border:1px solid rgba(128,0,0,.25);
+    border-radius:12px; background:rgba(128,0,0,.04); }
+  .apparaatlade[hidden] { display:none; }
+  .apparaatlade h2 { margin:0 0 4px; border:0; padding:0; }
+  .apparaatlade p { margin:0 0 12px; font-size:13px; color:#6d6360; }
+  .apparaatlade ul { list-style:none; margin:0 0 12px; padding:0; display:grid; gap:8px; }
+  .apparaatlade li { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid rgba(128,0,0,.14);
+    border-radius:10px; padding:8px 12px; }
+  .apparaatlade li .naam { font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:#3a3330; }
+  .apparaatlade li .wanneer { font-size:12px; color:#8a7f7c; margin-right:auto; }
+  /* Tikdoel 44px, net als elke andere knop hier — zie test/reviewtool.test.mjs. */
+  .apparaatlade .weg { min-height:44px; font-family:'Mulish',sans-serif; font-size:12.5px; color:#666;
+    background:none; border:0; padding:0 4px; text-decoration:underline; cursor:pointer; flex:none; }
+  .apparaatlade .weg:hover, .apparaatlade .weg:focus-visible { color:var(--brand); }
+  .apparaatlade .rij { display:flex; gap:8px; flex-wrap:wrap; }
+  .apparaatlade .rij button { flex:1 1 auto; min-width:160px; }
+  .uitlogknop { display:inline-flex; align-items:center; min-height:44px; font-family:'Mulish',sans-serif;
     font-size:12.5px; color:#666; background:none; border:0; padding:0 2px;
     text-decoration:underline; cursor:pointer; }
-  .tokenweg:hover, .tokenweg:focus-visible { color:var(--brand); }
+  .uitlogknop:hover, .uitlogknop:focus-visible { color:var(--brand); }
   /* De voettekst staat na alle inhoud en houdt afstand: de ruimte erboven is
      wat de knop onbereikbaar maakt voor een duim die op de laatste kaart mikt. */
   .voet { margin-top:40px; padding-top:14px; border-top:1px solid rgba(128,0,0,.12);
@@ -141,6 +142,10 @@
   .weigeringen .wurl{ margin-top:2px; font-size:12px; color:#7a6a6a; word-break:break-all; font-family:ui-monospace,Menlo,Consolas,monospace; }
   .melding { padding:12px 14px; border-radius:10px; margin-bottom:14px; font-size:14px; }
   .fout { background:rgba(128,0,0,.08); color:var(--brand); border:1px solid rgba(128,0,0,.25); }
+  .info { background:rgba(128,0,0,.04); color:#5e4a46; border:1px solid rgba(128,0,0,.14); }
+  /* Een bevestiging ("ingesteld", "verwijderd") hoort niet als waarschuwing te
+     ogen; groen is in deze tool de kleur van wat gelukt is. */
+  .goed { background:rgba(47,107,58,.07); color:var(--actueel); border:1px solid rgba(47,107,58,.3); }
   /* Waarschuwing binnen een conceptkaart: te smalle bronbasis of een door de
      server geweigerde publicatie. */
   .waarschuwing { margin:10px 0 0; padding:10px 12px; border-radius:10px; font-size:13.5px;
@@ -202,37 +207,6 @@
   .nakijklijst .rij { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .nakijklijst .rij a { flex:1; min-width:180px; color:var(--brand); text-decoration:none; font-weight:600; }
   .leeg { color:#8a7f7c; font-size:14px; }
-  /* De opslagdiagnose. Zandkleurig als het alleen een beperking is, rood als de
-     browser niets bewaart — dan is er een handeling nodig. */
-  .opslagstand { max-width:640px; margin:0 0 14px; padding:10px 12px; border-left:3px solid #cdbfb8;
-                 background:#faf7f5; color:#5c5148; font-size:13px; line-height:1.55; border-radius:0 8px 8px 0; }
-  .opslagstand[hidden] { display:none; }
-  .opslagstand.fout { border-left-color:#8a2b2b; background:#fdf5f4; color:#6b3630; }
-  .opslagstand b { font-weight:600; }
-  .opslagstand .details { margin-top:6px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:#8a7f7c; word-break:break-word; }
-  /* De sluitknop is de ENIGE manier waarop deze melding weggaat. Vandaar een
-     echt tikdoel van 44px: op een telefoon is dit het knopje dat je raakt
-     nadat je de tekst hebt gelezen, niet iets waar je per ongeluk langs veegt. */
-  .opslagstand .opslagsluit { display:inline-flex; align-items:center; min-height:44px; margin-top:6px;
-    font-family:'Mulish',sans-serif; font-size:12.5px; color:#6b3630; background:none; border:0; padding:0 2px;
-    text-decoration:underline; cursor:pointer; }
-  .opslagstand .opslagsluit:hover, .opslagstand .opslagsluit:focus-visible { color:var(--brand); }
-  /* De meldingen zoals ze op een groot scherm te lezen zijn. */
-  .meldingen { max-width:760px; margin:28px 0 0; }
-  .meldingen[hidden] { display:none; }
-  .meldknop { display:inline-flex; align-items:center; min-height:44px; font-family:'Mulish',sans-serif;
-    font-size:12.5px; color:#666; background:none; border:0; padding:0 2px; text-decoration:underline; cursor:pointer; }
-  .meldknop:hover, .meldknop:focus-visible { color:var(--brand); }
-  /* Een oordeel dat zegt dat alles werkt, hoort niet als waarschuwing te ogen. */
-  .meldingen .oordeel { padding:8px 12px; border-left:3px solid #cdbfb8; background:#faf7f5; color:#5c5148;
-    font-size:13px; line-height:1.55; border-radius:0 8px 8px 0; margin-top:8px; }
-  .meldingen .oordeel.fout { border-left-color:#8a2b2b; background:#fdf5f4; color:#6b3630; }
-  .meldingen .meldlade { margin-top:10px; }
-  .meldingen .meldlade[hidden] { display:none; }
-  .meldingen ol { margin:0; padding:0; list-style:none; display:grid; gap:8px; }
-  .meldingen li { border:1px solid rgba(128,0,0,.12); border-radius:10px; padding:8px 10px; background:#fff; }
-  .meldingen .wanneer { font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:var(--brand); }
-  .meldingen .rij { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:#6b625f; word-break:break-word; }
   /* De gemeten stand van de persketen onder een lege conceptlijst. Bewust
      nuchter opgemaakt: het is diagnose, geen waarschuwing — nul concepten kan
      een rustige nieuwsdag zijn. Wat de regels doen is dat verschil zichtbaar
@@ -257,69 +231,36 @@
     <button type="button" class="tab" role="tab" id="tabOverheid" data-tab="overheid" aria-selected="false" tabindex="-1" aria-controls="inhoud">Overheid</button>
   </div>
   <div id="melding"></div>
-  <div class="tokenvak" id="tokenvak" hidden>
-    <h2>Beheertoken</h2>
-    <label for="tokenveld">Token</label>
-    <!-- TYPE=TEXT, NIET PASSWORD. In #27 maakte ik hier een wachtwoordveld van,
-         netter ogend dan het tekstveld dat /banner-beheer gebruikt. Dat is
-         precies de wijziging waarna een geldig token werd geweigerd. Een
-         wachtwoordmanager doet aan een veld met type=password wat hij hoort te
-         doen: hij biedt zijn eigen opgeslagen waarde aan en vult die in, en
-         autocomplete="off" wordt daar door de meeste managers genegeerd. Wat je
-         plakt kan zo overschreven zijn tegen de tijd dat je op Bewaren drukt.
-         /banner-beheer gebruikt al jaren type=text en heeft dit nooit gehad. -->
-    <input type="text" id="tokenveld" autocomplete="off" spellcheck="false" autocapitalize="off"
-           autocorrect="off" placeholder="het REVIEW_TOKEN uit Vercel">
-    <!-- ÉÉN REGEL. Hier stond ook waarom een token niet in een URL hoort (die
-         komt in de browsergeschiedenis en in serverlogs terecht) en hoe je hier
-         later terugkomt. Dat is uitleg voor wie de code onderhoudt, niet voor
-         wie een token plakt; de reden staat bij TOKENSLEUTEL hieronder. -->
-    <p class="hint">Wordt alleen in deze browser bewaard en als header meegestuurd, nooit in de URL.</p>
-    <div class="knoppen">
-      <button type="button" class="actie pubbtn" id="tokenok">Bewaren</button>
+  <!-- APPARAAT. Achter één regel, dicht. Hier stel je de vingerafdruk op dit
+       apparaat in, zie je welke apparaten toegang hebben, en log je uit.
+       Bewust géén vast open blok: het is beheer dat je een paar keer per jaar
+       aanraakt, en het hoort niet elke dag boven de conceptenwachtrij te staan.
+       De balk zelf blijft wél altijd zichtbaar — uitloggen moet je zonder
+       zoeken kunnen, zeker op een geleend apparaat. -->
+  <div class="apparaatbalk" id="apparaatbalk" hidden>
+    <span id="wieben"></span>
+    <button type="button" class="apparaatknop" id="apparaatknop" aria-expanded="false" aria-controls="apparaatlade">Apparaat</button>
+  </div>
+  <div class="apparaatlade" id="apparaatlade" hidden>
+    <h2>Dit apparaat</h2>
+    <p id="apparaatuitleg">Met een vingerafdruk of gezichtsherkenning log je hier voortaan in één handeling in, zonder mail.</p>
+    <div class="rij" id="apparaatrij">
+      <button type="button" class="actie pubbtn" id="passkeynieuw" hidden>Vingerafdruk instellen op dit apparaat</button>
     </div>
+    <div id="apparaatmelding"></div>
+    <h2 style="margin-top:16px">Ingesteld</h2>
+    <ul id="passkeylijst"><li class="leeg">Laden…</li></ul>
+    <button type="button" class="uitlogknop" id="uitlogknop">Uitloggen</button>
   </div>
-  <!-- BLIJFT STAAN ZOLANG DEZE BROWSER EEN TOKEN HEEFT. De weghaalknop zat eerst
-       in het vak hierboven, en dat vak verbergt zichzelf zodra je binnen bent —
-       waarmee de enige manier om je toegang op te heffen onbereikbaar werd. Op
-       een geleende of gedeelde computer blijft het token dan achter, ook nadat
-       je op Ning uitlogt. Eén regel, altijd zichtbaar, is de prijs daarvoor. -->
-  <div class="tokenstand" id="tokenstand" hidden>
-    <!-- DEZE ZIN WAS EEN AANNAME. Hij stond er zodra `token` in het geheugen
-         zat, ook als het wegschrijven zojuist stil was mislukt — en dat is
-         precies wat er op mobiel gebeurde: elk bezoek opnieuw intikken, terwijl
-         het scherm volhield dat hij bewaard was. Wat er nu staat, komt uit de
-         uitslag van de schrijfpoging. Zie opslag.schrijf() hieronder.
-
-         DE WEGHAALKNOP STAAT HIER NIET MEER. Zie de voettekst onderaan. -->
-    <span id="tokenstandtekst">Het beheertoken is in deze browser bewaard.</span>
-  </div>
-  <!-- WAT DE BROWSER MET OPSLAG DOET. Alleen zichtbaar als er iets te melden
-       is. Bedoeld om op de telefoon zelf te kunnen lezen waaraan het ligt,
-       zonder ontwikkelaarsgereedschap dat daar niet bestaat. -->
-  <div class="opslagstand" id="opslagstand" hidden></div>
   <div id="inhoud" role="tabpanel" aria-labelledby="tabRedactie"><div class="leeg">Laden…</div></div>
 
-  <!-- VOETTEKST. "Token vergeten" stond pal boven de inhoud, één duimbreedte
-       van de knoppen die je de hele dag gebruikt. Op een telefoon is dat twee
-       keer misgegaan, en de prijs is elke keer dezelfde: geen toegang meer tot
-       de redactie tot het REVIEW_TOKEN weer is opgezocht.
-       Onderaan de pagina, achter alle inhoud langs, is hij nog steeds te vinden
-       voor wie hem zoekt — dat was de reden dat hij ooit uit het invoervak werd
-       gehaald — maar niet meer te raken voor wie hem mijdt. De standregel blijft
-       staan waar hij stond: die moet je zien zonder te scrollen. -->
-  <!-- DE MELDINGEN VAN DE TELEFOONS. Stonden eerst pal boven Concepten: zes
-       kaarten met user-agent-strings dwars door het redactiewerk heen. Dat is
-       ontwikkelaarsgereedschap in een productiegereedschap, en het is zelden
-       nodig ook. Nu onderaan, dicht, achter één regel die je zelf openklapt —
-       zoals de opruimlade. Het OORDEEL staat wél meteen zichtbaar, want dat is
-       het enige wat je normaal wilt weten. -->
-  <div class="meldingen" id="meldingen" hidden></div>
+  <!-- VOETTEKST. Hier stond "Token vergeten". Uitloggen heeft die plek niet
+       nodig: het staat nu in de apparaatbalk bovenaan, waar het hoort en waar
+       het zonder scrollen te vinden is op een geleend apparaat. De voettekst
+       blijft staan als het rustpunt onder de inhoud. -->
+  <footer class="voet" id="voet" hidden></footer>
 
-  <footer class="voet" id="voet" hidden>
-    <button type="button" class="tokenweg" id="tokenweg">Token vergeten</button>
-  </footer>
-
+<script src="/assets/inlog.js"></script>
 <script>
 (function(){
   "use strict";
@@ -328,242 +269,34 @@
   // nieuw tabblad, zodat de reviewsessie niet verloren gaat.
   var PREVIEW_URL = "/actueel";
 
-  // ---- Beheertoken ---------------------------------------------------------
-  // DRIE EISEN, in deze volgorde. (1) De link in het menu mag geen token
-  // dragen: die menubron (index.html) is een statisch bestand dat iedereen kan
-  // opvragen. (2) Het token mag niet in de URL van deze pagina blijven staan,
-  // want een URL komt in de browsergeschiedenis en in serverlogs terecht.
-  // (3) Je wilt hem niet elke keer opnieuw intikken.
+  // ---- Toegang -------------------------------------------------------------
+  // DE SESSIE ZIT IN COOKIES, NIET IN DEZE PAGINA. Hiervóór stond hier een
+  // beheertoken met alles eromheen: opslag in localStorage, een terugval op
+  // sessionStorage, een baken om te zien of de browser had opgeruimd, een
+  // vingerafdruk van het token om te zien of er iets anders voor in de plaats
+  // was gekomen, en een meldingenring op de server om dat op een telefoon te
+  // kunnen aflezen. Die hele laag bestond om één vraag te beantwoorden: heeft
+  // deze browser mijn token nog? Die vraag is er niet meer.
   //
-  // Dus: staat er ?token=… in de URL, dan wordt hij bewaard en METEEN uit de
-  // adresbalk gehaald. Daarna komt hij uit deze browser en gaat hij alleen nog
-  // als header mee. Zelfde aanpak als /banner-beheer, met een eigen sleutel.
-  var TOKENSLEUTEL = "nlfr_review_token";
-  // BAKEN. Wordt bij elk bezoek weggeschreven, náást het token. Hij beantwoordt
-  // de vraag die je met het token alleen niet kunt beantwoorden: is er sinds het
-  // vorige bezoek iets gewist? Staat het baken er nog maar het token niet, dan
-  // is het token gericht verdwenen. Is ALLES weg terwijl de opslag verder werkt,
-  // dan heeft de browser de site-gegevens opgeruimd — op mobiel gebeurt dat
-  // stilletjes bij privémodus, weinig ruimte, of een tijdslimiet op opslag die
-  // door een script is gezet. Zonder dit baken zien die gevallen er alle drie
-  // uit als "hij heeft het nooit bewaard".
-  var BAKENSLEUTEL = "nlfr_review_baken";
-  // VORMSLEUTEL. Bij het opslaan leggen we vast HOE het token eruitzag: zijn
-  // lengte en een korte vingerafdruk. Bij een volgend bezoek vergelijken we het
-  // teruggelezen token daarmee.
+  // De sessie wordt door @supabase/ssr in cookies bewaard (zie assets/inlog.js).
+  // Daardoor ziet de server hem vanzelf — de middleware vóór deze pagina en
+  // /api/review erachter — en hoeft deze pagina er niets aan te doen. Verzoeken
+  // dragen geen header meer; de cookie reist mee omdat hij van hetzelfde
+  // domein is.
   //
-  // Waarom dat nodig is: op 6 september bleek bij een tweede bezoek een token
-  // van 32 tekens te vertrekken terwijl er 22 was opgeslagen. Er wordt dus wél
-  // iets bewaard en meegestuurd, maar niet wat erin ging — en zonder deze twee
-  // waarden náást elkaar is niet te zien of de opslag iets anders teruggeeft,
-  // of dat er bij het opslaan al iets anders in het veld stond dan wat er is
-  // geplakt (autovullen op Android doet dat, ook bij een tekstveld met
-  // autocomplete="off").
-  var VORMSLEUTEL = "nlfr_review_tokenvorm";
-
-  // De vingerafdruk van een token: lengte plus een korte, niet-omkeerbare hash.
-  // BEWUST NIET HET TOKEN ZELF, en ook geen eerste-en-laatste-tekens. Deze
-  // waarde gaat het scherm op en de opslag van de server in; een beheertoken
-  // hoort daar niet terecht te komen, en van een verkeerd token weten we niet
-  // eens wat het is — het kan een wachtwoord uit een kluis zijn. Voor de vraag
-  // "is dit hetzelfde token als toen" is een hash genoeg, en meer is te veel.
-  function tokenVorm(t){
-    var s = String(t || "");
-    if (!s) return { len: 0, vinger: "leeg" };
-    var h = 5381;
-    for (var i = 0; i < s.length; i += 1) h = (h * 33) ^ s.charCodeAt(i);
-    return { len: s.length, vinger: (h >>> 0).toString(36) };
-  }
-  function vormTekst(v){
-    return v ? v.len + " tekens (" + v.vinger + ")" : "onbekend";
+  // WAT ER BIJ EEN 401 GEBEURT. Doorsturen naar /login, op elk verzoek en niet
+  // alleen op de eerste. Een sessie kan verlopen terwijl de pagina openstaat;
+  // zonder dit liep je bij elke knop tegen een foutmelding aan zonder een plek
+  // om opnieuw in te loggen. Eén keer doorsturen, nooit twee keer: een pagina
+  // met meerdere verzoeken tegelijk zou anders halverwege een tweede navigatie
+  // starten.
+  var wegGestuurd = false;
+  function naarLogin(reden){
+    if (wegGestuurd) return;
+    wegGestuurd = true;
+    location.replace("/login?terug=/review" + (reden ? "&reden=" + encodeURIComponent(reden) : ""));
   }
 
-  // ---- Opslag die zichzelf controleert ---------------------------------------
-  // WAAROM DIT MEER IS DAN localStorage.setItem. De vorige versie was:
-  //
-  //     try { localStorage.setItem(TOKENSLEUTEL, t); } catch(e){}
-  //
-  // Een lege catch. Weigert de browser te schrijven — privémodus op iOS gooit
-  // een QuotaExceededError bij de eerste setItem, een ingebedde pagina krijgt
-  // in Safari helemaal geen opslag — dan gebeurde er niets, en zei het scherm
-  // vervolgens "Het beheertoken is in deze browser bewaard." Dat was niet waar,
-  // en juist de onwaarheid maakte het onvindbaar: op desktop werkte het, op
-  // mobiel moest je elk bezoek opnieuw intikken, en niets wees een oorzaak aan.
-  //
-  // Er wordt nu TERUGGELEZEN. Een schrijfactie geldt pas als geslaagd wanneer
-  // hetzelfde eruit komt als erin ging. Dat vangt ook de browsers die niet
-  // gooien maar de waarde stil laten vallen.
-  //
-  // TWEE PLEKKEN, in deze volgorde. localStorage blijft na het sluiten staan en
-  // is wat je wilt. Lukt dat niet, dan sessionStorage: die overleeft het
-  // sluiten van het tabblad niet, maar wel het navigeren binnen dit bezoek —
-  // beter dan niets, mits de pagina er eerlijk over is. Lukt ook dat niet, dan
-  // leeft het token alleen in het geheugen van deze pagina en zegt het scherm
-  // dat met zoveel woorden.
-  var opslag = (function(){
-    var diagnose = { ingebed: null, local: null, session: null, waar: "geheugen" };
-
-    // Staat deze pagina in een iframe? Dan is de opslag in mobiele browsers
-    // vaak gescheiden van dezelfde site op het hoogste niveau, of geweigerd.
-    // Wat je in het ene verband bewaart, bestaat in het andere niet.
-    try { diagnose.ingebed = (window.top !== window.self); } catch(e){ diagnose.ingebed = true; }
-
-    // Werkt deze opslag écht? Schrijven, terugleen, opruimen. Een browser die
-    // wel een object aanbiedt maar niets bewaart, valt hier door de mand.
-    function toets(maak){
-      var proef = "nlfr_proef_" + Math.random().toString(36).slice(2);
-      try {
-        var bak = maak();
-        if (!bak) return { ok:false, reden:"niet beschikbaar" };
-        bak.setItem(proef, "1");
-        var terug = bak.getItem(proef);
-        bak.removeItem(proef);
-        if (terug !== "1") return { ok:false, reden:"schrijft niets weg (teruglezen gaf iets anders)" };
-        return { ok:true, reden:null };
-      } catch(e){
-        // De NAAM van de fout is het bruikbare deel: QuotaExceededError bij een
-        // volle of geweigerde opslag, SecurityError bij een geblokkeerde
-        // ingebedde context. "Er ging iets mis" helpt niemand verder.
-        return { ok:false, reden:(e && e.name ? e.name : "onbekende fout") + (e && e.message ? ": " + e.message : "") };
-      }
-    }
-
-    diagnose.local = toets(function(){ return window.localStorage; });
-    if (diagnose.local.ok) diagnose.waar = "local";
-    else {
-      diagnose.session = toets(function(){ return window.sessionStorage; });
-      if (diagnose.session.ok) diagnose.waar = "session";
-    }
-
-    function bak(){
-      if (diagnose.waar === "local") return window.localStorage;
-      if (diagnose.waar === "session") return window.sessionStorage;
-      return null;
-    }
-
-    return {
-      diagnose: diagnose,
-      // Blijft wat hier wordt bewaard staan als je de browser sluit?
-      blijvend: function(){ return diagnose.waar === "local"; },
-      lees: function(sleutel){
-        var b = bak();
-        if (!b) return "";
-        try { return b.getItem(sleutel) || ""; } catch(e){ return ""; }
-      },
-      // Geeft { ok, reden } terug in plaats van niets. De aanroeper MOET er iets
-      // mee doen; dat is het hele punt.
-      schrijf: function(sleutel, waarde){
-        var b = bak();
-        if (!b) return { ok:false, reden:"deze browser biedt geen opslag aan die iets bewaart" };
-        try {
-          if (waarde) {
-            b.setItem(sleutel, waarde);
-            if (b.getItem(sleutel) !== waarde) {
-              return { ok:false, reden:"de browser accepteerde de waarde maar bewaarde hem niet" };
-            }
-          } else {
-            b.removeItem(sleutel);
-          }
-          return { ok:true, reden:null };
-        } catch(e){
-          return { ok:false, reden:(e && e.name ? e.name : "onbekende fout") + (e && e.message ? ": " + e.message : "") };
-        }
-      }
-    };
-  })();
-
-  // Het baken van het VORIGE bezoek, opgehaald vóór we dat van nu wegschrijven.
-  var vorigBaken = opslag.lees(BAKENSLEUTEL);
-  // De uitslag van díe schrijfactie telt mee in de melding: een baken dat niet
-  // eens weg te schrijven is, zegt iets anders dan een baken dat wél wordt
-  // weggeschreven en bij het volgende bezoek verdwenen blijkt.
-  var bakenGeschreven = opslag.schrijf(BAKENSLEUTEL, new Date().toISOString()).ok;
-
-  // De uitslag van de laatste schrijfpoging. Hierop draait wat het scherm zegt:
-  // niet op "er staat een token in het geheugen", maar op "is hij bewaard".
-  //
-  // Beginwaarde is "is er überhaupt een plek", niet "is die plek blijvend": met
-  // de sessionStorage-terugval IS er weggeschreven, alleen niet voor na het
-  // sluiten van het tabblad. Dat onderscheid maakt tekenToken() hieronder; hier
-  // op blijvend() beginnen zou een geslaagde terugval als mislukking tonen.
-  var opslagUitslag = { ok: opslag.diagnose.waar !== "geheugen", reden: null };
-
-  function bewaardToken(){
-    return opslag.lees(TOKENSLEUTEL);
-  }
-  function bewaarToken(t){
-    opslagUitslag = opslag.schrijf(TOKENSLEUTEL, t);
-    // De vorm van wat er NU is weggeschreven, zodat een volgend bezoek kan
-    // vaststellen of het teruggelezen token nog hetzelfde is.
-    var vorm = tokenVorm(t);
-    opslag.schrijf(VORMSLEUTEL, t ? vorm.len + ":" + vorm.vinger : "");
-    return opslagUitslag;
-  }
-  // Wat er bij het OPSLAAN is vastgelegd, uit een vorig bezoek.
-  function bewaardeVorm(){
-    var ruw = opslag.lees(VORMSLEUTEL);
-    var deel = String(ruw || "").split(":");
-    if (deel.length !== 2) return null;
-    var len = parseInt(deel[0], 10);
-    return Number.isFinite(len) ? { len: len, vinger: deel[1] } : null;
-  }
-  // GENERATIETELLER. Elk verzoek onthoudt onder welke generatie het de deur uit
-  // ging; wisselt het token intussen, dan is het antwoord verouderd en wordt het
-  // genegeerd. Twee races die dat afvangt, allebei uit de review van #28:
-  //
-  //   1. Je klikt "Token vergeten" terwijl de eerste GET nog onderweg is. Dat
-  //      verzoek draagt nog de oude, geldige header; zonder deze teller zou het
-  //      antwoord daarna gewoon render() aanroepen en het scherm weer vol
-  //      redactionele gegevens zetten — precies wat je met die knop wilde
-  //      voorkomen op een geleende computer.
-  //   2. Twee verzoeken met een verlopen token overlappen. De eerste 401 opent
-  //      het vak, jij tikt een nieuw en geldig token in, en dán komt de tweede
-  //      401 van het oude verzoek binnen en wist jouw nieuwe token weer.
-  var tokenGeneratie = 0;
-  // De ENIGE plek die `token` verandert, zodat teller, opslag en weergave nooit
-  // uit elkaar kunnen lopen.
-  function zetToken(nieuw){
-    token = nieuw || "";
-    bewaarToken(token);
-    tokenGeneratie += 1;
-    // OOK DE OPGEHAALDE GEGEVENS WEG. Het scherm leegmaken is niet genoeg: de
-    // concepten, publicaties en overheidsberichten stonden nog in `state`, en
-    // render() wordt vanaf een stuk of zes plekken aangeroepen (een tabwissel,
-    // het Infofrankrijk-paneel). Eén zo'n aanroep zou de zojuist gewiste
-    // redactionele inhoud zo weer terugzetten. Een tokenwissel is een nieuwe
-    // sessie; wat bij de vorige hoorde gaat mee.
-    state.concepten = []; state.index = 0; state.duplicaten = 0; state.totaal = 0; state.journaal = null; state.opslagmeldingen = []; state.opslagoordeel = null;
-    state.publicaties = []; state.overheid = []; state.bronUrlWeigeringen = [];
-    state.verwijzingen = {}; state.nakijken = []; state.bijnaVerlopen = [];
-    state.ifIndex = null; state.ifPaneel = null;
-    state.gouv = { status: "leeg", tegels: [], fout: null, gebakkenOp: null };
-    tekenToken();
-  }
-  var params = new URLSearchParams(location.search);
-  var uitUrl = (params.get("token") || "").trim();
-  var bewaardRuw = bewaardToken();
-  var token = uitUrl || bewaardRuw;
-  // DE VERGELIJKING WAAR HET OM DRAAIT. Wat kwam er uit de opslag, en wat was
-  // er bij het opslaan weggeschreven? Lopen die uiteen, dan is het token tussen
-  // twee bezoeken door veranderd, en dát is een heel andere storing dan een
-  // token dat verlopen of ingetrokken is. Zonder deze twee naast elkaar zag je
-  // alleen "Ongeldig token" en had je geen idee welke kant je op moest zoeken.
-  var vormBijOpslaan = bewaardeVorm();
-  var vormTeruggelezen = tokenVorm(bewaardRuw);
-  var tokenGewijzigd = Boolean(
-    bewaardRuw && vormBijOpslaan &&
-    (vormBijOpslaan.len !== vormTeruggelezen.len || vormBijOpslaan.vinger !== vormTeruggelezen.vinger)
-  );
-  if (uitUrl){
-    bewaarToken(uitUrl);
-    // Uit de adresbalk halen, zodat hij niet in de geschiedenis blijft staan en
-    // niet meelift als Referer naar een externe link die je hier aanklikt.
-    try {
-      params.delete("token");
-      var rest = params.toString();
-      history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash);
-    } catch(e){}
-  }
   var nbEl = document.getElementById("nbLink");
   if (nbEl){ nbEl.href = PREVIEW_URL; }
   var meldingEl = document.getElementById("melding");
@@ -582,51 +315,40 @@
   function datum(iso){ try { return new Date(iso).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
   function melding(tekst, soort){ meldingEl.innerHTML = tekst ? '<div class="melding '+(soort||"info")+'">'+esc(tekst)+'</div>' : ""; }
 
-  // HET TOKEN GAAT ALLEEN ALS HEADER MEE, nooit in de URL. Een token in een URL
-  // belandt in de browsergeschiedenis en in de serverlogs van elke aanvraag, en
-  // lift mee als Referer naar elke externe link die je op deze pagina aanklikt —
-  // en deze pagina staat vol met links naar bronnen en naar Infofrankrijk.
+  // DE SESSIE REIST ALS COOKIE, nooit in de URL. Dat was al de regel toen hier
+  // nog een token stond, en om dezelfde reden: een geheim in een URL belandt in
+  // de browsergeschiedenis en in de serverlogs van elke aanvraag, en lift mee
+  // als Referer naar elke externe link die je op deze pagina aanklikt — en deze
+  // pagina staat vol met links naar bronnen en naar Infofrankrijk.
   //
-  // De querystring stond er een tijd als terugval bij, toen een geldig token
-  // werd geweigerd. Die oorzaak lag elders (een wachtwoordveld waar de
-  // wachtwoordmanager in schreef) en de headerroute is op productie bewezen,
-  // dus de terugval is eruit. api/review.js leest ?token= niet meer.
-  // ÉÉN PLEK WAAR EEN 401 WORDT OPGEMERKT, en dus op elk verzoek — niet alleen
-  // op de eerste GET. Wordt REVIEW_TOKEN in Vercel gewisseld terwijl deze
-  // pagina openstaat, dan liep je anders bij elke knop tegen een foutmelding
-  // aan zonder een plek om het nieuwe token in te vullen; alleen herladen hielp.
-  // Het dode token gaat meteen weg, zodat de stand ondubbelzinnig is.
+  // credentials:"same-origin" staat er expliciet bij. Dat is al het standaard
+  // gedrag van fetch, maar dit is de regel waar de hele toegang aan hangt; die
+  // hoort niet impliciet te zijn.
   //
-  // De STATUS reist mee, want niet elke fout is een tokenfout: bij 503 (geen KV)
-  // is er niets mis met het token en zou opnieuw vragen de redacteur op een
+  // ÉÉN PLEK WAAR EEN 401 WORDT OPGEMERKT, en dus op elk verzoek. De STATUS
+  // reist mee, want niet elke fout is een toegangsfout: bij 503 (geen KV) is er
+  // niets mis met de sessie en zou doorsturen naar /login de redacteur op een
   // dwaalspoor zetten.
-  function verwerkAntwoord(r, generatie){
+  function verwerkAntwoord(r){
     return r.json().catch(function(){ return {}; }).then(function(j){
-      // Verouderd antwoord: het token is gewisseld sinds dit verzoek vertrok.
-      // Niets renderen, en vooral: het huidige token NIET wissen.
-      if (generatie !== tokenGeneratie) return { verouderd: true, ok: false, status: 0, data: {} };
-      if (r.status === 401) zetToken("");
+      if (r.status === 401){ naarLogin(); return { ok: false, status: 401, data: j }; }
       return { ok: r.ok, status: r.status, data: j };
     });
   }
 
   function api(method, body){
-    var url = "/api/review";
-    var opties = { method: method, headers: { "X-Review-Token": token } };
+    var opties = { method: method, credentials: "same-origin", headers: {} };
     if (body){ opties.headers["Content-Type"] = "application/json"; opties.body = JSON.stringify(body); }
-    var generatie = tokenGeneratie;
-    return fetch(url, opties).then(function(r){ return verwerkAntwoord(r, generatie); });
+    return fetch("/api/review", opties).then(verwerkAntwoord);
   }
 
   // GET met extra querystring (de kandidatenlijst; zie ?deel=if in api/review.js).
   function apiGet(extra){
-    // `extra` komt binnen als "&deel=if&…"; zonder token ervoor moet dat een "?"
-    // worden, anders vraagt de pagina "/api/review&deel=if" op en ziet de server
-    // nooit een deel-parameter.
+    // `extra` komt binnen als "&deel=if&…"; dat moet hier een "?" worden, anders
+    // vraagt de pagina "/api/review&deel=if" op en ziet de server nooit een
+    // deel-parameter.
     var url = "/api/review" + (extra ? "?" + String(extra).replace(/^&/, "") : "");
-    var generatie = tokenGeneratie;
-    return fetch(url, { headers: { "X-Review-Token": token } })
-      .then(function(r){ return verwerkAntwoord(r, generatie); });
+    return fetch(url, { credentials: "same-origin" }).then(verwerkAntwoord);
   }
 
   function bronnenHtml(bronnen){
@@ -1465,322 +1187,168 @@
     });
   });
 
-  // ---- Het tokenvak ---------------------------------------------------------
-  // TWEE STANDEN, ALTIJD PRECIES ÉÉN ZICHTBAAR. Zonder token het invoervak;
-  // mét token één regel die zegt dat deze browser er een heeft, met de knop om
-  // hem weg te gooien. Die knop hoort NIET in het invoervak: dat verbergt
-  // zichzelf zodra je binnen bent, en dan is de enige manier om je toegang op
-  // te heffen onbereikbaar.
-  var tokenvakEl = document.getElementById("tokenvak");
-  var tokenstandEl = document.getElementById("tokenstand");
+  // ---- Het scherm aan/uit ---------------------------------------------------
   var voetEl = document.getElementById("voet");
   var tabsEl = document.querySelector(".tabs");
   function zetVerborgen(el, verborgen){
     if (!el) return;
     if (verborgen) el.setAttribute("hidden", ""); else el.removeAttribute("hidden");
   }
-  var tokenstandtekstEl = document.getElementById("tokenstandtekst");
-  var opslagstandEl = document.getElementById("opslagstand");
 
-  // ---- Wat het scherm over de opslag zegt -----------------------------------
-  // DRIE UITKOMSTEN, en ze zijn niet uitwisselbaar. Bewaard tot je terugkomt,
-  // bewaard tot je dit tabblad sluit, of niet bewaard. Alleen de eerste is wat
-  // iemand verwacht als er "bewaard" staat; de andere twee horen dat te zeggen,
-  // want anders zoekt hij de oorzaak bij zichzelf.
-  // TELLERS VOOR HET KNIPPEREN. Op Android verscheen de diagnose en verdween hij
-  // binnen een fractie van een seconde: te snel om te lezen, te snel voor een
-  // schermafdruk. Sinds deze versie verdwijnt hij niet meer vanzelf — maar wát
-  // hem eerder liet verdwijnen is nog steeds de vraag, en die beantwoordt zich
-  // niet als we het gedrag alleen maar wegnemen. Elke poging tot verbergen
-  // wordt daarom geteld en gaat mee in de melding naar de server.
-  var opslagGetekend = 0;
-  var opslagZouVerbergen = 0;
-  var opslagGetoond = false;   // heeft hij ooit iets getoond dit bezoek?
-  var opslagWeggeklikt = false; // heeft de lezer hem zelf gesloten?
+  // ---- Apparaat --------------------------------------------------------------
+  // WAT HIER STAAT EN WAAROM. De magic link is de eerste deur: hij werkt op elk
+  // apparaat en vereist niets dan toegang tot de mailbox. Maar hij kost elke
+  // keer een mail, en dat is te traag voor dagelijks redactiewerk. De passkey
+  // is de vaste deur: één aanraking, geen mail, en hij verlaat dit apparaat
+  // niet. Beide zijn nodig — de passkey is er niet om de mail te vervangen maar
+  // om hem zeldzaam te maken.
+  //
+  // DE LIJST STAAT ER OOK. Een passkey die je niet kunt zien, kun je niet
+  // intrekken, en een apparaat dat je kwijt bent moet je kunnen intrekken. Dat
+  // is de hele reden dat dit blok bestaat en niet alleen een knop is.
+  var apparaatBalkEl   = document.getElementById("apparaatbalk");
+  var apparaatKnopEl   = document.getElementById("apparaatknop");
+  var apparaatLadeEl   = document.getElementById("apparaatlade");
+  var apparaatMeldEl   = document.getElementById("apparaatmelding");
+  var passkeyNieuwEl   = document.getElementById("passkeynieuw");
+  var passkeyLijstEl   = document.getElementById("passkeylijst");
+  var uitlogKnopEl     = document.getElementById("uitlogknop");
+  var wieBenEl         = document.getElementById("wieben");
 
-  function tekenOpslagstand(){
-    if (!opslagstandEl) return;
-    opslagGetekend += 1;
-    if (opslagWeggeklikt){ opslagstandEl.hidden = true; return; }
-    var d = opslag.diagnose;
-    var regels = [];
-    var fout = false;
+  function apparaatMelding(tekst, soort){
+    if (!apparaatMeldEl) return;
+    apparaatMeldEl.innerHTML = tekst
+      ? '<div class="melding ' + (soort || "info") + '">' + esc(tekst) + "</div>"
+      : "";
+  }
 
-    if (d.waar === "geheugen"){
-      fout = true;
-      regels.push("<b>Deze browser bewaart het beheertoken niet.</b> Je moet het bij elk bezoek " +
-        "opnieuw invoeren zolang dat zo is.");
-    } else if (d.waar === "session"){
-      regels.push("<b>Het token blijft alleen in dit tabblad.</b> Zodra je het sluit, is het weg — " +
-        "deze browser weigert blijvende opslag.");
+  // De client van Supabase. assets/inlog.js is een gebundeld bestand uit deze
+  // repo, geen CDN: de deur van deze tool hoort niet aan een derde partij te
+  // hangen. Zie src/inlog.js voor de afweging.
+  function inlog(){
+    if (typeof NLFRAuth === "undefined"){
+      return Promise.reject(new Error("De inlogcode is niet geladen."));
     }
+    return NLFRAuth.client();
+  }
 
-    // De ingebedde context is een eigen oorzaak, ook als de opslag verder werkt:
-    // wat je hier bewaart, bestaat niet meer als je de pagina rechtstreeks
-    // opent, en andersom.
-    if (d.ingebed){
-      regels.push("Deze pagina staat in een <b>kader binnen een andere pagina</b>. Mobiele browsers " +
-        "houden opslag in zo'n kader apart van dezelfde site op zichzelf, of weigeren hem. " +
-        "Open <code>/review</code> als eigen pagina — via Beheer in het menu, of rechtstreeks.");
-    }
+  function datumKort(iso){
+    try { return new Date(iso).toLocaleDateString("nl-NL", { day:"numeric", month:"short", year:"numeric" }); }
+    catch(e){ return ""; }
+  }
 
-    // HET TOKEN IS VERANDERD SINDS HET WERD OPGESLAGEN. Dit is geen bijzaak en
-    // hoort bovenaan: het onderscheidt "mijn token is verlopen" van "er staat
-    // iets anders op de plek van mijn token", en dat zijn twee verschillende
-    // zoektochten.
-    if (tokenGewijzigd){
-      fout = true;
-      regels.unshift("<b>Het bewaarde beheertoken is veranderd sinds je het opsloeg.</b> " +
-        "Weggeschreven: " + esc(vormTekst(vormBijOpslaan)) + ". Nu teruggelezen: " +
-        esc(vormTekst(vormTeruggelezen)) + ". Sla je token opnieuw op; blijft dit terugkomen, " +
-        "dan schrijft iets anders op dit toestel over deze waarde heen.");
-    }
-
-    // Het baken beantwoordt de vraag die het token alleen niet kan beantwoorden.
-    if (!fout && !vorigBaken && d.waar === "local"){
-      regels.push("Er is geen spoor van een vorig bezoek in deze browser. Als je hier eerder wél " +
-        "een token hebt bewaard, heeft de browser de gegevens van deze site sindsdien opgeruimd " +
-        "(privémodus, weinig opslagruimte, of een tijdslimiet op wat een script bewaart).");
-    }
-
-    if (!regels.length){
-      opslagZouVerbergen += 1;
-      // BLIJFT STAAN. Wat er eenmaal stond, verdwijnt niet meer vanzelf: de
-      // lezer moet hem kunnen lezen en desnoods fotograferen, en op een telefoon
-      // is een melding die zichzelf opruimt hetzelfde als geen melding. Alleen
-      // de sluitknop haalt hem weg.
-      if (opslagGetoond) return;
-      opslagstandEl.hidden = true; opslagstandEl.innerHTML = "";
+  function tekenPasskeys(lijst){
+    if (!passkeyLijstEl) return;
+    if (!lijst || !lijst.length){
+      passkeyLijstEl.innerHTML = '<li class="leeg">Nog geen enkel apparaat ingesteld.</li>';
       return;
     }
-
-    // De onderregel is bewust technisch: dit is wat je overtikt of doorstuurt
-    // als het hiermee niet is opgelost. Zonder ontwikkelaarsgereedschap op een
-    // telefoon is dit de enige plek waar die namen te zien zijn.
-    var details = "token bewaard=" + vormTekst(vormBijOpslaan) +
-      " · teruggelezen=" + vormTekst(vormTeruggelezen) +
-      (uitUrl ? " · uit de adresbalk" : "") +
-      " · opslag=" + d.waar +
-      (d.local && !d.local.ok ? " · local: " + d.local.reden : "") +
-      (d.session && !d.session.ok ? " · session: " + d.session.reden : "") +
-      " · ingebed=" + (d.ingebed ? "ja" : "nee") +
-      " · vorig bezoek=" + (vorigBaken ? esc(vorigBaken) : "geen spoor");
-
-    opslagstandEl.className = "opslagstand" + (fout ? " fout" : "");
-    opslagstandEl.innerHTML = "<div>" + regels.join("</div><div>") + "</div>" +
-      '<div class="details">' + details + "</div>" +
-      '<button type="button" class="opslagsluit" id="opslagsluit">Sluiten</button>';
-    opslagstandEl.hidden = false;
-    opslagGetoond = true;
-    var sluit = document.getElementById("opslagsluit");
-    if (sluit) sluit.addEventListener("click", function(){
-      opslagWeggeklikt = true;
-      opslagstandEl.hidden = true;
-    });
-  }
-
-  // ---- De melding naar de server ---------------------------------------------
-  // WAAROM DIT NAAR DE SERVER GAAT. De diagnose stond alleen op het scherm van
-  // de telefoon, en juist daar was hij onleesbaar. Hij gaat daarom ook naar KV,
-  // te lezen met het beheertoken op een scherm waar hij blijft staan.
-  //
-  // MET het token, niet zonder. Dat token tikt de redacteur toch al elk bezoek
-  // in — dat is precies het probleem dat hier wordt onderzocht — en een route
-  // zonder token zou een vreemde in staat stellen de ring vol te duwen en deze
-  // metingen eruit te drukken.
-  //
-  // Eén keer per bezoek. Een mislukte verzending is geen melding waard: dan is
-  // er iets veel groters aan de hand en staat dat al op het scherm.
-  var opslagGemeld = false;
-  function meldOpslagAanServer(){
-    if (opslagGemeld || !token) return;
-    opslagGemeld = true;
-    var d = opslag.diagnose;
-    api("POST", { actie: "opslagmelding", melding: {
-      waar: d.waar,
-      localReden: d.local && !d.local.ok ? d.local.reden : null,
-      sessionReden: d.session && !d.session.ok ? d.session.reden : null,
-      ingebed: d.ingebed,
-      vorigBaken: vorigBaken || null,
-      bakenGeschreven: bakenGeschreven,
-      tokenGeschreven: opslagUitslag.ok,
-      // BEIDE VORMEN. Wat er bij het opslaan is weggeschreven, en wat er nu
-      // wordt verstuurd. Verschillen ze, dan is het token tussen twee bezoeken
-      // door veranderd; dat is met alleen een lengte niet te zien.
-      vormBijOpslaan: vormBijOpslaan ? vormBijOpslaan.len + ":" + vormBijOpslaan.vinger : null,
-      // DE VORM ZOALS HIJ BIJ HET LADEN UIT DE OPSLAG KWAM, niet die van nu.
-      // Deze melding vertrekt pas ná een geslaagde GET, en op een mislukt
-      // bezoek is dat pas nadat de redacteur zijn token opnieuw heeft ingetikt.
-      // `token` draagt dan het NIEUWE token, en dat is precies niet wat we
-      // willen weten: de vraag is wat er bij binnenkomst in de opslag stond.
-      vormVerstuurd: vormTeruggelezen.len + ":" + vormTeruggelezen.vinger,
-      tokenGewijzigd: tokenGewijzigd,
-      uitUrl: Boolean(uitUrl),
-      getekend: opslagGetekend,
-      zouVerbergen: opslagZouVerbergen,
-      ua: navigator.userAgent
-    }}).catch(function(){});
-  }
-
-  // ---- De opslagmeldingen van de telefoons -----------------------------------
-  // WAAROM ZE HIER STAAN. De diagnose op /review knipperde op Android voorbij:
-  // te snel om te lezen, te snel voor een schermafdruk. Elke melding gaat
-  // daarom mee met het beheertoken naar de server, en komt hier terug op een
-  // scherm waar hij blijft staan.
-  //
-  // Het OORDEEL erboven is de reden dat dit meer is dan een logboek: het
-  // scheidt "de browser weigert weg te schrijven" van "de browser ruimt het
-  // achteraf op", en dat zijn twee verschillende oplossingen. Zie
-  // lib/opslagmelding.js.
-  var meldingenEl = document.getElementById("meldingen");
-  function tekenMeldingen(){
-    if (!meldingenEl) return;
-    var lijst = state.opslagmeldingen || [];
-    var oordelen = state.opslagoordeel || [];
-    if (!lijst.length){ meldingenEl.hidden = true; meldingenEl.innerHTML = ""; return; }
-
-    // Eén regel per TOESTEL. De ring bevat de meldingen van elke browser die
-    // hier komt: de telefoon die onderzocht wordt én de desktop waarop je dit
-    // leest. Die op één hoop beoordelen gaf een oordeel over het verkeerde
-    // apparaat. Een oordeel dat zegt dat alles werkt, oogt bovendien niet als
-    // waarschuwing; alleen een echte storing krijgt de rode rand.
-    var stuk = oordelen.map(function(o){
-      var kwaad = (o.code === "schrijven-mislukt" || o.code === "gewist-tussen-bezoeken");
-      return '<div class="oordeel'+(kwaad?" fout":"")+'"><b>'+esc(o.browser || "onbekend toestel")+
-        "</b> · "+o.aantal+" bezoek"+(o.aantal===1?"":"en")+"<div>"+esc(o.tekst)+"</div></div>";
+    passkeyLijstEl.innerHTML = lijst.map(function(pk){
+      var naam = pk.friendly_name || "Onbekend apparaat";
+      var wanneer = datumKort(pk.created_at);
+      return '<li><span class="naam">' + esc(naam) + "</span>" +
+             '<span class="wanneer">' + esc(wanneer) + "</span>" +
+             '<button type="button" class="weg" data-passkey="' + esc(pk.id) + '">Verwijderen</button></li>';
     }).join("");
-
-    var rijen = lijst.map(function(m){
-      var regels = [
-        "opslag=" + esc(m.waar),
-        m.localReden ? "local: " + esc(m.localReden) : "",
-        m.sessionReden ? "session: " + esc(m.sessionReden) : "",
-        "ingebed=" + (m.ingebed ? "ja" : "nee"),
-        "vorig bezoek=" + (m.vorigBaken ? esc(m.vorigBaken) : "geen spoor"),
-        "baken geschreven=" + (m.bakenGeschreven ? "ja" : "nee"),
-        "token geschreven=" + (m.tokenGeschreven ? "ja" : "nee"),
-        "token bij opslaan=" + (m.vormBijOpslaan ? esc(m.vormBijOpslaan) : "onbekend") +
-          " · verstuurd=" + (m.vormVerstuurd ? esc(m.vormVerstuurd) : "onbekend") +
-          (m.tokenGewijzigd ? " · VERANDERD" : "") + (m.uitUrl ? " · uit de adresbalk" : ""),
-        "getekend=" + (m.getekend == null ? "?" : m.getekend) +
-          " · zou verbergen=" + (m.zouVerbergen == null ? "?" : m.zouVerbergen)
-      ].filter(Boolean);
-      return "<li><div class=\"wanneer\">" + esc(datum(m.op)) + "</div>" +
-        '<div class="rij">' + regels.join(" · ") + "</div>" +
-        (m.ua ? '<div class="rij">' + esc(m.ua) + "</div>" : "") + "</li>";
-    }).join("");
-
-    meldingenEl.innerHTML =
-      '<button type="button" class="meldknop" id="meldknop" aria-expanded="false" aria-controls="meldlade">' +
-        "Opslagmeldingen (" + lijst.length + ")</button>" + stuk +
-      '<div class="meldlade" id="meldlade" hidden><ol>' + rijen + "</ol></div>";
-    meldingenEl.hidden = false;
-
-    var knop = document.getElementById("meldknop");
-    var lade = document.getElementById("meldlade");
-    if (knop && lade) knop.addEventListener("click", function(){
-      var open = lade.hasAttribute("hidden");
-      if (open) lade.removeAttribute("hidden"); else lade.setAttribute("hidden", "");
-      knop.setAttribute("aria-expanded", open ? "true" : "false");
-    });
   }
 
-  function tekenToken(){
-    var heeft = Boolean(token);
-    zetVerborgen(tokenvakEl, heeft);
-    zetVerborgen(tokenstandEl, !heeft);
-    // De voettekst draagt de weghaalknop en volgt dezelfde stand: zonder token
-    // valt er niets weg te halen.
-    zetVerborgen(voetEl, !heeft);
-    // De tabbladen zeggen niets zolang er geen toegang is.
-    if (tabsEl) tabsEl.hidden = !heeft;
-    // DE STANDREGEL VOLGT DE UITSLAG, niet het geheugen. Stond hier eerder
-    // altijd "in deze browser bewaard", ook wanneer het wegschrijven zojuist
-    // was mislukt.
-    if (heeft && tokenstandtekstEl){
-      if (!opslagUitslag.ok){
-        tokenstandtekstEl.textContent =
-          "Het beheertoken is NIET bewaard — het geldt alleen zolang deze pagina open blijft.";
-      } else if (!opslag.blijvend()){
-        tokenstandtekstEl.textContent =
-          "Het beheertoken geldt tot je dit tabblad sluit; blijvend bewaren lukt in deze browser niet.";
-      } else {
-        tokenstandtekstEl.textContent = "Het beheertoken is in deze browser bewaard.";
+  function laadPasskeys(){
+    if (!passkeyLijstEl) return Promise.resolve();
+    return inlog()
+      .then(function(sb){ return sb.auth.passkey.list(); })
+      .then(function(res){
+        if (res.error) throw res.error;
+        // De vorm van de respons is bij een experimentele API niet in beton
+        // gegoten: hij komt als array, of als { passkeys: [...] }. Beide
+        // aannemen is hier goedkoper dan er één kiezen en het stil laten breken.
+        var lijst = Array.isArray(res.data) ? res.data : (res.data && res.data.passkeys) || [];
+        tekenPasskeys(lijst);
+        // De knop om er een in te stellen verschijnt alleen als deze browser
+        // passkeys kan, ongeacht of er er al een staat: één account kan meerdere
+        // apparaten hebben, en dat is juist de bedoeling.
+        zetVerborgen(passkeyNieuwEl, !NLFRAuth.passkeysMogelijk());
+      })
+      .catch(function(e){
+        passkeyLijstEl.innerHTML = '<li class="leeg">' + esc(NLFRAuth.foutTekst(e)) + "</li>";
+        zetVerborgen(passkeyNieuwEl, !NLFRAuth.passkeysMogelijk());
+      });
+  }
+
+  if (apparaatKnopEl && apparaatLadeEl){
+    apparaatKnopEl.addEventListener("click", function(){
+      var open = apparaatLadeEl.hasAttribute("hidden");
+      zetVerborgen(apparaatLadeEl, !open);
+      apparaatKnopEl.setAttribute("aria-expanded", open ? "true" : "false");
+      // Pas ophalen als de lade voor het eerst opengaat. De lijst is beheer,
+      // geen redactiewerk; hij hoort geen verzoek te kosten bij elk bezoek.
+      if (open && !apparaatLadeEl.dataset.geladen){
+        apparaatLadeEl.dataset.geladen = "1";
+        laadPasskeys();
       }
-    }
-    tekenOpslagstand();
-    if (!heeft){
-      inhoudEl.innerHTML = "";
-      var v = document.getElementById("tokenveld");
-      if (v) v.focus();
-    }
+    });
   }
 
-  function bewaarUitVeld(){
-    var v = document.getElementById("tokenveld");
-    var t = (v && v.value || "").trim();
-    if (!t){ melding("Vul eerst het token in.", "fout"); return; }
-    if (v) v.value = "";
-    zetToken(t);
-    // NIET DOEN ALSOF HET GELUKT IS. zetToken() heeft zojuist geprobeerd te
-    // schrijven; ging dat mis, dan hoort dat hier te staan en niet pas bij het
-    // volgende bezoek, wanneer het token weg blijkt en niemand meer weet waarom.
-    if (!opslagUitslag.ok){
-      melding("Het token werkt nu wel, maar is NIET bewaard: " + opslagUitslag.reden +
-        ". Bij een volgend bezoek moet je hem opnieuw invoeren.", "fout");
-      laad(true);
-      return;
-    }
-    laad();
+  if (passkeyNieuwEl) passkeyNieuwEl.addEventListener("click", function(){
+    apparaatMelding("");
+    passkeyNieuwEl.disabled = true;
+    inlog()
+      .then(function(sb){ return sb.auth.registerPasskey(); })
+      .then(function(res){
+        if (res.error) throw res.error;
+        apparaatMelding("Ingesteld. Vanaf nu kun je hier inloggen met je vingerafdruk.", "goed");
+        return laadPasskeys();
+      })
+      .catch(function(e){ apparaatMelding(NLFRAuth.foutTekst(e), "fout"); })
+      .finally(function(){ passkeyNieuwEl.disabled = false; });
+  });
+
+  if (passkeyLijstEl) passkeyLijstEl.addEventListener("click", function(e){
+    var knop = e.target && e.target.closest ? e.target.closest("[data-passkey]") : null;
+    if (!knop) return;
+    var id = knop.getAttribute("data-passkey");
+    // BEVESTIGEN. Het verwijderen van de passkey van het apparaat waar je nu op
+    // zit, sluit je daar uit tot je opnieuw een inloglink aanvraagt. Dat is
+    // precies wat je wilt kunnen doen bij een verloren apparaat, en precies wat
+    // je niet per ongeluk wilt doen.
+    if (!window.confirm("Dit apparaat verwijderen?\n\nInloggen met de vingerafdruk van dat apparaat werkt daarna niet meer. Een inloglink per mail blijft werken.")) return;
+    knop.disabled = true;
+    apparaatMelding("");
+    inlog()
+      .then(function(sb){ return sb.auth.passkey.delete({ passkeyId: id }); })
+      .then(function(res){
+        if (res && res.error) throw res.error;
+        apparaatMelding("Verwijderd.", "goed");
+        return laadPasskeys();
+      })
+      .catch(function(e){
+        knop.disabled = false;
+        apparaatMelding(NLFRAuth.foutTekst(e), "fout");
+      });
+  });
+
+  if (uitlogKnopEl) uitlogKnopEl.addEventListener("click", function(){
+    uitlogKnopEl.disabled = true;
+    inlog()
+      .then(function(sb){ return sb.auth.signOut(); })
+      .catch(function(){ /* de sessie was al weg; doorsturen is wat telt */ })
+      .then(function(){ location.replace("/login?reden=uitgelogd"); });
+  });
+
+  // WIE ZIT ER INGELOGD. Eén regel, want op een gedeeld of geleend apparaat is
+  // dat de vraag die je stelt voordat je iets publiceert.
+  function tekenWieBen(){
+    if (!wieBenEl) return;
+    inlog()
+      .then(function(sb){ return sb.auth.getUser(); })
+      .then(function(res){
+        var u = res && res.data && res.data.user;
+        wieBenEl.textContent = u && u.email ? "Ingelogd als " + u.email : "";
+      })
+      .catch(function(){ wieBenEl.textContent = ""; });
   }
-  var tokenokEl = document.getElementById("tokenok");
-  if (tokenokEl) tokenokEl.addEventListener("click", bewaarUitVeld);
-  var tokenwegEl = document.getElementById("tokenweg");
-  if (tokenwegEl) tokenwegEl.addEventListener("click", function(){
-    // BEVESTIGEN, want dit is onomkeerbaar zonder het token er weer bij te
-    // halen. Wie hier per ongeluk klikt sluit zichzelf uit de redactie tot hij
-    // het REVIEW_TOKEN opnieuw heeft opgezocht.
-    if (!window.confirm("Het beheertoken uit deze browser verwijderen?\n\n" +
-        "De reviewtool is daarna niet meer bereikbaar. Je hebt het REVIEW_TOKEN " +
-        "dan opnieuw nodig, uit Vercel of uit je wachtwoordmanager.")) return;
-    // zetToken hoogt de generatie op, waarmee een verzoek dat NU nog onderweg is
-    // zijn antwoord niet meer op het scherm krijgt.
-    zetToken("");
-    melding("Token vergeten. Deze browser heeft geen toegang meer.", "info");
-  });
-  var tokenveldEl = document.getElementById("tokenveld");
-  // Enter roept dezelfde functie aan als de knop, niet de knop zelf: een
-  // .click() op een element dat er niet is, is een TypeError, en of de knop er
-  // is hangt af van markup die hier verderop kan veranderen.
-  if (tokenveldEl) tokenveldEl.addEventListener("keydown", function(e){
-    if (e.key === "Enter"){ e.preventDefault(); bewaarUitVeld(); }
-  });
 
   function laad(behoudMelding){
-    // De LENGTE van wat er meeging, vastgelegd vóór een 401 het token wist. Bij
-    // een geweigerd token is "Ongeldig of ontbrekend token" niet genoeg om iets
-    // mee te doen: je weet niet of het veld leeg was, of er iets anders in stond
-    // dan je dacht (een wachtwoordmanager die zijn eigen waarde invulde), of dat
-    // het token in Vercel is veranderd. Het getal alleen verraadt niets en maakt
-    // het verschil meetbaar in plaats van een gok.
-    var lengteVerstuurd = token.length;
-    // DE VORM VAN WAT ER MEEGING, vastgelegd vóór het verzoek. Bij een 401 wist
-    // verwerkAntwoord() het token nog vóór deze melding wordt samengesteld;
-    // achteraf `token` uitlezen levert dan "0 tekens (leeg)" op en zegt niets
-    // over wat er werkelijk de deur uit ging. Dezelfde reden waarom
-    // lengteVerstuurd hier al stond.
-    var vormVerstuurd = tokenVorm(token);
-    if (!token){
-      melding("Deze browser kent het beheertoken nog niet. Vul het één keer in; daarna onthoudt hij het.", "info");
-      tekenToken();
-      return;
-    }
     api("GET").then(function(res){
-      // Verouderd: het token is gewisseld terwijl dit verzoek onderweg was.
-      // Niets tonen — anders vult een antwoord dat nog met het OUDE token is
-      // opgehaald het scherm alsnog met redactionele gegevens, nadat de
-      // redacteur net op "Token vergeten" heeft geklikt.
-      if (res.verouderd) return;
       if (res.ok && res.data.ok){
         if (!behoudMelding) melding("");
         state.concepten = res.data.concepten || [];
@@ -1794,54 +1362,32 @@
         state.bijnaVerlopen = res.data.bijnaVerlopen || [];
         state.ifIndex = res.data.ifIndex || null;
         state.journaal = res.data.journaal || null;
-        state.opslagmeldingen = res.data.opslagmeldingen || [];
-        state.opslagoordeel = res.data.opslagoordeel || null;
-        tekenMeldingen();
         if (state.index >= state.concepten.length) state.index = 0;
+        // Het scherm gaat pas AAN als de server de sessie heeft goedgekeurd.
+        // Niet op grond van wat deze pagina over de sessie denkt: de cookie kan
+        // er staan terwijl hij verlopen is, of bij een adres horen dat van de
+        // allowlist is gehaald. De server is de enige die dat weet.
+        zetVerborgen(apparaatBalkEl, false);
+        if (tabsEl) tabsEl.hidden = false;
+        tekenWieBen();
         render();
-        // PAS HIER. Eerder stond deze aanroep náást het laden, en dan liepen
-        // twee verzoeken met hetzelfde token tegelijk: kwam er op één van de
-        // twee een 401, dan wiste die het token en werd het antwoord van de
-        // ander als verouderd weggegooid — het scherm bleef leeg zonder dat
-        // ergens stond waarom. Na een geslaagde GET is er geen race meer, en is
-        // bewezen dat het token deugt.
-        meldOpslagAanServer();
+      } else if (res.status === 401){
+        // verwerkAntwoord() stuurt al door naar /login; hier valt niets te doen
+        // behalve het scherm leeg laten tot de navigatie is afgerond.
+        inhoudEl.innerHTML = "";
       } else {
-        // Bij 401 heeft verwerkAntwoord het tokenvak al geopend en de inhoud
-        // al leeggemaakt; hier blijft alleen de reden van de server over.
-        var reden = (res.data && res.data.fout) || "Toegang geweigerd.";
-        if (res.status === 401){
-          // BEIDE WAARDEN, niet alleen wat er meeging. Een verstuurd token dat
-          // afwijkt van wat er bij het opslaan is weggeschreven, wijst naar de
-          // opslag; komen ze overeen maar klopt de lengte niet met wat je hebt
-          // geplakt, dan stond er bij het OPSLAAN al iets anders in het veld.
-          // Dat zijn twee verschillende storingen en ze verdienen twee
-          // verschillende zinnen.
-          reden += " Verstuurd: " + vormTekst(vormVerstuurd) +
-            ". Bij het opslaan weggeschreven: " + vormTekst(vormBijOpslaan) + ".";
-          if (tokenGewijzigd){
-            reden += " DIE TWEE VERSCHILLEN: het bewaarde token is tussen twee bezoeken door veranderd. " +
-              "Dat is niet je token dat verlopen is, maar een andere waarde die op zijn plek staat.";
-          } else if (uitUrl){
-            reden += " Dit token kwam uit de ADRESBALK (?token=…) en heeft het bewaarde token overschreven; " +
-              "een oude snelkoppeling met een verlopen token doet dat bij elk bezoek opnieuw.";
-          } else {
-            reden += " Klopt die lengte niet met wat je hebt geplakt, dan stond er bij het opslaan al iets " +
-              "anders in het veld dan je dacht — autovullen doet dat, ook bij een tekstveld.";
-          }
-        } else {
-          inhoudEl.innerHTML = "";
-        }
-        melding(reden, "fout");
+        inhoudEl.innerHTML = "";
+        melding((res.data && res.data.fout) || "Toegang geweigerd.", "fout");
       }
     }).catch(function(){ melding("Netwerkfout.", "fout"); });
   }
 
-  // Eerst de twee tokenstanden goed zetten, dan pas laden. Eén plek die uit
-  // `token` afleidt wat er zichtbaar is; zonder deze regel bleef de standregel
-  // (met de weghaalknop) verborgen zolang het laden lukte, en dat is precies de
-  // stand waarin je hem nodig hebt.
-  tekenToken();
+  // Het scherm begint DICHT: geen tabbladen, geen apparaatbalk, geen inhoud.
+  // De eerste GET beslist of het opengaat. Zo staat er nooit een schil met
+  // knoppen op een scherm waarvan de server de toegang nog moet bevestigen.
+  zetVerborgen(apparaatBalkEl, true);
+  if (tabsEl) tabsEl.hidden = true;
+  zetVerborgen(voetEl, true);
   laad();
 })();
 </script>

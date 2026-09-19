@@ -22,14 +22,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { startNepKv, roeper } from "./fixtures/nep-kv.mjs";
+import { startNepSessie } from "./fixtures/nep-supabase.mjs";
 
 const { db, sluit } = await startNepKv();
-process.env.REVIEW_TOKEN = "geheim";
+const { cookie, sluit: sluitSb } = await startNepSessie();
 test.after(sluit);
+test.after(sluitSb);
 
 const C = await import("../lib/config.js");
 const review = (await import("../api/review.js")).default;
-const roep = roeper(review, "geheim");
+const roep = roeper(review, cookie);
 
 const SNAPSHOTS = [C.KEY_ACTUEEL_SNAPSHOT, C.KEY_ACTUEEL_TEKST_SNAPSHOT, C.KEY_ACTUEEL_ARCHIEF_SNAPSHOT];
 const NU = Date.now();

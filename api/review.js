@@ -1,21 +1,21 @@
-// /api/review — backend van de reviewtool. Toegang via een geheim token in de
-// header X-Review-Token, vergeleken met de env-var REVIEW_TOKEN. Geen login.
+// /api/review — backend van de reviewtool. Toegang via een Supabase-sessie:
+// een ingelogde gebruiker wiens e-mailadres in ALLOWED_LOGIN_EMAILS staat.
+// Zie lib/auth.js en docs/login.md.
 //
-// UITSLUITEND DE HEADER, NIET DE QUERYSTRING. Een token in een URL belandt in de
-// browsergeschiedenis en in de serverlogs van elke aanvraag, en lift mee als
-// Referer naar elke externe link die op die pagina wordt aangeklikt — en /review
-// staat vol met links naar bronnen en naar Infofrankrijk. Een header doet dat
-// alle drie niet.
+// DE CONTROLE STAAT HIER, IN DE ROUTE ZELF, en niet alleen in middleware.js.
+// De middleware bewaakt de PAGINA /review (wie geen sessie heeft gaat naar
+// /login); deze route bewaakt de GEGEVENS. Dat is geen dubbel werk: de gegevens
+// horen beschermd te zijn in dezelfde runtime die ze uitgeeft, zodat een
+// configuratiefout in de routering ze niet blootlegt. Bovendien is déze
+// controle te testen met de testsuite van dit project, en middleware niet.
 //
-// De route heeft ?token= een tijd lang óók gelezen: eerst als enige weg, later
-// als terugval toen een geldig token werd geweigerd. Die oorzaak bleek elders te
-// liggen (een wachtwoordveld waar de wachtwoordmanager in schreef) en de
-// headerroute is inmiddels op productie bewezen, dus de terugval is eruit.
-// review.html haalt een token dat nog in zijn eigen URL staat wel op, bewaart
-// het en wist het uit de adresbalk — een oude bookmark blijft dus werken, maar
-// het token reist daarna alleen nog als header.
+// Hiervóór stond hier een gedeeld geheim (REVIEW_TOKEN) in de header
+// X-Review-Token. Dat is vervangen omdat een gedeeld geheim niet verloopt, niet
+// per persoon in te trekken is, en op elk apparaat opnieuw moest worden
+// ingetikt. De reden waarom het token nooit in de querystring stond geldt
+// onverminderd voor de sessie: die reist als cookie, niet als URL.
 // ---------------------------------------------------------------------------
-// GET  -> lijst met concepten + publicaties (token vereist).
+// GET  -> lijst met concepten + publicaties (sessie vereist).
 // POST -> { actie, id, tekst? } met actie:
 //           "publiceer"   concept -> publicatie (evt. met bewerkte tekst)
 //           "weg"         concept verwijderen + afwijzing voor CONCEPT_TTL_S (cron regenereert niet)
@@ -29,9 +29,8 @@
 // Concepten verlopen automatisch na CONCEPT_TTL_S (nu 36 uur, TTL in KV). Standaard = niet
 // gepubliceerd.
 
-import crypto from "node:crypto";
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
-import { normaliseerMelding, beoordeelMeldingen, voegToe } from "../lib/opslagmelding.js";
+import { toegangVanVerzoek } from "../lib/auth-node.js";
 import { buitenlandDoorlaatNL } from "../lib/feeds.js";
 import {
   beoordeelPublicatie,
@@ -60,8 +59,6 @@ import {
   OVERHEID_TTL_S,
   SCAN_CONCEPT,
   KEY_CRON_RONDE,
-  KEY_OPSLAGMELDING,
-  OPSLAGMELDING_TTL_S,
   SCAN_PUBLICATIE,
   SCAN_OVERHEID,
   SCAN_REGISTER,
@@ -78,46 +75,6 @@ import {
   IF_KANDIDATEN_STANDAARD,
   IF_MAX_LEEFTIJD_MAANDEN,
 } from "../lib/config.js";
-
-// Het token komt uit ÉÉN bron: de header x-review-token. Node maakt binnenkomende
-// headernamen zelf kleine letters, dus de client mag hem als X-Review-Token
-// sturen. Er is bewust geen tweede bron meer — waarom niet staat bovenaan dit
-// bestand.
-//
-// Witruimte wordt getrimd. Een token dat uit een wachtwoordmanager of uit de
-// Vercel-interface wordt geplakt draagt geregeld een spatie of een regelovergang
-// mee, en dat is geen reden om iemand buiten te sluiten.
-function leesToken(req) {
-  const t = req && req.headers ? req.headers["x-review-token"] : undefined;
-  return (t == null ? "" : String(t)).trim();
-}
-
-function tokenGeldig(req) {
-  const verwachtRuw = process.env.REVIEW_TOKEN;
-  const verwacht = (verwachtRuw == null ? "" : String(verwachtRuw)).trim();
-  const geleverd = leesToken(req);
-
-  // Veilige diagnose: alleen lengtes en of de env-var bestaat — nooit waarden.
-  if (!verwacht || !geleverd || verwacht.length !== geleverd.length) {
-    console.warn(
-      `[review] tokencheck faalt: env REVIEW_TOKEN ${
-        verwachtRuw == null ? "ONTBREEKT in deze runtime" : "aanwezig"
-      }; verwachte lengte ${verwacht.length}, ontvangen lengte ${geleverd.length}`
-    );
-    return false;
-  }
-
-  const gelijk = crypto.timingSafeEqual(
-    Buffer.from(geleverd),
-    Buffer.from(verwacht)
-  );
-  if (!gelijk) {
-    console.warn(
-      `[review] tokencheck faalt: lengtes gelijk (${verwacht.length}) maar waarden verschillen`
-    );
-  }
-  return gelijk;
-}
 
 async function leesBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
@@ -311,8 +268,21 @@ export default async function handler(req, res) {
   res.setHeader("X-Robots-Tag", "noindex, nofollow");
   res.setHeader("Cache-Control", "no-store");
 
-  if (!tokenGeldig(req)) {
-    return res.status(401).json({ ok: false, fout: "Ongeldig of ontbrekend token." });
+  // DE POORT. Geen sessie, of een sessie met een adres dat niet op
+  // ALLOWED_LOGIN_EMAILS staat: 401, en géén uitleg welke van de twee het was.
+  // De pagina stuurt bij een 401 door naar /login; een API-client krijgt de
+  // statuscode die erbij hoort.
+  const deur = await toegangVanVerzoek(req, res);
+  if (!deur.ok) {
+    return res
+      .status(deur.status === 503 ? 503 : 401)
+      .json({
+        ok: false,
+        fout:
+          deur.status === 503
+            ? "Inloggen is op deze omgeving niet ingesteld."
+            : "Niet ingelogd of geen toegang.",
+      });
   }
   if (!kvBeschikbaar()) {
     return res
@@ -482,7 +452,6 @@ export default async function handler(req, res) {
     // melden viel of dat de keten stilstond. Ontbreekt het journaal, dan blijft
     // het null — de tool zegt dan dat het onbekend is, en verzint niets.
     const journaal = await getJSON(KEY_CRON_RONDE);
-    const opslagmeldingen = (await getJSON(KEY_OPSLAGMELDING)) || [];
     const ifIndex = await leesIfIndex();
     const bijnaVerlopen = ifIndex ? ifBijnaVerlopen({ index: ifIndex, nu: nuMs }) : [];
 
@@ -496,11 +465,6 @@ export default async function handler(req, res) {
         ? { opgehaaldOp: ifIndex.opgehaaldOp, aantal: ifIndex.artikelen.length }
         : null,
       journaal, // stand van de persketen; zie KEY_CRON_RONDE in lib/config.js
-      // Wat de browsers van de redactie over hun eigen opslag melden, plus het
-      // oordeel daarover. Op een telefoon is die diagnose niet te lezen — hij
-      // knipperde voorbij — dus staat hij hier, op een scherm waar hij blijft.
-      opslagmeldingen,
-      opslagoordeel: beoordeelMeldingen(opslagmeldingen),
       concepten: besten,
       totaalConcepten: concepten.length,
       duplicatenAantal: duplicaten.length,
@@ -546,23 +510,6 @@ export default async function handler(req, res) {
       return res
         .status(200)
         .json({ ok: true, verwijderd: duplicaten.length, over: alle.length - duplicaten.length });
-    }
-
-    // ---- Melding over de browseropslag ------------------------------------
-    // Komt binnen MET het beheertoken, want dat tikt de redacteur toch al in —
-    // en dat hij dat elke keer opnieuw moet doen is precies wat hier wordt
-    // onderzocht. Een route zonder token zou een vreemde in staat stellen de
-    // ring vol te duwen en de metingen eruit te drukken.
-    //
-    // Het tijdstip komt van de SERVER en niet uit de browser: een klok die
-    // verkeerd staat mag de volgorde van de ring niet bepalen. Verder wordt
-    // geen enkel veld ongezien overgenomen; zie normaliseerMelding().
-    if (actie === "opslagmelding") {
-      const ring = (await getJSON(KEY_OPSLAGMELDING)) || [];
-      const melding = normaliseerMelding(body.melding, new Date().toISOString());
-      const nieuw = voegToe(ring, melding);
-      await setJSON(KEY_OPSLAGMELDING, nieuw, OPSLAGMELDING_TTL_S);
-      return res.status(200).json({ ok: true, bewaard: melding, oordeel: beoordeelMeldingen(nieuw) });
     }
 
     if (!actie || !id) {

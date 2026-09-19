@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>NLFR — Inloggen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --brand:#800000; }
+  * { box-sizing:border-box; }
+  body { font-family:'Mulish',system-ui,sans-serif; line-height:1.7; color:#3a3330; background:#fdf9f8;
+    margin:0 auto; padding:24px 12px; max-width:440px; }
+  h1 { font-family:'Poppins',sans-serif; font-size:20px; color:var(--brand); margin:6px 0 2px; }
+  .sub { color:#8a7f7c; font-size:13px; margin:0 0 20px; }
+  .vak { background:#fff; border:1px solid rgba(128,0,0,.18); border-radius:14px; padding:18px; margin-bottom:14px; }
+  .vak h2 { font-family:'Poppins',sans-serif; font-size:15px; color:var(--brand); margin:0 0 4px; }
+  .vak p { font-size:13px; color:#6d6360; margin:0 0 14px; }
+  label { display:block; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:var(--brand); margin-bottom:4px; }
+  input[type=email] { width:100%; font-family:'Mulish',sans-serif; font-size:16px; padding:11px 12px;
+    border:1px solid rgba(128,0,0,.28); border-radius:10px; background:#fff; color:#3a3330; }
+  input[type=email]:focus-visible { outline:2px solid var(--brand); outline-offset:1px; }
+  /* Tikdoel 44px, net als in de reviewtool. */
+  button { font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; min-height:44px;
+    width:100%; padding:10px 16px; border-radius:999px; cursor:pointer;
+    border:1px solid rgba(128,0,0,.25); background:rgba(128,0,0,.06); color:var(--brand); }
+  button:hover:not(:disabled) { background:rgba(128,0,0,.12); }
+  button:disabled { opacity:.5; cursor:default; }
+  button.hoofd { background:var(--brand); color:#fff; border-color:var(--brand); }
+  button.hoofd:hover:not(:disabled) { background:#6a0000; }
+  .knoprij { margin-top:12px; }
+  .scheiding { display:flex; align-items:center; gap:10px; color:#a89f9c; font-size:12px;
+    font-family:'Poppins',sans-serif; margin:4px 0 14px; }
+  .scheiding::before, .scheiding::after { content:""; flex:1; height:1px; background:rgba(128,0,0,.12); }
+  .melding { border-radius:10px; padding:10px 12px; font-size:13.5px; margin-bottom:14px; }
+  .melding.info { background:rgba(128,0,0,.05); border:1px solid rgba(128,0,0,.15); color:#5e4a46; }
+  .melding.fout { background:#fff3f3; border:1px solid rgba(160,0,0,.35); color:#7a1414; }
+  .melding.goed { background:#f1f7f2; border:1px solid rgba(47,107,58,.3); color:#2f6b3a; }
+  .melding[hidden] { display:none; }
+  .voet { margin-top:18px; font-size:12px; color:#a89f9c; text-align:center; }
+</style>
+</head>
+<body>
+  <h1>Redactie actueel</h1>
+  <p class="sub">Deze tool is afgeschermd. Log in om verder te gaan.</p>
+
+  <div class="melding" id="melding" hidden></div>
+
+  <div class="vak" id="passkeyvak" hidden>
+    <h2>Dit apparaat</h2>
+    <p>Log in met de vingerafdruk of gezichtsherkenning die je eerder op dit apparaat hebt ingesteld.</p>
+    <button type="button" class="hoofd" id="passkeyknop">Inloggen met vingerafdruk</button>
+  </div>
+
+  <div class="scheiding" id="scheiding" hidden>of</div>
+
+  <div class="vak">
+    <h2>Inloglink per mail</h2>
+    <p>De eerste keer, of op een nieuw apparaat. Je krijgt een link die één keer werkt.</p>
+    <form id="mailform" novalidate>
+      <label for="adres">E-mailadres</label>
+      <input type="email" id="adres" name="email" autocomplete="username webauthn"
+             inputmode="email" spellcheck="false" autocapitalize="off" placeholder="naam@voorbeeld.nl">
+      <div class="knoprij"><button type="submit" id="mailknop">Stuur inloglink</button></div>
+    </form>
+  </div>
+
+  <p class="voet">Nederlanders.fr — redactiegereedschap</p>
+
+<script src="/assets/inlog.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var meldingEl  = document.getElementById("melding");
+  var passkeyVak = document.getElementById("passkeyvak");
+  var scheiding  = document.getElementById("scheiding");
+  var passkeyKnop= document.getElementById("passkeyknop");
+  var mailForm   = document.getElementById("mailform");
+  var mailKnop   = document.getElementById("mailknop");
+  var adresVeld  = document.getElementById("adres");
+
+  function melding(tekst, soort){
+    if (!tekst){ meldingEl.hidden = true; meldingEl.textContent = ""; return; }
+    meldingEl.className = "melding " + (soort || "info");
+    meldingEl.textContent = tekst;
+    meldingEl.hidden = false;
+  }
+
+  // WAAR STUREN WE HEEN NA HET INLOGGEN. Uitsluitend een pad binnen deze site.
+  // Een volledige URL uit de querystring overnemen zou deze pagina tot een open
+  // redirect maken: dan is /login?terug=https://… een keurig ogende link die
+  // ergens anders uitkomt. "//ergens.nl" is ook een volledige URL en wordt hier
+  // dus geweigerd.
+  function bestemming(){
+    var ruw = new URLSearchParams(location.search).get("terug") || "";
+    return (/^\/[^\/]/.test(ruw)) ? ruw : "/review";
+  }
+
+  // De reden waarmee de middleware of /auth/callback hierheen stuurde. Kort
+  // gehouden: wie hier staat wil weten wat hij nu moet doen, niet wat er
+  // technisch misging.
+  var REDENEN = {
+    verlopen:     ["De link is verlopen of al gebruikt. Vraag een nieuwe aan.", "fout"],
+    link:         ["Deze inloglink klopt niet. Vraag een nieuwe aan.", "fout"],
+    geenrecht:    ["Dit account heeft geen toegang tot de redactie.", "fout"],
+    configuratie: ["Inloggen is op deze omgeving niet ingesteld.", "fout"],
+    onbereikbaar: ["De inlogdienst is even niet bereikbaar. Probeer het zo opnieuw.", "fout"],
+    uitgelogd:    ["Je bent uitgelogd.", "info"]
+  };
+  (function(){
+    var r = new URLSearchParams(location.search).get("reden");
+    if (r && REDENEN[r]) melding(REDENEN[r][0], REDENEN[r][1]);
+  })();
+
+  // ---- Passkey -------------------------------------------------------------
+  // De knop verschijnt alleen als de browser WebAuthn heeft. Een knop die bij
+  // indrukken altijd "ondersteunt geen passkeys" zegt, is een knop te veel.
+  if (NLFRAuth.passkeysMogelijk()){
+    passkeyVak.hidden = false;
+    scheiding.hidden = false;
+  }
+
+  passkeyKnop.addEventListener("click", function(){
+    melding("");
+    passkeyKnop.disabled = true;
+    NLFRAuth.client()
+      .then(function(sb){ return sb.auth.signInWithPasskey(); })
+      .then(function(res){
+        if (res.error) throw res.error;
+        // De sessie staat nu in de cookies. Een gewone navigatie zorgt dat de
+        // server hem meteen ziet; location.replace houdt /login uit de
+        // geschiedenis, zodat "terug" niet op een loginpagina uitkomt.
+        location.replace(bestemming());
+      })
+      .catch(function(e){
+        passkeyKnop.disabled = false;
+        melding(NLFRAuth.foutTekst(e), "fout");
+      });
+  });
+
+  // ---- Magic link ----------------------------------------------------------
+  // De allowlist wordt op de SERVER gecontroleerd (api/inloglink.js). Deze
+  // pagina weet niet wie er op staat, en hoort dat ook niet te weten.
+  mailForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    var adres = (adresVeld.value || "").trim();
+    if (!adres){ melding("Vul je e-mailadres in.", "fout"); adresVeld.focus(); return; }
+    melding("");
+    mailKnop.disabled = true;
+    mailKnop.textContent = "Bezig…";
+    fetch("/api/inloglink", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adres })
+    })
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return { r: r, j: j }; }); })
+      .then(function(uit){
+        if (uit.j && uit.j.ok) melding(uit.j.melding || "Verstuurd.", "goed");
+        else melding((uit.j && uit.j.fout) || "Versturen mislukt.", "fout");
+      })
+      .catch(function(){ melding("Netwerkfout.", "fout"); })
+      .finally(function(){
+        mailKnop.disabled = false;
+        mailKnop.textContent = "Stuur inloglink";
+      });
+  });
+
+  // AL INGELOGD? Dan hoort hier niets te gebeuren behalve doorsturen. Dat komt
+  // voor: de browser had de pagina nog in de geschiedenis staan, of iemand
+  // klikt de link in het menu aan terwijl de sessie al loopt.
+  //
+  // NIET DOORSTUREN ALS ER EEN REDEN IN DE URL STAAT. Anders ontstaat er een
+  // lus die niet te doorbreken is: een account met een geldige sessie maar
+  // zonder recht op de redactie wordt door de middleware hierheen gestuurd met
+  // reden=geenrecht, deze regel ziet een sessie en stuurt terug naar /review,
+  // de middleware stuurt opnieuw hierheen — en de melding die uitlegt wat er
+  // aan de hand is, staat nooit lang genoeg op het scherm om gelezen te worden.
+  if (new URLSearchParams(location.search).get("reden")) return;
+
+  NLFRAuth.client()
+    .then(function(sb){ return sb.auth.getSession(); })
+    .then(function(res){
+      if (res && res.data && res.data.session) location.replace(bestemming());
+    })
+    .catch(function(){ /* geen sessie, of configuratie ontbreekt — het scherm zegt het al */ });
+})();
+</script>
+</body>
+</html>

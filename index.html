@@ -621,13 +621,15 @@
   // De beheerlade achter het tandwiel. De eerste twee wijzen naar deze deploy
   // zelf (nlfr-menu.vercel.app), de rest naar Ning.
   //
-  // GEEN TOKEN IN DEZE LINKS. Dit bestand is de menubron en is publiek
+  // GEEN GEHEIM IN DEZE LINKS. Dit bestand is de menubron en is publiek
   // opvraagbaar; alles wat hier staat kan iedereen lezen, ook zonder
-  // beheerdersprofiel. /review en /banner-beheer vragen hun token daarom zelf
-  // één keer en bewaren hem in de browser van de beheerder. Het tandwiel dat
-  // deze lade opent is voor een gewone bezoeker onzichtbaar (zie syncAdmin),
-  // maar dat is een kwestie van weergave — de beveiliging is het token op de
-  // pagina zelf, niet de onvindbaarheid van deze regel.
+  // beheerdersprofiel. /review regelt zijn eigen toegang: wie er zonder sessie
+  // op klikt, komt op /login uit (zie middleware.js en docs/login.md).
+  // /banner-beheer vraagt zijn eigen token één keer en bewaart dat in de
+  // browser van de beheerder. Het tandwiel dat deze lade opent is voor een
+  // gewone bezoeker onzichtbaar (zie syncAdmin), maar dat is een kwestie van
+  // weergave — de beveiliging zit achter de link, niet in de onvindbaarheid
+  // van deze regel.
   //
   // Redactie — Actueel staat er ACHTER Banner beheren en niet ervoor: die
   // volgorde ligt vast in test/menu.test.mjs, en een bestaande afspraak omgooien

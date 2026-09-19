@@ -5,11 +5,13 @@
 //    juist wil zien. Op mobiel staat er nu één knop; op een breed scherm blijft
 //    de regel zoals hij was.
 //
-// 2. "TOKEN VERGETEN" op /review. Die knop stond pal boven de inhoud, één
-//    duimbreedte van de knoppen die de redactie de hele dag gebruikt. Twee keer
-//    per ongeluk aangeraakt, en de prijs is elke keer dezelfde: geen toegang
-//    meer tot de redactie tot het REVIEW_TOKEN weer is opgezocht. Hij staat nu
-//    in de voettekst, achter alle inhoud langs.
+// 2. UITLOGGEN op /review. Hier stond ooit "Token vergeten", pal boven de
+//    inhoud, één duimbreedte van de knoppen die de redactie de hele dag
+//    gebruikt; twee keer per ongeluk aangeraakt en de toegang was weg. Sinds de
+//    login op Supabase draait, zit uitloggen in de apparaatlade, en die lade
+//    staat DICHT. Eén klik om hem te openen is precies de rem die de knop
+//    nodig heeft — en de prijs van een misklik is bovendien veel lager
+//    geworden: opnieuw inloggen kost een vingerafdruk, geen opgezocht token.
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -90,28 +92,30 @@ test("uitklappen meldt de nieuwe hoogte aan de omhullende pagina", () => {
 
 // ---- 2. "Token vergeten" ----------------------------------------------------
 
-test("de weghaalknop staat in de voettekst, niet meer naast de inhoud", () => {
-  const voet = review.indexOf('<footer class="voet"');
+test("de apparaatbalk staat boven de inhoud, de lade eronder en dicht", () => {
+  const balk = review.indexOf('<div class="apparaatbalk"');
+  const lade = review.indexOf('<div class="apparaatlade"');
   const inhoud = review.indexOf('<div id="inhoud"');
-  assert.ok(voet > inhoud, "de voettekst staat ná alle inhoud");
-  const knop = review.indexOf('id="tokenweg"');
-  assert.ok(knop > voet, "en de knop staat erin");
-  // Niet meer in de standregel: dat was de plek waar hij per ongeluk werd geraakt.
-  const stand = review.slice(review.indexOf('<div class="tokenstand"'), review.indexOf('<div id="inhoud"'));
-  assert.doesNotMatch(stand, /tokenweg/, "de standregel draagt de knop niet meer");
+  assert.ok(balk > -1 && lade > balk, "de lade hoort bij de balk");
+  assert.ok(lade < inhoud, "allebei boven de inhoud: uitloggen moet je zonder scrollen vinden");
+  // DICHT. Dat is de rem: de knop die je toegang opheft, kost eerst een klik om
+  // hem zichtbaar te maken.
+  const ladeTag = review.slice(lade, review.indexOf(">", lade) + 1);
+  assert.match(ladeTag, /hidden/, "de apparaatlade hoort dicht te beginnen");
 });
 
-test("de standregel blijft staan waar hij stond", () => {
-  const stand = review.slice(review.indexOf('<div class="tokenstand"'), review.indexOf('<div id="inhoud"'));
-  assert.match(stand, /id="tokenstandtekst"/);
-  assert.ok(
-    review.indexOf('<div class="tokenstand"') < review.indexOf('<div id="inhoud"'),
-    "die moet je zien zonder te scrollen"
-  );
+test("uitloggen zit in de lade, niet los boven de inhoud", () => {
+  const lade = review.indexOf('<div class="apparaatlade"');
+  const inhoud = review.indexOf('<div id="inhoud"');
+  const knop = review.indexOf('id="uitlogknop"');
+  assert.ok(knop > lade && knop < inhoud, "de uitlogknop staat binnen de apparaatlade");
+  // De balk zelf draagt hem niet: die is altijd zichtbaar.
+  const balk = review.slice(review.indexOf('<div class="apparaatbalk"'), lade);
+  assert.doesNotMatch(balk, /uitlogknop/, "de altijd zichtbare balk draagt de uitlogknop niet");
 });
 
 test("de voettekst houdt afstand van de laatste kaart", () => {
-  // De ruimte erboven is wat de knop onbereikbaar maakt voor een duim die op de
+  // De ruimte erboven is wat hem onbereikbaar maakt voor een duim die op de
   // laatste kaart mikt.
   const regel = reviewStijl.split("\n").find((r) => r.includes(".voet {"));
   assert.ok(regel, ".voet niet gevonden in de stylesheet");
@@ -119,12 +123,18 @@ test("de voettekst houdt afstand van de laatste kaart", () => {
   assert.ok(m && Number(m[1]) >= 32, `te weinig ruimte boven de voettekst: ${regel.trim()}`);
 });
 
-test("de voettekst verschijnt alleen als er een token is", () => {
-  const blok = review.slice(review.indexOf("function tekenToken(){"), review.indexOf("function bewaarUitVeld"));
-  assert.match(blok, /zetVerborgen\(voetEl, !heeft\);/, "zonder token valt er niets weg te halen");
+test("het scherm gaat pas open als de server de sessie heeft goedgekeurd", () => {
+  const blok = review.slice(review.indexOf("function laad(behoudMelding){"), review.indexOf("zetVerborgen(apparaatBalkEl, true);"));
+  assert.match(blok, /zetVerborgen\(apparaatBalkEl, false\);/, "de balk verschijnt pas na een geslaagde GET");
+  assert.match(blok, /tabsEl\.hidden = false/, "en de tabbladen ook");
+  // En het begint dicht.
+  assert.match(review, /zetVerborgen\(apparaatBalkEl, true\);/);
 });
 
-test("de knop houdt zijn tikdoel van 44 px", () => {
-  const regel = reviewStijl.split("\n").find((r) => r.includes(".tokenweg {"));
-  assert.match(regel, /min-height:44px/);
+test("de knoppen houden hun tikdoel van 44 px", () => {
+  for (const kiezer of [".uitlogknop {", ".apparaatknop {", ".apparaatlade .weg {"]) {
+    const regel = reviewStijl.split("\n").find((r) => r.includes(kiezer));
+    assert.ok(regel, `${kiezer} niet gevonden in de stylesheet`);
+    assert.match(regel, /min-height:44px/, `${kiezer} mist het tikdoel`);
+  }
 });

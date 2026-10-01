@@ -60,6 +60,16 @@ const INDEX = {
 test("HTML-entiteiten in een titel worden omgezet, niet doorgegeven", () => {
   assert.equal(ontHtml("Frankrijk &#8217;s fiscus &amp; u"), "Frankrijk ’s fiscus & u");
   assert.equal(ontHtml("<b>Vet</b> gedrukt"), "Vet gedrukt");
+  // Een tag wordt een SPATIE, niet niets. Een WordPress-excerpt is
+  // <p>…</p><p>…</p>; zonder die spatie plakt het einde van de ene alinea aan
+  // het begin van de volgende en ontstaat een woord dat nergens mee overlapt —
+  // dezelfde fout als "NATIONALITEITOp donderdag" bij de verenigingenfeed.
+  assert.equal(
+    ontHtml("<p>De aankoop</p><p>De koper betaalt.</p>"),
+    "De aankoop De koper betaalt."
+  );
+  // En die spatie mag niet vóór een leesteken blijven staan.
+  assert.equal(ontHtml("<p>Er komt een <strong>termijn</strong>.</p>"), "Er komt een termijn.");
   assert.equal(ontHtml("Caf&eacute; &laquo;Claude&raquo;"), "Café «Claude»");
   assert.equal(ontHtml(null), "");
 });
@@ -220,7 +230,9 @@ test("een fout van infofrankrijk.com wordt gegooid, niet stil ingeslikt", async 
 
 test("de postsUrl vraagt precies de velden op die we gebruiken", () => {
   const u = new URL(postsUrl(1));
-  assert.equal(u.searchParams.get("_fields"), "id,link,title,modified,modified_gmt,categories");
+  // excerpt hoort erbij: de samenvatting draagt de woordoverlap waarmee
+  // lib/ifsuggestie.js bepaalt welke artikelen bij een bericht passen.
+  assert.equal(u.searchParams.get("_fields"), "id,link,title,excerpt,modified,modified_gmt,categories");
   assert.equal(u.searchParams.get("per_page"), "100");
 });
 

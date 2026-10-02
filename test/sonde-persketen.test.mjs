@@ -168,6 +168,25 @@ test("I14 zwijgt over een tegel die al langer dan het venster leeg is", async ()
   assert.doesNotMatch(uit, /I14 lege tegel/, "een tegel buiten het seizoen mag niet elke week rood worden");
 });
 
+test("I14 zwijgt als één perstegel (bosbranden) leeg valt en de rest gevuld is", async () => {
+  const { uit } = await draaiSonde({
+    persArtikelen: 3,
+    bewaking: {
+      ronde: gelegen(5 * 60e3),
+      laatsteConceptOp: gelegen(2 * UUR),
+      persItemsLaatsteRonde: 61,
+      keten: {},
+      eersteNul: null,
+      duiding: null,
+      tegels: {
+        "pers-landelijk": { laatstGevuld: gelegen(UUR) },
+        "pers-bosbranden": { laatstGevuld: gelegen(47 * UUR) },
+      },
+    },
+  });
+  assert.doesNotMatch(uit, /I14 lege tegel/, "geen bosbrandnieuws is correct, geen foutmelding");
+});
+
 test("een ontbrekend bewakingsblok is zelf een bevinding", async () => {
   const { code, uit } = await draaiSonde({ persArtikelen: 3, bewaking: null });
   assert.equal(code, 1);

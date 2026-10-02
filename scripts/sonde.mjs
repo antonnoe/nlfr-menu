@@ -347,7 +347,16 @@ async function main() {
           : 0,
       ])
     );
+    // Perstegels zijn nieuwsgedreven (bosbranden na het seizoen, verkiezingen,
+    // stakingen): een lege is daar de juiste stand. Voor pers telt daarom alleen
+    // de keten als geheel: pas als GEEN perstegel meer iets bevat, is het de
+    // storing van 6 september. Een nieuwe perstegel hoeft nergens te worden
+    // aangemeld. Overige tegels blijven afzonderlijk bewaakt.
+    const persVulling = [...nuPerTegel.entries()]
+      .filter(([id]) => id.startsWith("pers-"))
+      .reduce((som, [, n]) => som + n, 0);
     for (const [id, stand] of Object.entries(bewaking.tegels || {})) {
+      if (id.startsWith("pers-") && persVulling > 0) continue;
       if ((nuPerTegel.get(id) || 0) > 0) continue;
       const laatst = Date.parse((stand && stand.laatstGevuld) || "");
       if (Number.isNaN(laatst)) continue; // nooit gevuld geweest: niets beloofd

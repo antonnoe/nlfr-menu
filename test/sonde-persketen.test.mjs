@@ -9,6 +9,7 @@
 //
 // I14 en I15 kijken naar wat er NIET staat:
 //   I14 — een tegel die deze week nog gevuld was, staat nu op nul (of ontbreekt).
+//         Voor perstegels telt alleen de keten als geheel: één lege tegel is geen storing.
 //   I15 — meer dan een etmaal geen concept, terwijl er persartikelen binnenkomen.
 //
 // De sonde draait hier als echt proces tegen een lokale server. Geen nagedane

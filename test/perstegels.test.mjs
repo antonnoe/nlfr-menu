@@ -132,3 +132,15 @@ test("korte plaatsnamen tellen alleen als heel woord", () => {
   assert.equal(persTegelVoor(pubT("De agenda van de vakbond", "Varkensvlees en een pauze in de onderhandelingen.", SO), naamNaarThema), "landelijk");
   assert.equal(persTegelVoor(pubT("Brand in Pau", "Een brand in Pau trekt aandacht.", SO), naamNaarThema), "regionaal");
 });
+
+// --- contextwoorden mogen niet zelf dubbelzinnig zijn (review PR #54) ----------
+test("een evacuatie of een bestemming maakt van een misdrijf of woningbrand geen verkeer of bosbrand", () => {
+  assert.equal(persTegelVoor(pubT("Verdachte op de vlucht", "De verdachte is op de vlucht; zijn bestemming is onbekend.", LM), naamNaarThema), "landelijk");
+  assert.equal(persTegelVoor(pubT("Flatbrand in Lille", "De brandweer evacueerde de bewoners van de flat.", LM), naamNaarThema), "landelijk");
+});
+
+test("gewone woorden die met een contextwoord beginnen, tellen niet mee", () => {
+  // "natuurlijk", "wegens", "politiestation" begonnen met of bevatten een eerder contextwoord.
+  assert.equal(persTegelVoor(pubT("Brand bij een garage", "De brandweer kon het vuur natuurlijk snel doven.", LM), naamNaarThema), "landelijk");
+  assert.equal(persTegelVoor(pubT("Spoor van braak", "Wegens sporen van braak sloot de politie het politiestation.", LM), naamNaarThema), "landelijk");
+});

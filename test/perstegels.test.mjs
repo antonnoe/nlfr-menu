@@ -105,3 +105,30 @@ test("een keukenbrand met brandweer is geen bosbrand, een brand met hectares wel
   assert.equal(persTegelVoor(pubT("Keukenbrand in Lyon", "De brandweer doofde de vlammen snel.", LM), naamNaarThema), "landelijk");
   assert.equal(persTegelVoor(pubT("Brand bij Marseille", "De brandweer bestrijdt de vlammen, al 300 hectare is verwoest.", LM), naamNaarThema), "bosbranden");
 });
+
+// --- regionaal vraagt een plaats ----------------------------------------------
+// Aanleiding: vier landelijke berichten (Banque de France, droogtesteun,
+// prestatiedruk bij jongeren, staking bij TotalEnergies) stonden in "Regionaal
+// nieuws", omdat alleen regionale kranten ze meldden.
+const SO = "Sud Ouest";
+
+test("landelijk nieuws uit een regionale krant blijft landelijk", () => {
+  for (const [kop, tekst] of [
+    ["Gouverneur Banque de France weerspreekt Mélenchon", "De gouverneur heeft gereageerd op aanvallen van de leider van La France insoumise."],
+    ["Nieuwe steun voor boeren na droogte", "De Franse regering kondigt extra steunmaatregelen aan voor landbouwers."],
+    ["Prestatiedruk weegt zwaar op Franse jongeren", "Franse media besteden aandacht aan een studie over de mentale gezondheid van jongeren."],
+    ["Stakingsoproep bij TotalEnergies op donderdag", "De vakbond CGT roept het personeel op om in heel Frankrijk het werk neer te leggen."],
+  ]) {
+    assert.equal(persTegelVoor(pubT(kop, tekst, SO), naamNaarThema), "landelijk", kop);
+  }
+});
+
+test("een bericht met een plaats uit de regio staat wel onder regionaal", () => {
+  assert.equal(persTegelVoor(pubT("Overstroming bij Toulouse", "Na zware regen staan straten onder water in Toulouse.", SO), naamNaarThema), "regionaal");
+  assert.equal(persTegelVoor(pubT("Markt in het dorp", "De burgemeester opent de nieuwe markt.", SO), naamNaarThema), "regionaal");
+});
+
+test("korte plaatsnamen tellen alleen als heel woord", () => {
+  assert.equal(persTegelVoor(pubT("De agenda van de vakbond", "Varkensvlees en een pauze in de onderhandelingen.", SO), naamNaarThema), "landelijk");
+  assert.equal(persTegelVoor(pubT("Brand in Pau", "Een brand in Pau trekt aandacht.", SO), naamNaarThema), "regionaal");
+});

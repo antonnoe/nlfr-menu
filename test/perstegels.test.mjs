@@ -125,7 +125,7 @@ test("landelijk nieuws uit een regionale krant blijft landelijk", () => {
 
 test("een bericht met een plaats uit de regio staat wel onder regionaal", () => {
   assert.equal(persTegelVoor(pubT("Overstroming bij Toulouse", "Na zware regen staan straten onder water in Toulouse.", SO), naamNaarThema), "regionaal");
-  assert.equal(persTegelVoor(pubT("Markt in het dorp", "De burgemeester opent de nieuwe markt.", SO), naamNaarThema), "regionaal");
+  assert.equal(persTegelVoor(pubT("Nieuwe markt in Bordeaux", "De burgemeester opent de nieuwe markt in Bordeaux.", SO), naamNaarThema), "regionaal");
 });
 
 test("korte plaatsnamen tellen alleen als heel woord", () => {
@@ -143,4 +143,9 @@ test("gewone woorden die met een contextwoord beginnen, tellen niet mee", () => 
   // "natuurlijk", "wegens", "politiestation" begonnen met of bevatten een eerder contextwoord.
   assert.equal(persTegelVoor(pubT("Brand bij een garage", "De brandweer kon het vuur natuurlijk snel doven.", LM), naamNaarThema), "landelijk");
   assert.equal(persTegelVoor(pubT("Spoor van braak", "Wegens sporen van braak sloot de politie het politiestation.", LM), naamNaarThema), "landelijk");
+});
+
+test("algemene functies en aanduidingen zijn geen plaats: een landelijk bericht over burgemeesters blijft landelijk", () => {
+  assert.equal(persTegelVoor(pubT("Burgemeesters vragen extra middelen", "Burgemeesters in heel Frankrijk vragen de regio en het departement om extra middelen; de prefect reageert.", SO), naamNaarThema), "landelijk");
+  assert.equal(persTegelVoor(pubT("Verdachten op de vlucht", "De verdachten zijn op de vlucht wegens een inbraak.", LM), naamNaarThema), "landelijk");
 });

@@ -229,6 +229,36 @@
       "_linkAggregaat": "De itemlinks wijzen naar de websites van de verenigingen zelf, niet naar antonnoe.github.io. De herkomsttoets 'host hoort bij de feed-host' kan hier dus niet gelden; zou hij dat wel doen, dan verdwijnt elke verenigingslink. Alle andere toetsen uit lib/bronurl.js blijven onverkort gelden: absolute http(s)-URL, niet-leeg pad, geen asset-host, geen geblokkeerd domein. De sonde (.github/workflows/sonde.yml) rapporteert welke hosts de aggregaat aanlevert, zodat deze lijst later een expliciete linkDomeinen-allowlist kan worden."
     },
     {
+      "naam": "NIHB — Nederlanders in het Buitenland",
+      "feed": "https://www.nihb.nl/feed/",
+      "thema": "verenigingen",
+      "regime": "verenigingen",
+      "taal": "nl",
+      "prioriteit": 3,
+      "actief": true,
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-10-09",
+      "vensterDagen": 30,
+      "licentie": "niet vastgesteld",
+      "_licentie": "Geen licentiesporen gevonden op de site (verkenner, 9 oktober 2026). De tegel toont uitsluitend kop, een korte aanhef en een link naar de eigen site van de organisatie, met vermelding van de bron. Geen samenvatting door het AI-model. Besluit van de eigenaar om de feed op te nemen zonder aparte toestemming.",
+      "_opmerking": "WordPress-feed, 10 items, laagfrequent (nieuwste 13 dagen oud op 9 oktober 2026). Komt in de verenigingentegel."
+    },
+    {
+      "naam": "Stichting GOED",
+      "feed": "https://www.stichtinggoed.nl/feed/",
+      "thema": "verenigingen",
+      "regime": "verenigingen",
+      "taal": "nl",
+      "prioriteit": 3,
+      "actief": true,
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-10-09",
+      "vensterDagen": 30,
+      "licentie": "niet vastgesteld",
+      "_licentie": "Geen licentiesporen gevonden op de site (verkenner, 9 oktober 2026). De tegel toont uitsluitend kop, een korte aanhef en een link naar de eigen site van de organisatie, met vermelding van de bron. Geen samenvatting door het AI-model. Besluit van de eigenaar om de feed op te nemen zonder aparte toestemming.",
+      "_opmerking": "WordPress-feed, 10 items, laagfrequent (nieuwste 13 dagen oud op 9 oktober 2026). Komt in de verenigingentegel."
+    },
+    {
       "naam": "Rijksoverheid — Nieuws",
       "feed": "https://www.rijksoverheid.nl/api/rss?query=%7B%22filters%22%3A%5B%5D%2C%22resultSearchTerm%22%3A%22%22%7D",
       "_feed": "Rijksoverheid publiceert geen vaste feed-URL: de pagina /service/rss laat je filters aanklikken en stelt het adres dan samen. Het patroon staat in hun eigen JavaScript: /api/rss?query=<JSON>. Beide velden zijn verplicht — met alleen 'filters' antwoordt de server met een 400. Deze query is de ongefilterde variant: al het rijksnieuws.",

@@ -40,3 +40,23 @@ for (const [naam, host, feed] of [
     assert.equal(art.bronnen[0].naam, bron.naam, "de bron wordt genoemd");
   });
 }
+
+// --- de zeef geldt voor het hele regime (review PR #55) ------------------------
+const ITEM = (host, titel, tekst, pad = "/nieuws/een-bericht/") => `<?xml version="1.0"?><rss version="2.0"><channel><title>x</title>
+<item><title>${titel}</title><link>https://${host}${pad}</link><pubDate>Sat, 26 Sep 2026 09:00:00 +0000</pubDate>
+<description><![CDATA[<p>${tekst}</p>]]></description></item></channel></rss>`;
+
+test("een bericht van NIHB dat naar Facebook of een concurrent verwijst, valt weg en wordt gemeld", () => {
+  const bron = lijst().find((b) => b.naam.startsWith("NIHB"));
+  const fb = normaliseerBron(parseerFeed(ITEM("www.nihb.nl", "Volg ons", "Meer nieuws vindt u op facebook.com/nihb.")), bron, NU);
+  assert.equal(fb.items.length, 0, "een Facebook-verwijzing hoort er niet door te komen");
+  assert.equal(fb.geweigerd.length, 1, "de weigering hoort in de bronstatus te staan");
+  const conc = normaliseerBron(parseerFeed(ITEM("www.nihb.nl", "Tip", "Lees ook goedinfrankrijk.fr voor meer.")), bron, NU);
+  assert.equal(conc.items.length, 0, "een concurrerend platform hoort er niet door te komen");
+});
+
+test("een kop over een tarief of de btw wordt bij een organisatie niet als zelfpromotie geweigerd", () => {
+  const bron = lijst().find((b) => b.naam.startsWith("Stichting GOED"));
+  const r = normaliseerBron(parseerFeed(ITEM("www.stichtinggoed.nl", "Nieuw btw-tarief voor woningen in Frankrijk", "Wat dit betekent voor eigenaren.")), bron, NU);
+  assert.equal(r.items.length, 1, "de zelfpromotiezeef is afgestemd op amateuristische verenigingssites");
+});

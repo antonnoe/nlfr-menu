@@ -43,6 +43,11 @@
   .cat-uitgelegd{ --c-main:#800000; --c-dark:#5f0000; --c-tint:#fbf0ee; --c-rand:#ecd9d5; --c-meta:#6b4a46; --c-chip:#fdf6f5;
                   --c-tweede:#2f6b3a; --c-tweede-tint:#eef4ef; --c-tweede-rand:#cfe1d4; }
 
+  /* Het hidden-attribuut moet winnen van de display van de knop zelf. Zonder deze
+     regel bleef "Alles uitklappen" zichtbaar op het tabblad Uitgelegd, waar de
+     code hem verbergt: .bar .knop zet display en won van het attribuut. */
+  .bar .knop[hidden]{ display:none; }
+
   *{ box-sizing:border-box; }
   html,body{ height:100%; margin:0; padding:0; background:var(--bg); -webkit-text-size-adjust:100%; }
   body{ font-family:var(--body); color:var(--ink-body); }

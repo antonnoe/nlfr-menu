@@ -74,3 +74,34 @@ test("elk brontthema wijst naar een bestaande tegel", () => {
     assert.ok(PERS_TEGELS.includes(tegel), `${brontThema} wijst naar onbekende tegel ${tegel}`);
   }
 });
+
+// --- woorden met een tweede betekenis ----------------------------------------
+// Aanleiding: een bericht over een inbraakpoging bij een 97-jarige zanger
+// stond in "Verkeer & reizen". De zeef zocht losse tekenreeksen midden in
+// woorden en nam bij "vlucht" en "spoor" de overdrachtelijke betekenis mee.
+
+// Anders dan pub() draagt deze ook de berichttekst; de zeef kijkt naar kop + tekst.
+const pubT = (kop, tekst, ...bronnen) => ({ kop, tekst, bronnen: bronnen.map((naam) => ({ naam })) });
+const LM = "Le Monde — À la une";
+
+test("een inbraak is geen verkeersbericht, ook niet bij 'op de vlucht' en 'sporen'", () => {
+  const p = pubT("Zanger (97) verstoort inbraakpoging in zijn woning",
+    "De inbrekers sloegen op de vlucht en lieten sporen van braak achter. De politie profileert de daders.", LM);
+  assert.equal(persTegelVoor(p, naamNaarThema), "landelijk");
+});
+
+test("'verkeerd' is geen 'verkeer'", () => {
+  const p = pubT("Een verkeerde indruk", "Het bericht gaf een verkeerde voorstelling van zaken.", LM);
+  assert.equal(persTegelVoor(p, naamNaarThema), "landelijk");
+});
+
+test("echt verkeer blijft verkeer: files met context, treinstaking, vluchten met passagiers", () => {
+  assert.equal(persTegelVoor(pubT("Files op de autosnelweg", "Lange files voor automobilisten richting het zuiden.", LM), naamNaarThema), "verkeer");
+  assert.equal(persTegelVoor(pubT("Treinstaking", "De treinstaking treft duizenden reizigers.", LM), naamNaarThema), "verkeer");
+  assert.equal(persTegelVoor(pubT("Vluchten geschrapt", "Meerdere vluchten werden geschrapt, passagiers wachten op het vliegveld.", LM), naamNaarThema), "verkeer");
+});
+
+test("een keukenbrand met brandweer is geen bosbrand, een brand met hectares wel", () => {
+  assert.equal(persTegelVoor(pubT("Keukenbrand in Lyon", "De brandweer doofde de vlammen snel.", LM), naamNaarThema), "landelijk");
+  assert.equal(persTegelVoor(pubT("Brand bij Marseille", "De brandweer bestrijdt de vlammen, al 300 hectare is verwoest.", LM), naamNaarThema), "bosbranden");
+});

@@ -34,7 +34,7 @@
     --body:'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   /* Categorie-tokens (op tegel én tab gezet). NL'ers deelt het groen. */
-  .cat-nieuws,.cat-nlers{ --c-main:#2f6b3a; --c-dark:#22522c; --c-tint:#eef4ef; --c-rand:#d5e4d9; --c-meta:#4b5c4f; --c-chip:#f6faf7; }
+  .cat-nieuws,.cat-nlers,.cat-evenementen{ --c-main:#2f6b3a; --c-dark:#22522c; --c-tint:#eef4ef; --c-rand:#d5e4d9; --c-meta:#4b5c4f; --c-chip:#f6faf7; }
   .cat-overheid{ --c-main:#800000; --c-dark:#5f0000; --c-tint:#fbf0ee; --c-rand:#ecd9d5; --c-meta:#6b4a46; --c-chip:#fdf6f5; }
   .cat-archief{ --c-main:#5c5f5c; --c-dark:#4a4d4a; --c-tint:#f3f2f0; --c-rand:#e2e0dc; --c-meta:#6f6663; --c-chip:#f8f8f6; }
   /* Uitgelegd draagt de twee huiskleuren samen: bordeaux als hoofdkleur, zoals
@@ -42,6 +42,20 @@
      zelf. Dat is het enige wat op dit tabblad echt telt, en het mag opvallen. */
   .cat-uitgelegd{ --c-main:#800000; --c-dark:#5f0000; --c-tint:#fbf0ee; --c-rand:#ecd9d5; --c-meta:#6b4a46; --c-chip:#fdf6f5;
                   --c-tweede:#2f6b3a; --c-tweede-tint:#eef4ef; --c-tweede-rand:#cfe1d4; }
+
+  /* Het hidden-attribuut moet winnen van de display van de knop zelf. Zonder deze
+     regel bleef "Alles uitklappen" zichtbaar op tabbladen waar hij verborgen hoort
+     te zijn (Uitgelegd en Evenementen), ook al stond hidden op true. */
+  .bar .knop[hidden]{ display:none; }
+
+  /* Evenementen: het ingesloten DATAtourisme-venster schaalt mee met het scherm
+     (de code van de aanbieder staat vast op 1024 x 768). */
+  .evenementen h3{ font-family:var(--disp); color:var(--c-dark); font-size:18px; margin:0 0 6px; }
+  .evenementen p{ margin:0 0 10px; line-height:1.55; }
+  .evenementen .dtframe{ display:block; width:100%; height:min(768px, 80vh); min-height:420px;
+                         border:1px solid #9b9b9b; border-radius:8px; background:#fff; }
+  .evenementen .dtbron{ font-size:13px; color:var(--c-meta); margin-top:10px; }
+  .evenementen .dtbron a{ color:var(--c-main); }
 
   *{ box-sizing:border-box; }
   html,body{ height:100%; margin:0; padding:0; background:var(--bg); -webkit-text-size-adjust:100%; }
@@ -368,6 +382,10 @@
     { key:"nieuws",    label:"Nieuws",       ic:"ic-nieuws" },
     { key:"overheid",  label:"Overheid",     ic:"ic-overheid" },
     { key:"nlers",     label:"NL'ers in FR", ic:"ic-nlers" },
+    // Evenementen is geen verzameling tegels maar één ingesloten zoekvenster van
+    // DATAtourisme (de Franse databank voor toerisme). Het heeft geen eigen
+    // voorraad en staat er altijd; zie evenementenHTML().
+    { key:"evenementen", label:"Evenementen", ic:"ic-agenda" },
     // Uitgelegd verzamelt de artikelen met een redactionele verwijzing naar
     // Infofrankrijk, dwars door tegels en regimes heen. Geen eigen voorraad: de
     // artikelen blijven ook gewoon in hun eigen tegel staan.
@@ -506,7 +524,7 @@
     // afgeleid van de verwijzingen, en die komen pas met de tweede levering
     // binnen (/api/actueel-tekst). Vullen gebeurt daarom in render(), bij elke
     // hertekening — zie verzamelUitgelegd().
-    var perCat = { nieuws:[], overheid:[], nlers:[], uitgelegd:[], archief:[] };
+    var perCat = { nieuws:[], overheid:[], nlers:[], evenementen:[], uitgelegd:[], archief:[] };
     (data.tegels||[]).forEach(function(t){ perCat[catVan(t.soort)].push(t); });
     if (data.agenda && data.agenda.length){
       perCat.nlers.push({ soort:"agenda", id:"agenda", thema:"agenda", label:"Agenda — komende twee weken",
@@ -774,6 +792,23 @@
     return '<div class="uitleglijst">'+rijen.map(uitgelegdKaart).join("")+"</div>";
   }
 
+  // De DATAtourisme-widget. Alleen als dit tabblad open staat wordt het venster
+  // opgebouwd, zodat het niet bij elk bezoek aan Nieuws wordt geladen. De uitleg
+  // erboven is Nederlands, want de widget zelf is Frans en vraagt een nummer.
+  var EVENEMENTEN_ADRES = "https://explore.datatourisme.fr/embed/eJyrVspNLEnOiE%2FMyVGyqq6tBQAytwYU?components=0&tools=1";
+  function evenementenHTML(){
+    return '<div class="platblok evenementen">'+
+      '<h3>Evenementen en uitjes bij u in de buurt</h3>'+
+      '<p>Typ het nummer van uw departement in het zoekvenster, bijvoorbeeld '+
+      '<strong>33</strong> voor de Gironde, <strong>62</strong> voor Pas-de-Calais of '+
+      '<strong>75</strong> voor Parijs. Met de filterknoppen kiest u wat u zoekt, zoals evenementen.</p>'+
+      '<iframe class="dtframe" src="'+EVENEMENTEN_ADRES+'" title="Evenementen en uitjes, DATAtourisme" '+
+      'loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>'+
+      '<p class="dtbron">De gegevens komen van DATAtourisme, de nationale Franse databank voor toerisme. '+
+      'Het venster is in het Frans. <a href="https://explore.datatourisme.fr/" target="_blank" rel="noopener">Opent het niet? Open het in een eigen venster.</a></p>'+
+      '</div>';
+  }
+
   function leegHTML(){
     return '<div class="leeg"><span class="rond">'+ico("ic-leeg")+'</span>'+
       '<h3>Geen nieuwe berichten</h3>'+
@@ -788,7 +823,7 @@
   }
 
   function renderTabs(perCat, aantalUitgelegd){
-    var keys = ["nieuws","overheid","nlers"];
+    var keys = ["nieuws","overheid","nlers","evenementen"];
     // BIJ NUL VERWIJZINGEN VERDWIJNT HET TABBLAD HELEMAAL. Niet grijs, niet leeg
     // met een uitleg erin: weg. Een tabblad dat er altijd staat en meestal niets
     // toont, leert de lezer het over te slaan — en dan mist hij het juist op de
@@ -811,6 +846,12 @@
     // halen. Een lezer die hierop tikt heeft de kaarten meteen voor zich.
     if (actief === "uitgelegd"){
       scrollerEl.innerHTML = lijst.length ? lijst[0].plat : leegHTML();
+      werkAllesLabelBij();
+      return;
+    }
+    // Evenementen: een vast venster, geen tegels om uit te klappen.
+    if (actief === "evenementen"){
+      scrollerEl.innerHTML = evenementenHTML();
       werkAllesLabelBij();
       return;
     }
@@ -838,9 +879,12 @@
     // De kleurtokens zitten normaal op de TEGEL (class cat-…). Uitgelegd heeft
     // geen tegel, dus draagt de scroller ze daar zelf.
     scrollerEl.className = "scroller" + (actief === "uitgelegd" ? " cat-uitgelegd" : "");
+    if (actief === "evenementen") scrollerEl.className = "scroller cat-evenementen";
     // "Alles uitklappen" heeft op dit tabblad niets om uit te klappen; een knop
     // die niets doet is erger dan geen knop.
     if (allesBtn) allesBtn.hidden = (actief === "uitgelegd");
+    // Evenementen is één ingesloten venster; ook daar is er niets uit te klappen.
+    if (allesBtn && actief === "evenementen") allesBtn.hidden = true;
     renderScroller(laatste);
     meldHoogte();
   }

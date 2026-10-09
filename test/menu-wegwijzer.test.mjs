@@ -274,7 +274,7 @@ const TEGELS = {
   vinden: {
     tekst: "Hulpmiddelen, adressen en de weg naar de Franse instanties.",
     punten: ["Vervoershub", "Verenigingen in Frankrijk", "Frans leren", "Wegwijs Franse overheid",
-             "Handige sites", "Nedergids", "Huisregels", "Contact beheerder"],
+             "Handige sites", "Veelgestelde vragen", "Nedergids", "Huisregels", "Contact beheerder"],
   },
   nieuws: {
     tekst: "Officiële berichten uit Frankrijk, in het Nederlands samengevat.",

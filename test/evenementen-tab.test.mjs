@@ -24,12 +24,27 @@ test("het venster wijst naar DATAtourisme en schaalt mee met het scherm", () => 
   assert.doesNotMatch(css, /width:1024px/, "de vaste breedte van de aanbieder wordt niet overgenomen");
 });
 
-test("de uitleg erboven is Nederlands en noemt voorbeelden van departementsnummers", () => {
+test("de uitleg erboven is Nederlands, noemt een plaats als voorbeeld en vraagt niet om een departementsnummer", () => {
   const blok = blokTussen("function evenementenHTML", "function leegHTML");
-  assert.match(blok, /Typ het nummer van uw departement/);
-  for (const nr of ["33", "62", "75"]) assert.ok(blok.includes(`<strong>${nr}</strong>`), `voorbeeld ${nr} ontbreekt`);
+  assert.match(blok, /Typ in het zoekvenster de naam van uw plaats/);
+  assert.ok(blok.includes("<strong>Bordeaux</strong>"), "een plaatsnaam als voorbeeld");
+  // Aanleiding: "62" zoekt op bedrijfsnamen met 62 erin en is geen departementsfilter.
+  assert.doesNotMatch(blok, /nummer van uw departement/, "de widget heeft geen departementsfilter");
   assert.match(blok, /Het venster is in het Frans/, "de lezer hoort te weten dat het Frans is");
   assert.match(blok, /Opent het niet\?/, "een uitweg als het venster niet laadt");
+});
+
+test("de Franse knoppen worden in het Nederlands uitgelegd", () => {
+  const blok = blokTussen("function evenementenHTML", "function leegHTML");
+  assert.match(blok, /<details class="evknoppen"><summary>Wat betekenen de Franse knoppen\?<\/summary>/);
+  for (const knop of ["Réinitialiser", "Liste", "Carte", "Outils", "aucune image"]) {
+    assert.ok(blok.includes(`<strong>${knop}</strong>`), `${knop} ontbreekt in de uitleg`);
+  }
+});
+
+test("de tekst op dit tabblad is minstens 16 px", () => {
+  const css = html.slice(html.indexOf(".evenementen p{"), html.indexOf(".evenementen p{") + 90);
+  assert.match(css, /font-size:16px/);
 });
 
 test("het venster wordt alleen opgebouwd als het tabblad openstaat, en niet opnieuw bij elke verversing", () => {

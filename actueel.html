@@ -48,13 +48,23 @@
      te zijn (Uitgelegd en Evenementen), ook al stond hidden op true. */
   .bar .knop[hidden]{ display:none; }
 
-  /* Evenementen: het ingesloten DATAtourisme-venster schaalt mee met het scherm
-     (de code van de aanbieder staat vast op 1024 x 768). */
-  .evenementen h3{ font-family:var(--disp); color:var(--c-dark); font-size:18px; margin:0 0 6px; }
-  .evenementen p{ margin:0 0 10px; line-height:1.55; }
-  .evenementen .dtframe{ display:block; width:100%; height:min(768px, 80vh); min-height:420px;
-                         border:1px solid #9b9b9b; border-radius:8px; background:#fff; }
-  .evenementen .dtbron{ font-size:13px; color:var(--c-meta); margin-top:10px; }
+  /* Evenementen: een uitlegkaart, daaronder het ingesloten DATAtourisme-venster.
+     Het venster schaalt mee met het scherm (de code van de aanbieder staat vast op
+     1024 x 768) en krijgt hier één nette omlijsting, in plaats van de dubbele rand
+     van de aanbieder zelf. Tekst op 16 px: dit tabblad is voor lezers die niet
+     willen turen. */
+  .evenementen p{ margin:0 0 10px; font-size:16px; line-height:1.55; }
+  .evenementen .evkaart{ background:var(--c-tint); border:1px solid var(--c-rand); border-radius:12px;
+                         padding:16px 18px 10px; margin-bottom:14px; }
+  .evenementen h3{ font-family:var(--disp); color:var(--c-dark); font-size:19px; margin:0 0 6px; }
+  .evenementen .evknoppen{ margin:0 0 6px; font-size:15px; }
+  .evenementen .evknoppen summary{ cursor:pointer; font-weight:600; color:var(--c-main); padding:6px 0; }
+  .evenementen .evknoppen summary:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; border-radius:4px; }
+  .evenementen .evknoppen ul{ margin:4px 0 8px; padding-left:20px; line-height:1.7; }
+  .evenementen .dtomlijsting{ border:1px solid var(--c-rand); border-radius:12px; overflow:hidden;
+                              box-shadow:0 1px 4px rgba(0,0,0,.08); background:#fff; }
+  .evenementen .dtframe{ display:block; width:100%; height:min(768px, 80vh); min-height:420px; border:0; background:#fff; }
+  .evenementen .dtbron{ font-size:13px; color:var(--c-meta); margin-top:12px; }
   .evenementen .dtbron a{ color:var(--c-main); }
 
   *{ box-sizing:border-box; }
@@ -798,12 +808,20 @@
   var EVENEMENTEN_ADRES = "https://explore.datatourisme.fr/embed/eJyrVspNLEnOiE%2FMyVGyqq6tBQAytwYU?components=0&tools=1";
   function evenementenHTML(){
     return '<div class="platblok evenementen">'+
-      '<h3>Evenementen en uitjes bij u in de buurt</h3>'+
-      '<p>Typ het nummer van uw departement in het zoekvenster, bijvoorbeeld '+
-      '<strong>33</strong> voor de Gironde, <strong>62</strong> voor Pas-de-Calais of '+
-      '<strong>75</strong> voor Parijs. Met de filterknoppen kiest u wat u zoekt, zoals evenementen.</p>'+
-      '<iframe class="dtframe" src="'+EVENEMENTEN_ADRES+'" title="Evenementen en uitjes, DATAtourisme" '+
-      'loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>'+
+      '<div class="evkaart">'+
+        '<h3>Evenementen en uitjes bij u in de buurt</h3>'+
+        '<p>Typ in het zoekvenster de naam van uw plaats, bijvoorbeeld <strong>Bordeaux</strong>. '+
+        'Kies daarna met de filterknoppen wat u zoekt, bijvoorbeeld evenementen.</p>'+
+        '<details class="evknoppen"><summary>Wat betekenen de Franse knoppen?</summary><ul>'+
+          '<li><strong>Réinitialiser</strong>: opnieuw beginnen</li>'+
+          '<li><strong>Liste</strong>: de resultaten als lijst tonen</li>'+
+          '<li><strong>Carte</strong>: de resultaten op de kaart tonen</li>'+
+          '<li><strong>Outils</strong>: hulpmiddelen</li>'+
+          '<li><strong>aucune image</strong>: er is geen afbeelding beschikbaar</li>'+
+        '</ul></details>'+
+      '</div>'+
+      '<div class="dtomlijsting"><iframe class="dtframe" src="'+EVENEMENTEN_ADRES+'" title="Evenementen en uitjes, DATAtourisme" '+
+      'loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'+
       '<p class="dtbron">De gegevens komen van DATAtourisme, de nationale Franse databank voor toerisme. '+
       'Het venster is in het Frans. <a href="https://explore.datatourisme.fr/" target="_blank" rel="noopener">Opent het niet? Open het in een eigen venster.</a></p>'+
       '</div>';

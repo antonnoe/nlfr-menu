@@ -106,7 +106,7 @@ test("geen enkel tabblad zet zijn eigen naam boven de tegelnaam", () => {
   const tegelHTML = maakTegelHTML();
   assert.deepEqual(
     CATS.map((c) => c.key),
-    ["nieuws", "overheid", "nlers", "evenementen", "uitgelegd", "archief"],
+    ["nieuws", "overheid", "nlers", "uitgelegd", "archief"],
     "de tabbladen en hun volgorde"
   );
   for (const cat of CATS) {

@@ -37,6 +37,8 @@ for (const [naam, host, feed] of [
     const art = tegel.artikelen[0];
     assert.equal(art.url, `https://${host}/nieuws/een-bericht/`, "de link wijst naar de eigen site van de organisatie");
     assert.ok(!art.summary.includes("Tweede zin"), "alleen een korte aanhef, geen samenvatting");
+    assert.ok(!art.tekst.includes("Tweede zin"), "ook uitgeklapt alleen de korte aanhef, niet de hele beschrijving");
+    assert.ok(art.tekst.includes("Eerste zin"), "de aanhef zelf blijft staan");
     assert.equal(art.bronnen[0].naam, bron.naam, "de bron wordt genoemd");
   });
 }

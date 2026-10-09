@@ -850,8 +850,11 @@
       return;
     }
     // Evenementen: een vast venster, geen tegels om uit te klappen.
+    // Het venster blijft staan zolang dit tabblad openstaat. De pagina ververst
+    // zichzelf elke vijf minuten en tekent dan opnieuw; een nieuw venster zou
+    // het departement en de filters wissen die de bezoeker net had gekozen.
     if (actief === "evenementen"){
-      scrollerEl.innerHTML = evenementenHTML();
+      if (!scrollerEl.querySelector(".dtframe")) scrollerEl.innerHTML = evenementenHTML();
       werkAllesLabelBij();
       return;
     }

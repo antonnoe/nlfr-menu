@@ -32,9 +32,9 @@ test("de uitleg erboven is Nederlands en noemt voorbeelden van departementsnumme
   assert.match(blok, /Opent het niet\?/, "een uitweg als het venster niet laadt");
 });
 
-test("het venster wordt alleen opgebouwd als het tabblad openstaat", () => {
+test("het venster wordt alleen opgebouwd als het tabblad openstaat, en niet opnieuw bij elke verversing", () => {
   const blok = blokTussen("function renderScroller", "function render(){");
-  assert.match(blok, /if \(actief === "evenementen"\)\s*\{\s*scrollerEl\.innerHTML = evenementenHTML\(\);/);
+  assert.match(blok, /if \(actief === "evenementen"\)\s*\{\s*if \(!scrollerEl\.querySelector\("\.dtframe"\)\) scrollerEl\.innerHTML = evenementenHTML\(\);/);
 });
 
 test("Alles uitklappen verdwijnt ook op dit tabblad", () => {

@@ -524,7 +524,7 @@ lezen". Vandaar een apart blok met eigen opmaak, onder de bronnen — en de sond
 **De twee filters** staan in `lib/config.js`:
 
 1. `IF_CATEGORIE_PER_THEMA` koppelt het thema van het bericht (de acht
-   overheidsthema's en de vier perstegels) aan Infofrankrijk-categorieën. Dit
+   overheidsthema's en de zes perstegels, waaronder zorg) aan Infofrankrijk-categorieën. Dit
    is **handwerk, met opzet**: de categorisering op infofrankrijk.com is niet
    strak genoeg om automatisch af te leiden — onder de fiscale categorieën valt
    ook "Kinderbijslag" en "Juridische bijstand". Bijschaven doe je in die ene

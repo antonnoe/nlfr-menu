@@ -5,7 +5,7 @@
 //   "Bronnen" (pers: de Franse originelen; overige: de ene eigen/overheidsbron).
 // Tegels (in volgorde):
 //   1) pers   — gepubliceerde redactiesyntheses (KV), gegroepeerd tot
-//               bosbranden / landelijk / regionaal.
+//               bosbranden / verkeer / zorg ("Zorg en gezondheid") / landelijk / regionaal.
 //   2) overheid — NL-samenvattingen (KV, direct live), per thema, één bron elk.
 //   3) infofrankrijk — eigen publicatie (live feed): titel + summary + link.
 //   4) verenigingen — NL-verenigingsnieuws (live feed).

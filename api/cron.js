@@ -84,7 +84,7 @@ import {
   SNAPSHOT_TTL_S,
   KEY_CRON_RONDE,
 } from "../lib/config.js";
-import { dedupOverheid, alBekend, overheidSleutel } from "../lib/overheid.js";
+import { dedupOverheid, alBekend, overheidSleutel, kiesOverheidThema } from "../lib/overheid.js";
 import { maakRegisterRecord, zoekKeten } from "../lib/register.js";
 import { bouwAntwoord } from "../lib/antwoord.js";
 import { verversIfIndex } from "../lib/ifindex.js";
@@ -250,16 +250,23 @@ export default async function handler(req, res) {
       continue;
     }
     try {
-      const { kop, samenvatting, model } = alNederlands
+      const { kop, samenvatting, model, thema: modelThema } = alNederlands
         ? overheidUitFeed(item)
         : await samenvatOverheid(item);
+      // THEMA OVERHEID. Het thema van de feed blijft staan tenzij het model (in
+      // dezelfde aanroep als de samenvatting) een ander, geldig thema geeft: het
+      // model heeft dan het laatste woord, de prompt vraagt dat alleen te doen als
+      // de tekst DUIDELIJK over iets anders gaat. Nederlandstalige bronnen gaan
+      // zonder model (overheidUitFeed) en houden dus altijd hun feedthema; ook een
+      // feedthema buiten de modelkeuze (nl-overheid) wordt nooit overschreven.
+      const gekozenThema = kiesOverheidThema({ feedThema: item.thema, modelThema, alNederlands });
       const doc = {
         id,
         // Actualité-nummer (A18905) als dat in de URL zit: de identiteit die
         // over alle feeds heen gelijk is. Null voor bronnen zonder zo'n nummer;
         // die vallen terug op de titelvergelijking.
         sleutel: overheidSleutel(item.url),
-        thema: item.thema,
+        ...gekozenThema, // thema, themaBron ("model" | "regels") en evt. themaFeed
         bron: item.bron,
         url: item.url,
         datum: item.datum,
@@ -487,6 +494,10 @@ export default async function handler(req, res) {
         sleutel: id,
         kop: synth.kop, // korte NL-kop voor de artikelweergave
         tekst: synth.tekst,
+        // Thema gekozen door het model in dezelfde aanroep (alleen als het uit
+        // PERS_TEGELS komt). Zonder thema beslissen de regels in persTegelVoor;
+        // de redactie kan het later overschrijven (themaBron "redactie").
+        ...(synth.thema ? { thema: synth.thema, themaBron: "model" } : {}),
         // Uitsluitend de bronnen die de synthese echt heeft gebruikt (gematcht
         // op URL tegen de clusteritems). Clusterbijvangst valt hier weg; alleen
         // als de opgave van het model onbruikbaar was staat de volledige lijst

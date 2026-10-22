@@ -623,6 +623,27 @@ Het gedeelde `REVIEW_TOKEN` is vervallen. De volledige beschrijving — analyse,
 opbouw, variabelen, Supabase-instellingen en wat te doen bij een verloren
 apparaat — staat in **`docs/login.md`**.
 
+## Thema van een nieuwsbericht (model, redactie, regels)
+
+Het thema waaronder een bericht op `/actueel` staat, komt uit drie bronnen. Het record
+bewaart het als `thema` met de herkomst in `themaBron`:
+
+- `"model"`: in de bestaande synthese-aanroep (`lib/synthese.js`) kiest het model ook het
+  thema, als extra regel `THEMA: <code>` uit de vaste lijst `PERS_TEGELS` (uitleg per thema
+  in `PERS_THEMA_UITLEG`, `lib/config.js`). Geen extra API-aanroep. Onbekend, ontbrekend of
+  onleesbaar = geen thema.
+- `"redactie"`: in `/review` staat onder elke publicatie het thema met een keuzelijst
+  (actie `thema` in `api/review.js`, zelfde sessiecontrole als de andere acties). De keuze
+  wint van het model; "Automatisch (regels)" zet hem terug.
+- `"regels"`: de trefwoordregels in `persTegelVoor` (`lib/tegels.js`). Die gelden ook als
+  terugval zodra er geen geldig opgeslagen thema is (oude berichten, geen API-antwoord).
+
+Overheidsberichten houden het thema van hun feed. Alleen Franse bronnen gaan al door het
+model (`samenvatOverheid`); daar mag het model het thema wijzigen als de tekst duidelijk
+over iets anders gaat (`kiesOverheidThema`, `lib/overheid.js`). Nederlandstalige bronnen
+gaan zonder model en blijven zoals ze zijn. Bestaande berichten krijgen geen modelthema
+(dat zou een nieuwe aanroep kosten); zij worden door de regels ingedeeld.
+
 ## Bewaking: tests en sonde (GitHub Actions)
 
 Twee workflows in `.github/workflows/`.

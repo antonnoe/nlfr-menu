@@ -23,6 +23,8 @@
 //           "depubliceer" publicatie verwijderen (verdwijnt van de feed)
 //           "verwijs"     Infofrankrijk-verwijzing onder een bericht zetten
 //           "verwijs-weg" die verwijzing weer weghalen
+//           "thema"       thema van een publicatie/concept wijzigen (themaBron "redactie");
+//                         thema "" = terug naar de automatische indeling (regels)
 //           "nakijken"    IF-artikel op de auditlijst zetten (lezer ziet niets)
 //           "nakijken-klaar" van de auditlijst af
 // GET ?deel=if&artikel=<id>[&zoek=…] -> Infofrankrijk-kandidaten bij één bericht.
@@ -41,7 +43,7 @@ import {
 import { vindGelijkenis, gelijkenis, vindPrimaireBron } from "../lib/gelijkenis.js";
 import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
 import { keurBronnen, bronUrlOordeel, bronVoorNaam } from "../lib/bronurl.js";
-import { persTegelVanPublicatie } from "../lib/tegels.js";
+import { persTegelVanPublicatie, opgeslagenThema } from "../lib/tegels.js";
 import {
   kandidaten as ifKandidaten,
   bijnaVerlopen as ifBijnaVerlopen,
@@ -51,6 +53,8 @@ import {
 import {
   CONCEPT_TTL_S,
   PUBLICATIE_TTL_S,
+  PERS_TEGELS,
+  PERS_TEGEL_LABEL,
   KEY_CONCEPT,
   KEY_PUBLICATIE,
   KEY_AFGEWEZEN,
@@ -402,6 +406,12 @@ export default async function handler(req, res) {
       (a, b) =>
         (Date.parse(b.gepubliceerdOp) || 0) - (Date.parse(a.gepubliceerdOp) || 0)
     );
+    // Het thema waaronder elke publicatie NU op /actueel staat (opgeslagen thema
+    // of, zonder, de regels), plus de herkomst. De server rekent, de UI toont.
+    for (const p of publicaties) {
+      p.themaEffectief = persTegelVanPublicatie(p);
+      p.themaHerkomst = opgeslagenThema(p) ? p.themaBron || "model" : "regels";
+    }
     overheid.sort(
       (a, b) =>
         (Date.parse(b.gepubliceerdOp) || 0) - (Date.parse(a.gepubliceerdOp) || 0)
@@ -465,6 +475,8 @@ export default async function handler(req, res) {
         ? { opgehaaldOp: ifIndex.opgehaaldOp, aantal: ifIndex.artikelen.length }
         : null,
       journaal, // stand van de persketen; zie KEY_CRON_RONDE in lib/config.js
+      // De keuzelijst voor het thema (waarde + label), in tegelvolgorde.
+      themas: PERS_TEGELS.map((t) => ({ waarde: t, label: PERS_TEGEL_LABEL[t] || t })),
       concepten: besten,
       totaalConcepten: concepten.length,
       duplicatenAantal: duplicaten.length,
@@ -642,6 +654,48 @@ export default async function handler(req, res) {
       // een zichtbare verandering op /actueel, dus de momentopname klopt niet meer.
       await vervalSnapshots();
       return res.status(200).json({ ok: true, publicatie: pub, snapshotVervallen: true });
+    }
+
+    if (actie === "thema") {
+      // Handmatig thema. Dezelfde sessiecontrole als elke andere actie (de
+      // poort bovenaan de handler); hier komt alleen nog de invoercontrole bij.
+      // Alleen waarden uit PERS_TEGELS, of "" voor terug naar de regels.
+      const gevraagd = typeof body.thema === "string" ? body.thema.trim() : null;
+      if (gevraagd === null || (gevraagd !== "" && !PERS_TEGELS.includes(gevraagd))) {
+        return res.status(400).json({ ok: false, fout: "Onbekend thema." });
+      }
+      const pas = (doc) => {
+        if (gevraagd === "") {
+          delete doc.thema;
+          doc.themaBron = "regels";
+        } else {
+          doc.thema = gevraagd;
+          doc.themaBron = "redactie";
+        }
+        doc.themaGewijzigdOp = new Date().toISOString();
+      };
+      const pub = await getJSON(KEY_PUBLICATIE(id));
+      if (pub) {
+        pas(pub);
+        const gepubT = Date.parse(pub.gepubliceerdOp) || Date.now();
+        const rest = Math.max(60, Math.round(PUBLICATIE_TTL_S - (Date.now() - gepubT) / 1000));
+        await setJSON(KEY_PUBLICATIE(id), pub, rest); // TTL loopt door tot het oorspronkelijke eindpunt
+        // Het artikel kan van tegel wisselen: de momentopname klopt niet meer.
+        await vervalSnapshots();
+        return res.status(200).json({
+          ok: true,
+          publicatie: pub,
+          themaEffectief: persTegelVanPublicatie(pub),
+          snapshotVervallen: true,
+        });
+      }
+      const concept = await getJSON(KEY_CONCEPT(id));
+      if (concept) {
+        pas(concept);
+        await setJSON(KEY_CONCEPT(id), concept, CONCEPT_TTL_S);
+        return res.status(200).json({ ok: true, concept, themaEffectief: persTegelVanPublicatie(concept) });
+      }
+      return res.status(404).json({ ok: false, fout: "Publicatie of concept niet gevonden." });
     }
 
     if (actie === "keten") {

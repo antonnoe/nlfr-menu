@@ -114,17 +114,18 @@ const AFGESPROKEN = [
   { titel: "Recente activiteiten", href: "https://www.nederlanders.fr/#xg_network_activity", live: true, vorm: undefined },
   { titel: "Frankrijknieuws", href: "https://www.nederlanders.fr/page/actueel-frankrijknieuws", live: true, vorm: undefined },
   { titel: "Nieuwsbrief van vandaag", href: "https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", live: false, vorm: undefined },
+  { titel: "Infopoche (pilot): de app voor op uw telefoon", href: "https://infopoche.fr", live: false, vorm: undefined },
   { titel: "Meld je aan voor de nieuwsbrief",
     href: "https://communities-abroad-c.email-provider.eu/memberforms/subscribe/standalone/form/?a=0f1aywezl2&l=ysinmqgflb",
     live: false, vorm: "tekst" },
 ];
 
-test("de lade toont vier items", () => {
+test("de lade toont vijf items", () => {
   assert.ok(Array.isArray(DOC.kaarten), "kaarten hoort een lijst te zijn");
-  assert.equal(DOC.kaarten.length, 4);
+  assert.equal(DOC.kaarten.length, 5);
 });
 
-test("de vier items staan in de afgesproken volgorde, met de afgesproken links", () => {
+test("de vijf items staan in de afgesproken volgorde, met de afgesproken links", () => {
   assert.deepEqual(
     DOC.kaarten.map((k) => ({ titel: k.titel, href: k.href, live: k.live, vorm: k.vorm })),
     AFGESPROKEN

@@ -19,6 +19,7 @@ const { inParijs } = await import("../lib/banner.js");
 const origineleFetch = globalThis.fetch;
 let kv;
 let gezet;
+let leesFout = null;   // "status" = KV antwoordt 500; "json" = onleesbare inhoud
 
 function zetKvOp(begin) {
   kv = new Map(begin || []);
@@ -28,13 +29,17 @@ function zetKvOp(begin) {
     const args = JSON.parse(opties.body);
     const cmd = String(args[0]).toUpperCase();
     let result;
-    if (cmd === "GET") result = kv.has(args[1]) ? kv.get(args[1]) : null;
+    if (cmd === "GET" && leesFout === "status") {
+      return { ok: false, status: 500, json: async () => ({}), text: async () => "kapot" };
+    }
+    if (cmd === "GET" && leesFout === "json") result = "{dit is geen json";
+    else if (cmd === "GET") result = kv.has(args[1]) ? kv.get(args[1]) : null;
     else if (cmd === "SET") { kv.set(args[1], args[2]); gezet.push(args); result = "OK"; }
     else throw new Error("onverwacht KV-commando: " + cmd);
     return { ok: true, status: 200, json: async () => ({ result }), text: async () => "" };
   };
 }
-test.afterEach(() => { globalThis.fetch = origineleFetch; });
+test.afterEach(() => { globalThis.fetch = origineleFetch; leesFout = null; });
 
 function nepRes() {
   return {
@@ -119,6 +124,72 @@ test("de respons bevat geen token of persoonsgegevens", async () => {
   const g = await roep(banner, getBanner());
   const tekst = JSON.stringify(g.body);
   assert.ok(!/token|@|cookie|session/i.test(tekst.replace(/meet\.google\.com/g, "")), tekst);
+});
+
+// --- ontbrekend record versus mislukte lezing -------------------------------
+
+test("cafejeudi: een ONTBREKEND record is een geldig begin (startwaarde), er wordt geschreven", async () => {
+  zetKvOp();                       // niets onder "banner"
+  const res = await roep(review, postReview({ actie: "cafejeudi", ja: true }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(gezet.length, 1);
+  assert.equal(JSON.parse(gezet[0][2]).aan, true);
+});
+
+for (const soort of ["status", "json"]) {
+  test(`cafejeudi: een MISLUKTE lezing (${soort}) schrijft niets en geeft een duidelijke fout`, async () => {
+    zetKvOp([["banner", JSON.stringify({ aan: true, aanTot: "2999-12-31", titel: "Eigen titel" })]]);
+    leesFout = soort;
+    const res = await roep(review, postReview({ actie: "cafejeudi", ja: false }));
+    assert.equal(res.statusCode, 503);
+    assert.equal(res.body.ok, false);
+    assert.match(res.body.fout, /niet worden gelezen/);
+    assert.equal(gezet.length, 0, "geen enkele SET: het bestaande record blijft staan");
+  });
+}
+
+// --- aanTot is van /review, niet van het beheerformulier ---------------------
+
+const GELDIG_TOKEN = "geheim-voorbeeld-token";
+const postBanner = (body) =>
+  ({ method: "POST", headers: { authorization: "Bearer " + GELDIG_TOKEN }, query: {}, body });
+
+test("banner-POST met een verouderde aanTot overschrijft de keuze uit /review niet", async () => {
+  process.env.BANNER_TOKEN = GELDIG_TOKEN;
+  // /review heeft net op ja gezet voor 2999-12-31; het formulier is ouder.
+  zetKvOp([["banner", JSON.stringify({ aan: true, aanTot: "2999-12-31" })]]);
+  const oudFormulier = { aan: true, aanTot: "2020-01-02", titel: "Nieuwe titel" };
+  const res = await roep(banner, postBanner(oudFormulier));
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.record.aanTot, "2999-12-31");
+  assert.equal(res.body.record.titel, "Nieuwe titel", "de weergave-instellingen worden wel opgeslagen");
+  assert.equal(JSON.parse(gezet[0][2]).aanTot, "2999-12-31");
+});
+
+test("banner-POST kan aanTot niet zetten of wissen; ontbrekend record geeft null", async () => {
+  process.env.BANNER_TOKEN = GELDIG_TOKEN;
+  zetKvOp([["banner", JSON.stringify({ aan: false, aanTot: null })]]);
+  let res = await roep(banner, postBanner({ aan: true, aanTot: "2999-12-31" }));
+  assert.equal(res.body.record.aanTot, null, "een formulierwaarde zet geen ja");
+  zetKvOp();                       // geen record: startwaarde zonder aanTot
+  res = await roep(banner, postBanner({ aan: true, aanTot: "2999-12-31" }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.record.aanTot, null);
+});
+
+test("banner-POST bij een mislukte lezing schrijft niets", async () => {
+  process.env.BANNER_TOKEN = GELDIG_TOKEN;
+  zetKvOp([["banner", JSON.stringify({ aan: true, aanTot: "2999-12-31" })]]);
+  leesFout = "status";
+  const res = await roep(banner, postBanner({ aan: true }));
+  assert.equal(res.statusCode, 503);
+  assert.match(res.body.fout, /niet worden gelezen/);
+  assert.equal(gezet.length, 0);
+});
+
+test("het beheerformulier stuurt geen aanTot mee", () => {
+  const beheer = readFileSync(new URL("../banner-beheer.html", import.meta.url), "utf8");
+  assert.ok(!/aanTot:\s*record\.aanTot/.test(beheer));
 });
 
 // --- de pagina ---------------------------------------------------------------

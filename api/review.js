@@ -38,7 +38,7 @@
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { toegangVanVerzoek } from "../lib/auth-node.js";
 import { cafeJeudiZetten, effectieveStand, eerstvolgende } from "../lib/banner.js";
-import { leesBanner, KV_SLEUTEL_BANNER } from "../lib/banner-opslag.js";
+import { leesBanner, leesBannerStrikt, KV_SLEUTEL_BANNER } from "../lib/banner-opslag.js";
 import { buitenlandDoorlaatNL } from "../lib/feeds.js";
 import {
   beoordeelPublicatie,
@@ -546,10 +546,23 @@ export default async function handler(req, res) {
 
     // Café Jeudi ja/nee: zelfde sessiepoort als alle acties hierboven, geen id.
     if (actie === "cafejeudi") {
-      const { record } = await leesBanner();
+      // Ontbrekend record = startwaarde; mislukte lezing = niets schrijven.
+      let record;
+      try {
+        ({ record } = await leesBannerStrikt());
+      } catch {
+        return res.status(503).json({
+          ok: false,
+          fout: "Het banner-record kon niet worden gelezen; er is niets gewijzigd. Probeer het zo opnieuw.",
+        });
+      }
       const uitslag = cafeJeudiZetten(record, body.ja);
       if (!uitslag.ok) return res.status(400).json({ ok: false, fout: uitslag.fout });
-      await setJSON(KV_SLEUTEL_BANNER, uitslag.record);
+      try {
+        await setJSON(KV_SLEUTEL_BANNER, uitslag.record);
+      } catch {
+        return res.status(503).json({ ok: false, fout: "Opslaan mislukt; de stand is niet gewijzigd." });
+      }
       const stand = effectieveStand(uitslag.record);
       return res.status(200).json({
         ok: true,

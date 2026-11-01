@@ -292,9 +292,9 @@ function uitFormulier(){
   const keuze = $("onderschriftkeuze").value;
   return {
     aan: $("aan").checked,
-    // Het "ja" van /review (donderdag waarvoor de banner aan mag) blijft
-    // ongemoeid; dit formulier verandert het niet.
-    aanTot: record.aanTot || null,
+    // Geen aanTot: het "ja" van /review (donderdag waarvoor de banner aan mag)
+    // is niet van dit formulier. De server behoudt de bestaande waarde zelf,
+    // zodat een verouderd formulier de laatste keuze niet kan overschrijven.
     soort: $("soort").value,
     titel: $("titel").value.trim() || STANDAARD.titel,
     wekelijks,

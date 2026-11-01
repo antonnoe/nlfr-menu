@@ -103,7 +103,9 @@ stand, voor de beheerpagina) en `bijgewerkt`. Zetten gebeurt met één klik op
 `/review` (blok "Café Jeudi", actie `cafejeudi` in `api/review.js`, sessie en
 `ALLOWED_LOGIN_EMAILS`, geen token in de browser). Nieuwe lezers (zoals de
 nieuwsbrief) lezen `GET /api/banner` en gebruiken `aan` en `datum`, nooit het
-ruwe veld.
+ruwe veld. `aanTot` is van `/review`: `POST /api/banner` (beheerformulier) neemt
+het uit het bestaande record en nooit uit de body, en schrijft niets als dat
+record niet te lezen is; hetzelfde geldt voor de actie `cafejeudi`.
 
 Het beheertoken (`BANNER_TOKEN`, zie Env-vars) wordt één keer gevraagd en
 daarna in je browser bewaard. Het gaat als `Authorization`-header mee en staat

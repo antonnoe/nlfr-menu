@@ -38,6 +38,29 @@
   .opruimlade p { margin:0; font-size:13px; color:#6d6360; }
   .balk button.gevaar { border-color:rgba(128,0,0,.35); background:#fff; }
 
+  /* ---- Café Jeudi ja/nee --------------------------------------------------
+     Eén klik per week. Leest de effectieve stand en schrijft via /api/review
+     (sessie, geen token). De
+     stand valt na de donderdag vanzelf terug naar Nee; zie lib/banner.js.
+     Tikdoel 44px, zoals elke knop hier. */
+  .cafejeudi { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:0 0 12px; padding:10px 14px;
+    border:1px solid rgba(128,0,0,.15); border-left:4px solid rgba(128,0,0,.25); border-radius:10px; background:#fff; }
+  .cafejeudi[hidden] { display:none; }
+  .cafejeudi.ja { border-left-color:var(--actueel); background:rgba(47,107,58,.05); }
+  .cafejeudi .cj-kop { flex:1 1 200px; min-width:0; font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; color:var(--brand); }
+  .cafejeudi .cj-stand { display:block; font-family:'Mulish',system-ui,sans-serif; font-weight:700; font-size:13px; color:#6d6360; }
+  .cafejeudi.ja .cj-stand { color:var(--actueel); }
+  .cafejeudi .cj-knoppen { display:flex; gap:8px; flex:0 0 auto; }
+  .cafejeudi .cj-knop { font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; min-height:44px; min-width:76px; padding:8px 18px;
+    border-radius:9px; cursor:pointer; border:1px solid rgba(128,0,0,.25); background:#fff; color:var(--brand); }
+  .cafejeudi .cj-knop.cj-ja { border-color:rgba(47,107,58,.4); color:var(--actueel); }
+  .cafejeudi .cj-knop[aria-pressed="true"].cj-ja { background:var(--actueel); border-color:var(--actueel); color:#fff; }
+  .cafejeudi .cj-knop[aria-pressed="true"].cj-nee { background:var(--brand); border-color:var(--brand); color:#fff; }
+  .cafejeudi .cj-knop:disabled { opacity:.6; cursor:default; }
+  .cafejeudi .cj-melding { flex-basis:100%; font-size:13px; color:var(--actueel); min-height:0; }
+  .cafejeudi .cj-melding.fout { color:var(--brand); background:none; border:0; padding:0; }
+  @media (max-width:480px) { .cafejeudi .cj-knoppen { flex:1 1 100%; } .cafejeudi .cj-knop { flex:1; } }
+
   /* ---- Tabbladen: Redactie actueel | Overheid ---------------------------
      TWEE STROMEN, ÉÉN TOOL. Het eerste tabblad is de dagelijkse taak (de
      conceptenwachtrij) en staat daarom standaard open. Het tweede gaat over
@@ -233,6 +256,16 @@
       <a class="hulp-link" href="/uitleg" target="_blank" rel="noopener" title="Hoe werkt dit? Uitleg met schermen" aria-label="Uitleg over deze tool">?</a>
       <a id="nbLink" class="nb-link" href="/actueel" target="_blank" rel="noopener">Bekijk nieuwspagina ↗</a>
     </div>
+  </div>
+  <!-- CAFÉ JEUDI. Begint dicht, net als de tabbladen: pas zichtbaar als de
+       server de sessie heeft goedgekeurd. -->
+  <div class="cafejeudi" id="cafejeudi" hidden>
+    <div class="cj-kop" id="cjkop">Café Jeudi<span class="cj-stand" id="cjstand" role="status" aria-live="polite">Laden…</span></div>
+    <div class="cj-knoppen" role="group" aria-label="Café Jeudi deze week">
+      <button type="button" class="cj-knop cj-ja" id="cjja" aria-pressed="false">Ja</button>
+      <button type="button" class="cj-knop cj-nee" id="cjnee" aria-pressed="false">Nee</button>
+    </div>
+    <div class="cj-melding" id="cjmelding" role="status" aria-live="polite"></div>
   </div>
   <div class="tabs" role="tablist" aria-label="Reviewtool">
     <button type="button" class="tab" role="tab" id="tabRedactie" data-tab="redactie" aria-selected="true" tabindex="0" aria-controls="inhoud">Redactie actueel</button>
@@ -1426,6 +1459,7 @@
         // allowlist is gehaald. De server is de enige die dat weet.
         zetVerborgen(apparaatBalkEl, false);
         if (tabsEl) tabsEl.hidden = false;
+        if (cjEl) { cjEl.hidden = false; cjLaad(); }
         tekenWieBen();
         render();
       } else if (res.status === 401){
@@ -1439,11 +1473,69 @@
     }).catch(function(){ melding("Netwerkfout.", "fout"); });
   }
 
+  // ---- Café Jeudi ja/nee ---------------------------------------------------
+  // De stand komt uit /api/review?deel=banner (effectief: `aan`, `datum`,
+  // `volgende`, zelfde bron als het publieke /api/banner); schrijven gaat via
+  // /api/review met de sessie. Er staat geen
+  // token in deze pagina. Na de donderdag valt de stand vanzelf terug naar Nee.
+  var cjEl = document.getElementById("cafejeudi");
+  var cjStandEl = document.getElementById("cjstand");
+  var cjJa = document.getElementById("cjja");
+  var cjNee = document.getElementById("cjnee");
+  var cjMeldingEl = document.getElementById("cjmelding");
+  var cjGeladen = false;
+  var MAANDEN_CJ = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+  function cjDatum(iso){
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+    return m ? Number(m[3]) + " " + MAANDEN_CJ[Number(m[2]) - 1] : "";
+  }
+  function cjTeken(aan, datum, volgende){
+    var d = cjDatum(aan ? datum : volgende);
+    document.getElementById("cjkop").firstChild.nodeValue = "Café Jeudi" + (d ? ", donderdag " + d : "");
+    cjStandEl.textContent = aan ? "Staat op Ja" : "Staat op Nee";
+    cjEl.className = "cafejeudi" + (aan ? " ja" : "");
+    cjJa.setAttribute("aria-pressed", aan ? "true" : "false");
+    cjNee.setAttribute("aria-pressed", aan ? "false" : "true");
+  }
+  function cjMelding(tekst, soort){
+    cjMeldingEl.textContent = tekst || "";
+    cjMeldingEl.className = "cj-melding" + (soort ? " " + soort : "");
+  }
+  function cjLaad(){
+    if (cjGeladen) return;
+    cjGeladen = true;
+    apiGet("&deel=banner")
+      .then(function(res){
+        if (!res.ok || !res.data || res.data.ok !== true) throw new Error("stand");
+        cjTeken(res.data.aan === true, res.data.datum, res.data.volgende);
+      })
+      .catch(function(){ cjStandEl.textContent = "Stand niet te laden"; cjGeladen = false; });
+  }
+  function cjZet(ja){
+    cjJa.disabled = cjNee.disabled = true;
+    cjMelding("Bezig…");
+    api("POST", { actie: "cafejeudi", ja: ja }).then(function(res){
+      cjJa.disabled = cjNee.disabled = false;
+      if (res.ok && res.data && res.data.ok){
+        cjTeken(res.data.aan === true, res.data.datum, res.data.volgende);
+        cjMelding(res.data.aan ? "Opgeslagen: Café Jeudi staat op Ja voor donderdag " + cjDatum(res.data.datum) + "." : "Opgeslagen: Café Jeudi staat op Nee.");
+      } else if (res.status !== 401){
+        cjMelding("Niet opgeslagen: " + ((res.data && res.data.fout) || "status " + res.status), "fout");
+      }
+    }, function(){
+      cjJa.disabled = cjNee.disabled = false;
+      cjMelding("Niet opgeslagen: geen verbinding.", "fout");
+    });
+  }
+  cjJa.addEventListener("click", function(){ cjZet(true); });
+  cjNee.addEventListener("click", function(){ cjZet(false); });
+
   // Het scherm begint DICHT: geen tabbladen, geen apparaatbalk, geen inhoud.
   // De eerste GET beslist of het opengaat. Zo staat er nooit een schil met
   // knoppen op een scherm waarvan de server de toegang nog moet bevestigen.
   zetVerborgen(apparaatBalkEl, true);
   if (tabsEl) tabsEl.hidden = true;
+  if (cjEl) cjEl.hidden = true;
   zetVerborgen(voetEl, true);
   laad();
 })();

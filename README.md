@@ -90,6 +90,21 @@ de overslaan-lijst, dan schuift hij een week op. Dat levert bijvoorbeeld
 eigen datumtekst is er geen datumregel en wordt de knop "Lees meer…", die de
 uitleg opent.
 
+**Café Jeudi ja/nee (aan + `aanTot`, automatische terugval).** De banner
+staat alleen aan als het record `aan: true` heeft én `aanTot` (ISO-datum van de
+donderdag waarvoor "ja" is gezet) gevuld is én vandaag in Parijs niet na
+`aanTot` ligt; staat `aanTot` in `overslaan`, dan geldt het "ja" niet meer.
+Er is geen cronjob: na die donderdag is de stand vanzelf uit, dus elke week is
+een nieuwe "ja" nodig. Eén functie bepaalt dit, `effectieveStand()` in
+`lib/banner.js`; het menu (`bannerHTML`) en `GET /api/banner` gebruiken die. De
+respons heeft naast de recordvelden `aan` (effectief), `datum` (de donderdag
+of `null`), `volgende` (eerstvolgende bijeenkomst), `aanIngesteld` (de ruwe
+stand, voor de beheerpagina) en `bijgewerkt`. Zetten gebeurt met één klik op
+`/review` (blok "Café Jeudi", actie `cafejeudi` in `api/review.js`, sessie en
+`ALLOWED_LOGIN_EMAILS`, geen token in de browser). Nieuwe lezers (zoals de
+nieuwsbrief) lezen `GET /api/banner` en gebruiken `aan` en `datum`, nooit het
+ruwe veld.
+
 Het beheertoken (`BANNER_TOKEN`, zie Env-vars) wordt één keer gevraagd en
 daarna in je browser bewaard. Het gaat als `Authorization`-header mee en staat
 nooit in de URL of in de menu-HTML.

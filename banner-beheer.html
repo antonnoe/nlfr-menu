@@ -254,7 +254,7 @@ function melden(tekst, soort){
 // --- formulier <-> record ------------------------------------------------
 function naarFormulier(r){
   $("aan").checked = !!r.aan;
-  $("aanst").textContent = r.aan ? "Banner staat aan" : "Banner staat uit";
+  $("aanst").textContent = r.aan ? "Banner staat aan (zichtbaar zodra Café Jeudi in /review op Ja staat)" : "Banner staat uit";
   $("soort").value = r.soort;
   $("titel").value = r.titel;
   $("boektitel").value = r.boek.titel;
@@ -292,6 +292,9 @@ function uitFormulier(){
   const keuze = $("onderschriftkeuze").value;
   return {
     aan: $("aan").checked,
+    // Het "ja" van /review (donderdag waarvoor de banner aan mag) blijft
+    // ongemoeid; dit formulier verandert het niet.
+    aanTot: record.aanTot || null,
     soort: $("soort").value,
     titel: $("titel").value.trim() || STANDAARD.titel,
     wekelijks,
@@ -356,7 +359,7 @@ function tekenOverslaan(lijst){
 function tekenVoorbeeld(){
   const r = normaliseer(uitFormulier());
   $("voorbeeld").innerHTML = r.aan
-    ? bannerHTML(r)
+    ? bannerHTML(r, undefined, { voorbeeld: true })
     : '<p class="leegtekst">De banner staat uit; het menu toont er dan geen.</p>';
   // In het voorbeeld mag de [?] gewoon werken, net als in het menu.
   const vraag = $("voorbeeld").querySelector("#bnrvraag");
@@ -375,7 +378,7 @@ for (const id of ["aan","soort","titel","boektitel","boekauteur","afbeelding","w
   el.addEventListener("change", bijInvoer);
 }
 function bijInvoer(){
-  $("aanst").textContent = $("aan").checked ? "Banner staat aan" : "Banner staat uit";
+  $("aanst").textContent = $("aan").checked ? "Banner staat aan (zichtbaar zodra Café Jeudi in /review op Ja staat)" : "Banner staat uit";
   $("wekelijksst").textContent = $("wekelijksaan").checked ? "Elke week op een vaste dag" : "Geen vast weekschema";
   $("wekelijksvak").hidden = !$("wekelijksaan").checked;
   $("boekvak").hidden = $("soort").value !== "boek";
@@ -409,7 +412,11 @@ async function laad(){
   try {
     const r = await fetch("/api/banner", { cache: "no-store" });
     if (!r.ok) throw new Error("status " + r.status);
-    record = normaliseer(await r.json());
+    const j = await r.json();
+    // `aan` in het antwoord is de effectieve stand; het formulier hoort de
+    // ingestelde stand te tonen (en weer terug te schrijven).
+    if (typeof j.aanIngesteld === "boolean") j.aan = j.aanIngesteld;
+    record = normaliseer(j);
     naarFormulier(record);
     melden("Geladen.", "goed");
   } catch (e) {

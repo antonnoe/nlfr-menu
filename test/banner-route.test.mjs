@@ -42,7 +42,10 @@ test("GET levert de startwaarde uit banner.json als KV leeg is", async () => {
 
   assert.equal(res._status, 200);
   assert.equal(res._json.bron, "banner.json", "zonder KV komt het uit de repo");
-  assert.equal(res._json.aan, STARTWAARDE.aan);
+  // `aan` is de EFFECTIEVE stand: banner.json heeft geen aanTot, dus uit.
+  assert.equal(res._json.aan, false);
+  assert.equal(res._json.aanIngesteld, STARTWAARDE.aan, "de ruwe stand blijft zichtbaar voor de beheerpagina");
+  assert.equal(res._json.datum, null);
   assert.equal(res._json.titel, "Café Jeudi");
   assert.deepEqual(res._json.wekelijks, STARTWAARDE.wekelijks);
   assert.equal(res._headers["cache-control"], "no-store", "de banner mag niet gecachet worden");

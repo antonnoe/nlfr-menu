@@ -20,6 +20,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import pw from "playwright-core";
+import { volgendeDatum } from "../lib/banner.js";
 
 const { chromium } = pw;
 const WORTEL = process.cwd();
@@ -42,7 +43,11 @@ function server() {
 
     if (p === "/api/banner") {
       res.writeHead(200, { "Content-Type": MIME[".json"], "Cache-Control": "no-store" });
-      return res.end(fs.readFileSync(path.join(WORTEL, "banner.json")));
+      // Een banner zonder "ja" is effectief uit; voor de schermafdruk zetten we
+      // hem op ja voor de eerstvolgende bijeenkomst.
+      const rec = JSON.parse(fs.readFileSync(path.join(WORTEL, "banner.json"), "utf8"));
+      rec.aanTot = volgendeDatum(rec);
+      return res.end(JSON.stringify(rec));
     }
     if (p === "/") p = "/index.html";
     if (!path.extname(p)) p += ".html";           // cleanUrls

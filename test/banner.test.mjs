@@ -14,6 +14,11 @@ import {
   valideer, normaliseer, bannerHTML, inParijs,
 } from "../lib/banner.js";
 
+// Een banner met "ja" voor donderdag 10 september 2026. Zonder aanTot is de
+// banner effectief uit (zie test/banner-stand.test.mjs); de opmaaktests hieronder
+// gaan over het uiterlijk en hebben dus een "ja" nodig.
+const JA = { ...STANDAARD, aanTot: "2026-09-10" };
+
 const STARTWAARDE = JSON.parse(fs.readFileSync(new URL("../banner.json", import.meta.url), "utf8"));
 
 // Een moment in Parijse tijd. In september is Parijs UTC+2, dus 18:00 in
@@ -101,7 +106,7 @@ test("staat de banner uit, dan is er geen banner", () => {
 });
 
 test("de banner toont titel, datumregel, onderschrift en knop", () => {
-  const h = bannerHTML(STANDAARD, new Date("2026-09-07T10:00Z"));
+  const h = bannerHTML(JA, new Date("2026-09-07T10:00Z"));
   assert.match(h, /Café Jeudi/);
   assert.match(h, /Donderdag 10 september van 18:00 tot \+\/- 19:30/);
   assert.match(h, /Iedereen is van harte welkom \| Soyez les bienvenus/);
@@ -112,20 +117,20 @@ test("de banner toont titel, datumregel, onderschrift en knop", () => {
 });
 
 test("zonder datumregel wordt de knop 'Lees meer…' en opent hij de uitleg", () => {
-  const h = bannerHTML({ ...STANDAARD, wekelijks: null, datumtekst: null });
+  const h = bannerHTML({ ...STANDAARD, aanTot: "2999-12-31", wekelijks: null, datumtekst: null });
   assert.match(h, /Lees meer…/);
   assert.match(h, /<button[^>]+class="bnr-knop"/, "een knop, geen link naar de Meet");
   assert.ok(!/bnr-datum/.test(h), "geen lege datumregel");
 });
 
 test("de uitleg is een in-flow blok, geen overlay of window.open", () => {
-  const h = bannerHTML(STANDAARD, new Date("2026-09-07T10:00Z"));
+  const h = bannerHTML(JA, new Date("2026-09-07T10:00Z"));
   assert.match(h, /<div class="bnr-uitleg" id="bnruitleg" hidden>/);
   assert.ok(!/position:\s*(absolute|fixed)/.test(h), "de uitleg staat in de flow");
 });
 
 test("soort 'boek' zet titel en auteur onder de banner-titel", () => {
-  const rec = { ...STANDAARD, soort: "boek", boek: { titel: "De aanslag", auteur: "Harry Mulisch" } };
+  const rec = { ...JA, soort: "boek", boek: { titel: "De aanslag", auteur: "Harry Mulisch" } };
   const h = bannerHTML(rec, new Date("2026-09-07T10:00Z"));
   assert.match(h, /class="bnr-boek">De aanslag — Harry Mulisch</);
   // Bij soort cafe blijft dat blok weg, ook als er boekgegevens staan.
@@ -133,12 +138,12 @@ test("soort 'boek' zet titel en auteur onder de banner-titel", () => {
 });
 
 test("een afbeelding komt als klein icoon links van de titel", () => {
-  const h = bannerHTML({ ...STANDAARD, afbeelding: "https://example.org/logo.png" }, new Date("2026-09-07T10:00Z"));
+  const h = bannerHTML({ ...JA, afbeelding: "https://example.org/logo.png" }, new Date("2026-09-07T10:00Z"));
   assert.match(h, /<img class="bnr-afb" src="https:\/\/example\.org\/logo\.png"/);
 });
 
 test("de opmaak ontsnapt aan HTML in de tekstvelden", () => {
-  const h = bannerHTML({ ...STANDAARD, titel: '<script>alert(1)</script>' }, new Date("2026-09-07T10:00Z"));
+  const h = bannerHTML({ ...JA, titel: '<script>alert(1)</script>' }, new Date("2026-09-07T10:00Z"));
   assert.ok(!/<script>/.test(h), "geen ruwe HTML uit een tekstveld");
   assert.match(h, /&lt;script&gt;/);
 });

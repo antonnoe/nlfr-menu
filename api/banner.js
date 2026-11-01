@@ -1,6 +1,9 @@
 // /api/banner — het record achter de Café Jeudi-banner in het hoofdmenu.
 //
-//   GET   publiek, no-store. Levert het KV-record "banner"; is KV leeg of niet
+//   GET   publiek, no-store. Levert het KV-record "banner" plus de effectieve
+//         stand: `aan` (effectief, zie lib/banner.js effectieveStand), `datum`
+//         (de donderdag waarvoor het geldt, of null), `volgende` (eerstvolgende
+//         bijeenkomst) en `bijgewerkt`. Is KV leeg of niet
 //         geconfigureerd, dan banner.json uit de repo als startwaarde. Zo toont
 //         een verse deployment meteen de goede banner, zonder eerst te moeten
 //         opslaan.
@@ -17,27 +20,9 @@
 // beheerpagina bewaart hem in localStorage en stuurt hem als header mee.
 
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
-import { getJSON, setJSON, kvBeschikbaar } from "../lib/store.js";
-import { valideer, normaliseer, STANDAARD } from "../lib/banner.js";
-
-const KV_SLEUTEL = "banner";
-
-// De startwaarde uit de repo. Eén keer lezen en onthouden: het bestand
-// verandert niet tijdens de looptijd van een functie-instantie.
-let startwaardeCache = null;
-function startwaarde() {
-  if (startwaardeCache) return startwaardeCache;
-  try {
-    const bestand = path.join(process.cwd(), "banner.json");
-    startwaardeCache = normaliseer(JSON.parse(fs.readFileSync(bestand, "utf8")));
-  } catch {
-    // Ook zonder het bestand een werkend antwoord: het schema staat in lib/.
-    startwaardeCache = normaliseer(STANDAARD);
-  }
-  return startwaardeCache;
-}
+import { setJSON, kvBeschikbaar } from "../lib/store.js";
+import { valideer, effectieveStand, eerstvolgende } from "../lib/banner.js";
+import { leesBanner, KV_SLEUTEL_BANNER as KV_SLEUTEL } from "../lib/banner-opslag.js";
 
 function leesToken(req) {
   const kop = req && req.headers ? req.headers.authorization || req.headers.Authorization : "";
@@ -84,16 +69,18 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
 
   if (req.method === "GET") {
-    let record = null;
-    try {
-      record = await getJSON(KV_SLEUTEL);
-    } catch {
-      record = null;
-    }
-    const uit = record ? normaliseer(record) : startwaarde();
+    const { record: uit, bron } = await leesBanner();
+    // `aan` is hier de EFFECTIEVE stand (zie effectieveStand in lib/banner.js):
+    // zonder "ja" voor een donderdag die nog niet voorbij is, is het false.
+    // `aanIngesteld` is de ruwe stand in het record, voor de beheerpagina.
+    const stand = effectieveStand(uit);
     return res.status(200).json({
       ...uit,
-      bron: record ? "kv" : "banner.json",
+      aanIngesteld: uit.aan,
+      aan: stand.aan,
+      datum: stand.datum,
+      volgende: eerstvolgende(uit),
+      bron,
       bijgewerkt: new Date().toISOString(),
     });
   }

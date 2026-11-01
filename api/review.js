@@ -27,12 +27,18 @@
 //                         thema "" = terug naar de automatische indeling (regels)
 //           "nakijken"    IF-artikel op de auditlijst zetten (lezer ziet niets)
 //           "nakijken-klaar" van de auditlijst af
+//           "cafejeudi"   { ja: true|false } zonder id: Café Jeudi deze week ja of nee.
+//                         ja zet aan + aanTot (eerstvolgende donderdag), nee leegt aanTot.
+//                         Zelfde record als /api/banner; de stand valt na de donderdag
+//                         vanzelf terug (effectieveStand in lib/banner.js).
 // GET ?deel=if&artikel=<id>[&zoek=…] -> Infofrankrijk-kandidaten bij één bericht.
 // Concepten verlopen automatisch na CONCEPT_TTL_S (nu 36 uur, TTL in KV). Standaard = niet
 // gepubliceerd.
 
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { toegangVanVerzoek } from "../lib/auth-node.js";
+import { cafeJeudiZetten, effectieveStand, eerstvolgende } from "../lib/banner.js";
+import { leesBanner, KV_SLEUTEL_BANNER } from "../lib/banner-opslag.js";
 import { buitenlandDoorlaatNL } from "../lib/feeds.js";
 import {
   beoordeelPublicatie,
@@ -297,6 +303,20 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const nuMs = Date.now();
 
+    // ---- Café Jeudi: de effectieve stand (kleine GET, zelfde bron als /api/banner)
+    // Hier en niet via het publieke /api/banner, zodat de pagina alleen met
+    // /api/review praat en de stand achter dezelfde sessiepoort blijft.
+    if (leesQuery(req, "deel") === "banner") {
+      const { record } = await leesBanner();
+      const stand = effectieveStand(record);
+      return res.status(200).json({
+        ok: true,
+        aan: stand.aan,
+        datum: stand.datum,
+        volgende: eerstvolgende(record),
+      });
+    }
+
     // ---- Kandidatenlijst bij één bericht (aparte, kleine GET) --------------
     // Apart gehouden van de hoofd-GET: die haalt alle concepten, publicaties,
     // overheidsberichten en registerrecords op, en dat hoef je niet opnieuw te
@@ -522,6 +542,21 @@ export default async function handler(req, res) {
       return res
         .status(200)
         .json({ ok: true, verwijderd: duplicaten.length, over: alle.length - duplicaten.length });
+    }
+
+    // Café Jeudi ja/nee: zelfde sessiepoort als alle acties hierboven, geen id.
+    if (actie === "cafejeudi") {
+      const { record } = await leesBanner();
+      const uitslag = cafeJeudiZetten(record, body.ja);
+      if (!uitslag.ok) return res.status(400).json({ ok: false, fout: uitslag.fout });
+      await setJSON(KV_SLEUTEL_BANNER, uitslag.record);
+      const stand = effectieveStand(uitslag.record);
+      return res.status(200).json({
+        ok: true,
+        aan: stand.aan,
+        datum: stand.datum,
+        volgende: eerstvolgende(uitslag.record),
+      });
     }
 
     if (!actie || !id) {

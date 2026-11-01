@@ -22,7 +22,7 @@
 import crypto from "node:crypto";
 import { setJSON, kvBeschikbaar } from "../lib/store.js";
 import { valideer, effectieveStand, eerstvolgende } from "../lib/banner.js";
-import { leesBanner, KV_SLEUTEL_BANNER as KV_SLEUTEL } from "../lib/banner-opslag.js";
+import { leesBanner, leesBannerStrikt, KV_SLEUTEL_BANNER as KV_SLEUTEL } from "../lib/banner-opslag.js";
 
 function leesToken(req) {
   const kop = req && req.headers ? req.headers.authorization || req.headers.Authorization : "";
@@ -109,13 +109,30 @@ export default async function handler(req, res) {
       });
     }
 
+    // `aanTot` is van /review ("Café Jeudi ja/nee"), niet van dit formulier. Een
+    // formulier dat al even openstaat heeft een oude waarde; die zou de laatste
+    // keuze uit /review overschrijven. Daarom wordt aanTot hier NOOIT uit de
+    // body genomen maar uit het bestaande record. Lukt het lezen daarvan niet,
+    // dan schrijven we niets (anders zou een storing de keuze wissen).
+    let bestaand;
     try {
-      await setJSON(KV_SLEUTEL, uitslag.record);
+      bestaand = (await leesBannerStrikt()).record;
+    } catch {
+      return res.status(503).json({
+        ok: false,
+        fout: "Het bestaande record kon niet worden gelezen; er is niets opgeslagen. Probeer het zo opnieuw.",
+      });
+    }
+    const samen = valideer({ ...uitslag.record, aanTot: bestaand.aanTot });
+    const record = samen.ok ? samen.record : { ...uitslag.record, aanTot: null };
+
+    try {
+      await setJSON(KV_SLEUTEL, record);
     } catch (e) {
       return res.status(500).json({ ok: false, fout: "Opslaan mislukt: " + (e && e.message) });
     }
 
-    return res.status(200).json({ ok: true, record: uitslag.record });
+    return res.status(200).json({ ok: true, record });
   }
 
   res.setHeader("Allow", "GET, POST, OPTIONS");

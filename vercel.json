@@ -9,6 +9,6 @@
     { "source": "/auth/callback", "destination": "/api/auth-callback" }
   ],
   "crons": [
-    { "path": "/api/cron", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron", "schedule": "0 5,17 * * *" }
   ]
 }

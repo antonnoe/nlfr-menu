@@ -46,7 +46,7 @@ test("de rondes liggen gelijkmatig genoeg: de langste tussenpoos is de croninter
   );
 });
 
-test("het schema is elk uur op minuut 7: 24 rondes, ten hoogste 48 modelaanroepen per dag", () => {
+test("het schema is elk uur op minuut 7: 24 rondes, ten hoogste 48 concepten per dag", () => {
   assert.equal(cron.schedule, "7 * * * *");
   assert.equal(rondesPerEtmaal(cron.schedule), 24);
   assert.equal(MAX_SYNTHESE_PER_RONDE, 2);

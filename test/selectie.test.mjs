@@ -182,7 +182,7 @@ test("beslissingen krijgen GEEN TTL, kandidaten wel (bron)", () => {
   const api = fs.readFileSync(new URL("../api/selectie.js", import.meta.url), "utf8");
   assert.match(api, /setJSON\(KEY_SEL_BESLUIT\(id\), besluit\);/);
   const ronde = fs.readFileSync(new URL("../lib/selectie/ronde.js", import.meta.url), "utf8");
-  assert.match(ronde, /setJSON\(KEY_SEL_KANDIDAAT\(i\.id\), doc, SEL_KANDIDAAT_TTL_S\)/);
+  assert.match(ronde, /setJSON\(KEY_SEL_KANDIDAAT\(doc\.id\), doc, SEL_KANDIDAAT_TTL_S\)/);
 });
 
 test("de selectie raakt de actueelketen niet: eigen cron, eigen sleutels", () => {
@@ -208,4 +208,25 @@ test("/api/selectie zonder sessie geeft geen gegevens prijs", async () => {
   assert.ok([401, 503].includes(uit.status));
   assert.equal(uit.body.ok, false);
   assert.equal(uit.body.kandidaten, undefined);
+});
+
+test("feed: hooguit twee PEIL-parameters, 'mogelijk gewijzigd' gaat als soort mee naar de lezer", () => {
+  const p = (soort) => ({ ...peilKort(PEIL[0]), soort });
+  const feed = bouwFeed([{ id: "9", besluit: "go", categorie: "regelgeving", titel: "CAK", datum: "2026-11-06T10:00:00Z", ai: { peil: [p("mogelijk-gewijzigd"), p("raakt"), p("raakt")] } }], NU);
+  const peil = feed.categorieen[0].items[0].peil;
+  assert.equal(peil.length, 2);
+  assert.equal(peil[0].soort, "mogelijk-gewijzigd");
+  assert.equal(peil[1].soort, "raakt");
+});
+
+test("terugdraaien bewaart het oude besluit zonder TTL (herstelronde 7 november 2026)", () => {
+  const api = fs.readFileSync(new URL("../api/selectie.js", import.meta.url), "utf8");
+  assert.match(api, /setJSON\(KEY_SEL_HISTORIE\(id, [^)]+\)\), \{ \.\.\.b, teruggedraaidOp: nu/);
+});
+
+test("ronde: kandidaten worden opgeslagen vóór de modelaanroep, en lijsten lezen strikt", () => {
+  const ronde = fs.readFileSync(new URL("../lib/selectie/ronde.js", import.meta.url), "utf8");
+  assert.ok(ronde.indexOf("setJSON(KEY_SEL_KANDIDAAT(doc.id), doc, SEL_KANDIDAAT_TTL_S)") < ronde.indexOf("beoordeel(b, voorbeelden"), "opslaan komt eerst");
+  assert.match(ronde, /strikteLijst\(SCAN_SEL_BESLUIT\)/);
+  assert.match(ronde, /const meteoBelofte = haal\(SELECTIE_METEO_FEED/);
 });

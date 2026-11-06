@@ -22,13 +22,13 @@
   .item:last-child { border-bottom:0; }
   .item a.t { display:block; color:#3a3230; font-weight:700; font-size:12px; line-height:1.35; }
   .item a.t:hover { color:#800000; }
-  .meta { color:#7a6f6b; font-size:10.5px; margin-top:2px; }
+  .meta { color:#5f5552; font-size:11.5px; margin-top:2px; }
   .stip { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:4px; vertical-align:1px; }
   .stip.orange { background:#f08a00; } .stip.red { background:#d0021b; }
-  .peil { margin-top:4px; font-size:10.5px; color:#2f6b3d; background:rgba(47,107,61,.07); border-radius:4px; padding:3px 5px; }
-  .peil a { color:#800000; font-weight:700; }
+  .peil { margin-top:4px; font-size:11px; color:#2f6b3d; background:rgba(47,107,61,.07); border-radius:4px; padding:3px 5px; }
+  .peil a { color:#800000; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
   .voet { display:block; text-align:center; font:600 10.5px/1.3 Mulish, sans-serif; color:#800000; margin-top:7px; }
-  .leeg { color:#7a6f6b; font-size:11px; padding:6px 0; }
+  .leeg { color:#5f5552; font-size:11.5px; padding:6px 0; }
 </style>
 </head>
 <body>
@@ -43,16 +43,22 @@
   function dag(iso) { if (!iso) return ""; return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short" }); }
   function veiligUrl(u) { return /^https:\/\//.test(String(u || "")) ? u : "#"; }
 
+  // "PEIL" linkt naar het register zelf, zodat een lezer die het woord niet
+  // kent het kan opzoeken; de tool is een duidelijke link met pijl.
+  var PEIL_URL = "https://communitiesabroad.com/peil/";
   function peil(i) {
     if (!i.peil || !i.peil.length) return "";
-    var p = i.peil[0];
-    var tools = (p.tools || []).filter(function (t) { return t.url; });
-    return '<div class="peil">Raakt PEIL: ' + esc(p.naam) + (tools.length ? " · Reken het na in " + tools.slice(0, 2).map(function (t) { return '<a href="' + esc(veiligUrl(t.url)) + '" target="_blank" rel="noopener">' + esc(t.naam) + "</a>"; }).join(" en ") : "") + "</div>";
+    return i.peil.map(function (p) {
+      var tools = (p.tools || []).filter(function (t) { return t.url; });
+      var regel = 'Gecontroleerd in <a href="' + PEIL_URL + '" target="_blank" rel="noopener">PEIL</a>: ' + esc(p.naam);
+      if (p.soort === "mogelijk-gewijzigd") return '<div class="peil">' + regel + ", wordt nagelopen naar aanleiding van dit bericht.</div>";
+      return '<div class="peil">' + regel + (tools.length ? ". Reken het na in " + tools.slice(0, 2).map(function (t) { return '<a href="' + esc(veiligUrl(t.url)) + '" target="_blank" rel="noopener">' + esc(t.naam) + " →</a>"; }).join(" of ") : "") + "</div>";
+    }).join("");
   }
 
   function toon(feed) {
     var el = document.getElementById("inhoud");
-    if (!feed.categorieen || !feed.categorieen.length) { el.innerHTML = '<div class="leeg">Op dit moment geen geselecteerd nieuws.</div>'; return; }
+    if (!feed.categorieen || !feed.categorieen.length) { el.innerHTML = '<div class="leeg">Vandaag nog geen nieuws uitgelicht. Al het Frankrijknieuws staat via de link hieronder.</div>'; return; }
     el.innerHTML = feed.categorieen.map(function (c) {
       return '<div class="cat">' + esc(c.label) + "</div>" + c.items.map(function (i) {
         return '<div class="item"><a class="t" href="' + esc(veiligUrl(i.url)) + '" target="_blank" rel="noopener">' + (i.kleur ? '<span class="stip ' + esc(i.kleur) + '"></span>' : "") + esc(i.titel) + '</a><div class="meta">' + esc(i.bron) + (i.datum ? " · " + dag(i.datum) : "") + "</div>" + peil(i) + "</div>";

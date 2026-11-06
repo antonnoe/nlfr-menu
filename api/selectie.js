@@ -19,6 +19,7 @@ import {
   KEY_SEL_KANDIDAAT,
   KEY_SEL_BESLUIT,
   KEY_SEL_RONDE,
+  KEY_SEL_HISTORIE,
   SCAN_SEL_KANDIDAAT,
   SCAN_SEL_BESLUIT,
   SEL_KANDIDAAT_TTL_S,
@@ -95,6 +96,10 @@ export default async function handler(req, res) {
     const b = await getJSON(KEY_SEL_BESLUIT(id));
     if (!b) return res.status(404).json({ ok: false, fout: "Beslissing niet gevonden." });
     const { besluit, besluitOp, door, categorieDoorRedactie, ...kandidaat } = b;
+    // Het teruggedraaide besluit blijft bewaard (geen TTL): ook een correctie is
+    // lesmateriaal, en wie later wil weten wat er gebeurde kan het nalezen.
+    const nu = new Date().toISOString();
+    await setJSON(KEY_SEL_HISTORIE(id, nu.replace(/[^0-9]/g, "")), { ...b, teruggedraaidOp: nu, teruggedraaidDoor: deur.adres || null });
     await setJSON(KEY_SEL_KANDIDAAT(id), kandidaat, SEL_KANDIDAAT_TTL_S);
     await del(KEY_SEL_BESLUIT(id));
     return res.status(200).json({ ok: true });

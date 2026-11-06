@@ -172,7 +172,7 @@ Naast het statische menu draait op dezelfde Vercel-deployment de route
   open data van het onderwijsministerie, met vaste link naar service-public.
   Zie "Schoolvakanties: tijdzone en vakantienaam" hieronder — daar zitten twee
   valkuilen die allebei live hebben gestaan.
-- `/api/cron` — serverless job (Vercel Cron, elke 15 min) die voor nieuwe
+- `/api/cron` — serverless job (Vercel Cron, elk uur op minuut 7) die voor nieuwe
   hot-clusters via de Anthropic API één NL-synthese schrijft en als **concept**
   opslaat. Nooit direct live. Model/max_tokens staan in één constante
   (`lib/config.js` → `AI_CONFIG`). Aan het eind van elke ronde **bakt de cron
@@ -425,7 +425,7 @@ Deze route stelde het antwoord vroeger bij **elke** cache-miss ter plekke samen:
 De traagste externe site bepaalde de responstijd — gemeten 12,0 tot 12,5 s, tegen
 0,06 s bij een cache-hit. Nu is het omgedraaid:
 
-1. **De cron bakt voor.** Aan het eind van elke ronde (elke 15 min) stelt
+1. **De cron bakt voor.** Aan het eind van elke ronde (elk uur) stelt
    `/api/cron` het volledige antwoordobject samen — `bijgewerkt`, `tegels`,
    `agenda`, `bronStatus` — splitst het in de drie leveringen en schrijft die
    weg onder **`actueel:snapshot:v3`** (compact),
@@ -469,7 +469,7 @@ voorraad van ~145 documenten zijn dat 5 round-trips naar Upstash in plaats van
 
 | header | waarde | waarom |
 | --- | --- | --- |
-| `s-maxage` (CDN) | **900 s** | gelijk aan de croninterval: binnen dat venster bestaat er geen versere versie |
+| `s-maxage` (CDN) | **900 s** | korte randcache: een redactiehandeling laat de momentopname vervallen en de eerstvolgende aanvraag bakt opnieuw |
 | `stale-while-revalidate` | **86400 s** | een bezoeker krijgt altijd direct de laatst bekende versie; de verse wordt op de achtergrond gemaakt |
 | `max-age` (browser) | **120 s** | herbezoek en terugnavigatie binnen twee minuten kosten niets |
 
@@ -586,7 +586,7 @@ een cron-ronde die het record herschrijft de keuze van de redactie niet kan
 overschrijven. TTL gelijk aan de langstlevende records (28 dagen). De auditlijst
 staat onder `actueel:nakijken:<if-id>` en verloopt **niet**: die wordt afgevinkt,
 niet uitgezeten. Een nieuwe verwijzing verschijnt op de pagina zodra de
-eerstvolgende cronronde de leveringen opnieuw bakt (hoogstens vijftien minuten);
+eerstvolgende aanvraag de leveringen opnieuw bakt (hoogstens vijftien minuten randcache);
 de reviewtool zegt dat er ook bij.
 
 **Grenzen die worden afgedwongen.** Hooguit `IF_VERWIJZING_MAX` (3) verwijzingen

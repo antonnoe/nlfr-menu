@@ -640,6 +640,10 @@ Het gedeelde `REVIEW_TOKEN` is vervallen. De volledige beschrijving — analyse,
 opbouw, variabelen, Supabase-instellingen en wat te doen bij een verloren
 apparaat — staat in **`docs/login.md`**.
 
+## Nieuwsselectie: de vervanger van Feedspot (sinds 7 november 2026)
+
+De AI scant elk uur de Nederlandse en Vlaamse pers, weerwaarschuwingen en de overheidsberichten, doet per bericht een voorstel (categorie, score, reden, PEIL-koppeling) en de redactie geeft op `/selectie` go of no-go. Goedgekeurde berichten staan in `/api/selectie-feed` en in het sidebarblok `/sidebar-nieuws`, dat de FeedWind-widget met de Feedspot-pinboard in de NING-sidebar vervangt. Elke beslissing blijft bewaard en gaat als voorbeeld mee naar de volgende ronde. Volledige uitleg, ook wat de module bewust niet doet: [`docs/selectie.md`](docs/selectie.md). De module raakt `/actueel`, de reviewtool en de dagelijkse brief niet.
+
 ## Thema van een nieuwsbericht (model, redactie, regels)
 
 Het thema waaronder een bericht op `/actueel` staat, komt uit drie bronnen. Het record

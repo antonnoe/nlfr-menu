@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>NLFR · Nieuwsselectie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --brand:#800000; --groen:#2f6b3d; --tekst:#3a3330; --zacht:#8a7f7c; --lijn:rgba(128,0,0,.14); }
+  * { box-sizing:border-box; }
+  body { font-family:'Mulish',system-ui,sans-serif; line-height:1.55; color:var(--tekst); background:#fdf9f8; margin:0 auto; padding:12px 14px 60px; max-width:760px; }
+  h1 { font-family:'Poppins',sans-serif; font-size:20px; color:var(--brand); margin:6px 0 2px; }
+  h2 { font-family:'Poppins',sans-serif; font-size:15px; color:var(--brand); border-bottom:1px solid var(--lijn); padding-bottom:6px; margin:26px 0 12px; }
+  .sub { color:var(--zacht); font-size:13px; margin:0 0 12px; }
+  .ronde { font-size:12px; color:var(--zacht); background:#fff; border:1px solid var(--lijn); border-radius:10px; padding:8px 10px; margin-bottom:12px; }
+  .ronde.fout { border-color:#c96b00; color:#8a4b00; }
+  .tabs { display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px; -webkit-overflow-scrolling:touch; }
+  .tabs button { flex:none; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; border-radius:999px; padding:7px 12px; min-height:38px; border:1px solid var(--lijn); background:#fff; color:var(--brand); cursor:pointer; }
+  .tabs button[aria-pressed="true"] { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .kaart { background:#fff; border:1px solid var(--lijn); border-radius:14px; padding:12px 13px; margin-bottom:12px; }
+  .kaart.weg { opacity:.35; pointer-events:none; }
+  .kop { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--zacht); }
+  .score { font-family:'Poppins',sans-serif; font-weight:700; font-size:13px; color:#fff; background:var(--zacht); border-radius:8px; padding:2px 8px; }
+  .score.hoog { background:var(--groen); } .score.mid { background:#b07a1a; }
+  .soort { text-transform:uppercase; letter-spacing:.03em; font-weight:700; font-size:10.5px; }
+  .titel { display:block; font-family:'Poppins',sans-serif; font-weight:600; font-size:15.5px; line-height:1.35; color:var(--tekst); text-decoration:none; margin:6px 0 4px; }
+  .titel:hover { color:var(--brand); }
+  .reden { font-size:13.5px; margin:4px 0 0; }
+  .peil { margin-top:10px; border-left:3px solid var(--groen); background:rgba(47,107,61,.06); border-radius:0 10px 10px 0; padding:8px 10px; font-size:13px; }
+  .peil b { color:var(--groen); }
+  .peil .gewijzigd { color:#8a4b00; font-weight:700; }
+  .peil a { color:var(--brand); font-weight:600; text-decoration:none; }
+  .peil .p { margin:4px 0; }
+  .gat { margin-top:8px; font-size:12.5px; color:#8a4b00; background:rgba(201,107,0,.07); border-radius:10px; padding:7px 10px; }
+  .acties { display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+  .acties select { font-family:'Mulish',sans-serif; font-size:14px; min-height:44px; border-radius:10px; border:1px solid var(--lijn); padding:0 8px; background:#fff; color:var(--tekst); flex:1 1 170px; }
+  .acties button { font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; min-height:44px; border-radius:10px; padding:0 18px; cursor:pointer; border:0; }
+  .go { background:var(--groen); color:#fff; } .nogo { background:#f1e9e7; color:var(--brand); }
+  .leeg { color:var(--zacht); font-size:14px; padding:20px 0; text-align:center; }
+  .recent { font-size:13px; display:flex; gap:8px; align-items:baseline; padding:6px 0; border-bottom:1px dashed var(--lijn); }
+  .recent .b { font-weight:700; width:52px; flex:none; } .recent .b.go { color:var(--groen); background:none; } .recent .b.nogo { color:var(--brand); background:none; }
+  .recent .t { flex:1; } .recent button { flex:none; font-size:12px; border:1px solid var(--lijn); background:#fff; border-radius:8px; padding:4px 8px; cursor:pointer; color:var(--zacht); }
+  .melding { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); background:var(--tekst); color:#fff; padding:10px 16px; border-radius:999px; font-size:13px; display:none; }
+  .uitleg { font-size:12.5px; color:var(--zacht); }
+</style>
+</head>
+<body>
+<h1>Nieuwsselectie</h1>
+<p class="sub">De AI scant en doet een voorstel. Jij geeft go of no-go. Goedgekeurde berichten komen in de sidebar van Nederlanders.fr.</p>
+<div id="ronde" class="ronde">Laden…</div>
+<div class="tabs" id="tabs" role="toolbar" aria-label="Filter op categorie"></div>
+<div id="lijst"></div>
+<h2>Recent beslist</h2>
+<p class="uitleg">Elke keuze wordt bewaard en gaat als voorbeeld mee naar de volgende selectie. Zo leert de AI jouw oordeel.</p>
+<div id="recent"></div>
+<div class="melding" id="melding"></div>
+<script>
+(function () {
+  var data = null, filter = "alles";
+  var LABEL = {};
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function datum(iso) { if (!iso) return ""; var d = new Date(iso); return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }); }
+  function melding(t) { var m = document.getElementById("melding"); m.textContent = t; m.style.display = "block"; clearTimeout(melding.t); melding.t = setTimeout(function () { m.style.display = "none"; }, 2200); }
+
+  function laad() {
+    fetch("/api/selectie", { credentials: "same-origin", cache: "no-store" }).then(function (r) {
+      if (r.status === 401) { location.href = "/login?terug=/selectie"; return null; }
+      return r.json();
+    }).then(function (d) {
+      if (!d) return;
+      if (!d.ok) { document.getElementById("ronde").textContent = d.fout || "Fout bij laden."; return; }
+      data = d; LABEL = {}; d.categorieen.forEach(function (c) { LABEL[c.key] = c.label; });
+      toon();
+    }).catch(function () { document.getElementById("ronde").textContent = "Niet bereikbaar. Probeer het zo opnieuw."; });
+  }
+
+  function toonRonde() {
+    var el = document.getElementById("ronde"), r = data.ronde;
+    if (!r) { el.textContent = "Nog geen selectieronde gedraaid. De eerste komt binnen het uur."; return; }
+    var t = "Laatste ronde " + datum(r.op) + " · " + r.gevonden + " berichten bekeken, " + r.nieuw + " nieuw · PEIL " + (r.peil && r.peil.versie ? "v" + r.peil.versie : "niet geladen") + " · " + data.telling.besluiten + " keuzes bewaard";
+    el.textContent = t;
+    el.className = "ronde" + (r.modelFout || (r.peil && r.peil.fout) ? " fout" : "");
+    if (r.modelFout) el.textContent += " · AI-oordeel mislukt: " + r.modelFout;
+  }
+
+  function toonTabs() {
+    var tel = { alles: data.kandidaten.length, geen: 0 };
+    data.kandidaten.forEach(function (k) { var c = k.ai ? k.ai.categorie : "geen"; tel[c] = (tel[c] || 0) + 1; });
+    var knoppen = [["alles", "Alles"]].concat(data.categorieen.map(function (c) { return [c.key, c.label]; })).concat([["geen", "Niet relevant"]]);
+    document.getElementById("tabs").innerHTML = knoppen.map(function (k) {
+      return '<button type="button" data-f="' + k[0] + '" aria-pressed="' + (filter === k[0]) + '">' + esc(k[1]) + " (" + (tel[k[0]] || 0) + ")</button>";
+    }).join("");
+  }
+
+  function peilBlok(ai) {
+    if (!ai || !ai.peil || !ai.peil.length) return "";
+    return '<div class="peil"><b>Raakt PEIL</b>' + ai.peil.map(function (p) {
+      var tools = (p.tools || []).map(function (t) { return t.url ? '<a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.naam) + "</a>" : esc(t.naam); }).join(", ");
+      return '<div class="p">' + esc(p.naam) + (p.verificatiedatum ? " · gecontroleerd " + esc(p.verificatiedatum) : "") +
+        (p.soort === "mogelijk-gewijzigd" ? ' · <span class="gewijzigd">mogelijk gewijzigd, verifiëren</span>' : "") +
+        (p.toelichting ? "<br><span>" + esc(p.toelichting) + "</span>" : "") +
+        (tools ? "<br>Tools: " + tools : "<br><i>Nog geen tool gekoppeld in PEIL</i>") + "</div>";
+    }).join("") + "</div>";
+  }
+
+  function kaart(k) {
+    var ai = k.ai, cat = ai ? ai.categorie : "geen";
+    var score = ai ? ai.score : null;
+    var kl = score == null ? "" : score >= 70 ? " hoog" : score >= 40 ? " mid" : "";
+    var opties = data.categorieen.map(function (c) { return '<option value="' + c.key + '"' + (c.key === cat ? " selected" : "") + ">" + esc(c.label) + "</option>"; }).join("");
+    if (cat === "geen") opties = '<option value="" selected>Kies een categorie</option>' + opties;
+    return '<div class="kaart" id="k-' + esc(k.id) + '">' +
+      '<div class="kop"><span class="score' + kl + '">' + (score == null ? "?" : score) + '</span><span class="soort">' + esc(k.soort) + "</span><span>" + esc(k.bron) + (k.land ? " (" + esc(k.land) + ")" : "") + " · " + datum(k.datum) + "</span></div>" +
+      '<a class="titel" href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.titel) + "</a>" +
+      (ai ? '<p class="reden">' + esc(ai.reden) + "</p>" : '<p class="reden"><i>Nog geen AI-oordeel; volgt in de volgende ronde.</i></p>') +
+      peilBlok(ai) +
+      (ai && ai.gat ? '<div class="gat"><b>Gat in PEIL:</b> ' + esc(ai.gat) + "</div>" : "") +
+      '<div class="acties"><select aria-label="Categorie">' + opties + '</select><button class="go" data-a="go" data-id="' + esc(k.id) + '">Go</button><button class="nogo" data-a="nogo" data-id="' + esc(k.id) + '">No-go</button></div>' +
+      "</div>";
+  }
+
+  function toon() {
+    toonRonde(); toonTabs();
+    var lijst = data.kandidaten.filter(function (k) { var c = k.ai ? k.ai.categorie : "geen"; return filter === "alles" || c === filter; });
+    document.getElementById("lijst").innerHTML = lijst.length ? lijst.map(kaart).join("") : '<div class="leeg">Niets te beoordelen in deze categorie.</div>';
+    document.getElementById("recent").innerHTML = data.recent.length ? data.recent.map(function (b) {
+      return '<div class="recent"><span class="b ' + b.besluit + '">' + (b.besluit === "go" ? "Go" : "No-go") + '</span><span class="t">' + (b.besluit === "go" && b.categorie ? "[" + esc(LABEL[b.categorie] || b.categorie) + "] " : "") + esc(b.titel) + '</span><button data-a="herstel" data-id="' + esc(b.id) + '">Terugdraaien</button></div>';
+    }).join("") : '<div class="leeg">Nog niets beslist.</div>';
+  }
+
+  function stuur(actie, id, categorie) {
+    var kaartEl = document.getElementById("k-" + id);
+    if (kaartEl) kaartEl.classList.add("weg");
+    fetch("/api/selectie", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actie: actie, id: id, categorie: categorie || undefined }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) { if (kaartEl) kaartEl.classList.remove("weg"); melding(d.fout || "Mislukt."); return; }
+        melding(actie === "go" ? "Go: staat in de feed" : actie === "nogo" ? "No-go bewaard" : "Teruggedraaid");
+        laad();
+      })
+      .catch(function () { if (kaartEl) kaartEl.classList.remove("weg"); melding("Niet bereikbaar."); });
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.f) { filter = t.dataset.f; toon(); return; }
+    var a = t.dataset.a, id = t.dataset.id; if (!a || !id) return;
+    if (a === "herstel") { stuur("herstel", id); return; }
+    var sel = t.parentNode.querySelector("select");
+    var cat = sel ? sel.value : "";
+    if (a === "go" && !cat) { melding("Kies eerst een categorie."); return; }
+    stuur(a, id, cat);
+  });
+  laad();
+})();
+</script>
+</body>
+</html>

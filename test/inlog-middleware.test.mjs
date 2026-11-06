@@ -151,7 +151,7 @@ test("de cookies die de middleware zet zijn Secure en gelden voor de hele site",
 });
 
 test("ook /review.html wordt bewaakt, niet alleen /review", async () => {
-  assert.deepEqual(config.matcher, ["/review", "/review.html"]);
+  assert.deepEqual(config.matcher, ["/review", "/review.html", "/selectie", "/selectie.html"]);
   const uit = await middleware(verzoek("/review.html"));
   assert.equal(uit.status, 302);
 });
@@ -177,5 +177,15 @@ test("is Supabase onbereikbaar, dan ook dicht", async () => {
     assert.equal(uit.status, 302, "een storing mag de deur niet openzetten");
   } finally {
     process.env.NEXT_PUBLIC_SUPABASE_URL = bewaard;
+  }
+});
+
+test("ook /selectie wordt bewaakt en stuurt na het inloggen terug naar /selectie", async () => {
+  for (const pad of ["/selectie", "/selectie.html"]) {
+    const uit = await middleware(verzoek(pad));
+    assert.equal(uit.status, 302);
+    const doel = new URL(uit.headers.get("location"));
+    assert.equal(doel.pathname, "/login");
+    assert.equal(doel.searchParams.get("terug"), "/selectie");
   }
 });

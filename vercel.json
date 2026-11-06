@@ -9,6 +9,7 @@
     { "source": "/auth/callback", "destination": "/api/auth-callback" }
   ],
   "crons": [
-    { "path": "/api/cron", "schedule": "7 * * * *" }
+    { "path": "/api/cron", "schedule": "7 * * * *" },
+    { "path": "/api/selectie-cron", "schedule": "37 * * * *" }
   ]
 }

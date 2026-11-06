@@ -25,15 +25,27 @@ import { createServerClient } from "@supabase/ssr";
 import { supabaseOmgeving, toegang, COOKIE_NAAM, schrijfCookie } from "./lib/auth.js";
 
 export const config = {
-  matcher: ["/review", "/review.html"],
+  // /selectie is het go/no-go-scherm van de nieuwsselectie (sinds 7 november
+  // 2026), achter dezelfde deur als /review.
+  matcher: ["/review", "/review.html", "/selectie", "/selectie.html"],
 };
+
+// Terug naar het scherm waar de bezoeker heen wilde, uit een VASTE lijst: nooit
+// een pad uit het verzoek zelf.
+function terugPad(url) {
+  try {
+    return new URL(url).pathname.startsWith("/selectie") ? "/selectie" : "/review";
+  } catch {
+    return "/review";
+  }
+}
 
 function naarLogin(url, reden, cookies) {
   const doel = new URL("/login", url);
   // Waar de bezoeker heen wilde, zodat /login na het inloggen daarheen kan
   // terugsturen. Alleen het PAD, nooit een volledige URL uit het verzoek: een
   // open redirect is precies de fout die je met een loginpagina niet wilt maken.
-  doel.searchParams.set("terug", "/review");
+  doel.searchParams.set("terug", terugPad(url));
   if (reden) doel.searchParams.set("reden", reden);
   const kop = new Headers({
     Location: doel.toString(),

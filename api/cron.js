@@ -1,5 +1,5 @@
-// GET /api/cron — serverless job met TWEE stromen. Draait op Vercel Cron (elke
-// 15 min; alleen op productie) en is handmatig aanroepbaar met
+// GET /api/cron — serverless job met TWEE stromen. Draait op Vercel Cron (elk
+// uur, minuut 7; alleen op productie) en is handmatig aanroepbaar met
 // `Authorization: Bearer <CRON_SECRET>`.
 // ---------------------------------------------------------------------------
 // 1) OVERHEID (Licence Ouverte): elk nieuw item uit de vijf overheidsthema's

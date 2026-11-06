@@ -30,6 +30,7 @@ import {
   IF_VERWIJZING_MAX,
   CONCEPT_STILTE_MAX_UREN,
   TEGEL_VULLING_VENSTER_DAGEN,
+  CRON_INTERVAL_MIN,
 } from "../lib/config.js";
 
 const BASIS = (process.env.SONDE_URL || "https://nlfr-menu.vercel.app").replace(/\/+$/, "");
@@ -46,9 +47,10 @@ const API_TEKST = `${BASIS}/api/actueel-tekst`;
 const API_ARCHIEF = `${BASIS}/api/actueel-archief`;
 const STATISCH = `${BASIS}/actueel.json`;
 const DAG = 24 * 60 * 60 * 1000;
-// De croninterval (vercel.json: */15). Binnen dit venster mogen de leveringen
-// uit verschillende rondes komen zonder dat er iets stuk is — zie I10.
-const CRON_INTERVAL_MS = 15 * 60 * 1000;
+// De croninterval (vercel.json: "7 * * * *", elk uur; CRON_INTERVAL_MIN in
+// lib/config.js). Binnen dit venster mogen de leveringen uit verschillende
+// rondes komen zonder dat er iets stuk is — zie I10.
+const CRON_INTERVAL_MS = CRON_INTERVAL_MIN * 60 * 1000;
 
 // Ruimste bewaartermijn die de code zelf hanteert, plus een dag speling voor
 // caching. Alles daarbuiten is per definitie fout: het had opgeruimd moeten zijn.

@@ -20,7 +20,7 @@
 // /api/actueel-archief en worden pas opgehaald als de lezer hem opent. Zie
 // lib/levering.js voor het waarom en de precieze vorm.
 //
-// HOE HET ANTWOORD TOT STAND KOMT. De cron bakt elke 15 minuten alle drie de
+// HOE HET ANTWOORD TOT STAND KOMT. De cron bakt elk uur alle drie de
 // leveringen voor; hier wordt de compacte alleen gelezen (één KV-round-trip).
 // Ontbreekt de snapshot of is hij ouder dan SNAPSHOT_MAX_LEEFTIJD_S, dan stelt
 // de route het volledige antwoord alsnog zelf samen, splitst het, schrijft alle

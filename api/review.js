@@ -863,7 +863,7 @@ export default async function handler(req, res) {
       await vervalSnapshots();
       // De pagina bakt bij de eerstvolgende aanvraag opnieuw. Wat er dan nog
       // tussen zit is de randcache van /api/actueel (s-maxage 900), dus hoogstens
-      // de croninterval — niet meer de levensduur van de momentopname.
+      // de cachetijd van de rand (FEED_MAX_AGE_S) — niet meer de levensduur van de momentopname.
       return res.status(200).json({ ok: true, items, snapshotVervallen: true });
     }
 

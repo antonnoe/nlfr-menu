@@ -32,6 +32,17 @@ In de sidebar staat onder een bericht dat PEIL raakt: "Raakt PEIL: <parameter> Â
 - `GET /api/selectie-cron?diagnose=1` met `Authorization: Bearer <CRON_SECRET>`: alles ophalen en naast PEIL leggen, zonder modelaanroep en zonder te schrijven.
 - Model wisselen zonder code: `SELECTIE_AI_MODEL` in Vercel (standaard `claude-sonnet-5-5`).
 
+## Waar de oude Feedspot-feed nog hangt (gemeten 7 november 2026)
+
+De pinboard van Feedspot zit via FeedWind-widget 39720 op twee plekken:
+
+- de sidebar van Nederlanders.fr (NING);
+- de startpagina van Infofrankrijk.com, blok "Nieuws uit en over Frankrijk" (Divi-codemodule, naast "Uit het forum").
+
+Het blok "Uit het forum" op Infofrankrijk is FeedWind-widget 129731. Dat heeft twee bronnen: een Feedspot-tag (COR, leeg) en de blogfeed van Nederlanders.fr. Het draait in de praktijk op de blogfeed en heeft Feedspot niet nodig.
+
+Feedspot pas opzeggen als **beide** iframes van widget 39720 zijn vervangen.
+
 ## In de NING-sidebar
 
 Vervang de FeedWind-iframe door:

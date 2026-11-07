@@ -230,3 +230,16 @@ test("ronde: kandidaten worden opgeslagen vóór de modelaanroep, en lijsten lez
   assert.match(ronde, /strikteLijst\(SCAN_SEL_BESLUIT\)/);
   assert.match(ronde, /const meteoBelofte = haal\(SELECTIE_METEO_FEED/);
 });
+
+test("PEIL: een los woord uit een parameternaam koppelt niet (miljoen, kinderen, vakantie)", () => {
+  const extra = [
+    { id: "p.fr.ifi.decote", naam: "IFI-décote tussen 1,3 en 1,4 miljoen", trefwoorden: "ifi vermogensbelasting", waarde_weergave: "…", tools: [] },
+    { id: "p.fr.erf.reserve_hereditaire", naam: "Wettelijk erfdeel kinderen", trefwoorden: "erfrecht reserve erfdeel", waarde_weergave: "…", tools: [] },
+    { id: "p.nl.aow.vakantiegeld_per_maand", naam: "AOW vakantiegeld per maand", trefwoorden: "aow vakantiegeld", waarde_weergave: "…", tools: [] },
+  ];
+  const alle = [...PEIL, ...extra];
+  assert.deepEqual(peilVoorselectie("Ministerie meldt 600.000 betogers, vakbond 1,6 miljoen", alle), []);
+  assert.deepEqual(peilVoorselectie("Bus vol kinderen botst frontaal tegen boom in Frankrijk", alle), []);
+  assert.deepEqual(peilVoorselectie("Kerstvakantie 2026: data per regio verschillen", alle), []);
+  assert.deepEqual(peilVoorselectie("Wordt het AOW-vakantiegeld in mei verlaagd?", alle).map((p) => p.id), ["p.nl.aow.vakantiegeld_per_maand"]);
+});

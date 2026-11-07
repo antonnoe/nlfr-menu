@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nieuws over Frankrijk · Nederlanders.fr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Sidebarblok voor Nederlanders.fr (vervangt de FeedWind-widget met de
+     Feedspot-pinboard). Zelfde maat en kleuren als de kaarten erboven in de
+     NING-sidebar: Mulish 12px, #800000, rand 1.5px. */
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; background:#fff; }
+  body { font-family:Mulish, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size:12px; line-height:1.4; color:#3a3230; }
+  a { text-decoration:none; }
+  .blok { border:1.5px solid #800000; border-radius:6px; padding:8px 9px 6px; }
+  .hoofd { display:flex; align-items:center; justify-content:space-between; font:700 10.5px/1.2 Poppins, sans-serif; letter-spacing:.01em; text-transform:uppercase; color:#800000; margin-bottom:2px; }
+  .cat { font:700 10px/1.2 Poppins, sans-serif; text-transform:uppercase; letter-spacing:.02em; color:#1f6d30; margin:10px 0 3px; }
+  .item { padding:5px 0; border-bottom:1px solid #f1e9e7; }
+  .item:last-child { border-bottom:0; }
+  .item a.t { display:block; color:#3a3230; font-weight:700; font-size:12px; line-height:1.35; }
+  .item a.t:hover { color:#800000; }
+  .meta { color:#5f5552; font-size:11.5px; margin-top:2px; }
+  .stip { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:4px; vertical-align:1px; }
+  .stip.orange { background:#f08a00; } .stip.red { background:#d0021b; }
+  .peil { margin-top:4px; font-size:11px; color:#2f6b3d; background:rgba(47,107,61,.07); border-radius:4px; padding:3px 5px; }
+  .peil a { color:#800000; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
+  .voet { display:block; text-align:center; font:600 10.5px/1.3 Mulish, sans-serif; color:#800000; margin-top:7px; }
+  .leeg { color:#5f5552; font-size:11.5px; padding:6px 0; }
+</style>
+</head>
+<body>
+<div class="blok">
+  <div class="hoofd"><span>Frankrijk in het nieuws</span></div>
+  <div id="inhoud"><div class="leeg">Nieuws wordt geladen…</div></div>
+  <a class="voet" href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_top">Meer nieuws over Frankrijk →</a>
+</div>
+<script>
+(function () {
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function dag(iso) { if (!iso) return ""; return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short" }); }
+  function veiligUrl(u) { return /^https:\/\//.test(String(u || "")) ? u : "#"; }
+
+  // "PEIL" linkt naar het register zelf, zodat een lezer die het woord niet
+  // kent het kan opzoeken; de tool is een duidelijke link met pijl.
+  var PEIL_URL = "https://communitiesabroad.com/peil/";
+  function peil(i) {
+    if (!i.peil || !i.peil.length) return "";
+    return i.peil.map(function (p) {
+      var tools = (p.tools || []).filter(function (t) { return t.url; });
+      var regel = 'Gecontroleerd in <a href="' + PEIL_URL + '" target="_blank" rel="noopener">PEIL</a>: ' + esc(p.naam);
+      if (p.soort === "mogelijk-gewijzigd") return '<div class="peil">' + regel + ", wordt nagelopen naar aanleiding van dit bericht.</div>";
+      return '<div class="peil">' + regel + (tools.length ? ". Reken het na in " + tools.slice(0, 2).map(function (t) { return '<a href="' + esc(veiligUrl(t.url)) + '" target="_blank" rel="noopener">' + esc(t.naam) + " →</a>"; }).join(" of ") : "") + "</div>";
+    }).join("");
+  }
+
+  function toon(feed) {
+    var el = document.getElementById("inhoud");
+    if (!feed.categorieen || !feed.categorieen.length) { el.innerHTML = '<div class="leeg">Vandaag nog geen nieuws uitgelicht. Al het Frankrijknieuws staat via de link hieronder.</div>'; return; }
+    el.innerHTML = feed.categorieen.map(function (c) {
+      return '<div class="cat">' + esc(c.label) + "</div>" + c.items.map(function (i) {
+        return '<div class="item"><a class="t" href="' + esc(veiligUrl(i.url)) + '" target="_blank" rel="noopener">' + (i.kleur ? '<span class="stip ' + esc(i.kleur) + '"></span>' : "") + esc(i.titel) + '</a><div class="meta">' + esc(i.bron) + (i.datum ? " · " + dag(i.datum) : "") + "</div>" + peil(i) + "</div>";
+      }).join("");
+    }).join("");
+  }
+
+  // ?voorbeeld=1 toont vaste voorbeeldberichten (Feedspot-pins van 30 oktober
+  // en 6 november 2026), om de opmaak te beoordelen zonder live selectie.
+  if (new URLSearchParams(location.search).get("voorbeeld") === "1") {
+    toon({ categorieen: [
+      { label: "Wet- en regelgeving", items: [
+        { titel: "Met pensioen in Spanje, Frankrijk of Portugal? Zo verandert je CAK-bijdrage voor zorg in 2027", bron: "Welingelichte Kringen", url: "https://www.nederlanders.fr/", datum: "2026-10-30T18:26:00Z", peil: [{ naam: "Woonlandfactor Frankrijk", tools: [{ naam: "Financieel Kompas", url: "https://infofrankrijk.com/financieel-kompas/" }] }] }
+      ] },
+      { label: "Meteo", items: [
+        { titel: "Oranje waarschuwing voor regen en overstromingen: Corse-du-Sud, Gard, Haute-Corse, Hérault", bron: "Météo-France vigilance", url: "https://vigilance.meteofrance.fr/fr", datum: "2026-11-05T17:34:00Z", kleur: "orange", peil: [] }
+      ] },
+      { label: "Reisnieuws", items: [
+        { titel: "Nieuwe TGV haalt 320 kilometer per uur en krijgt twee verdiepingen: in 2029 ook tussen België en Frankrijk", bron: "HLN", url: "https://www.nederlanders.fr/", datum: "2026-11-06T15:50:00Z", peil: [] },
+        { titel: "Frankrijk opent een van de duurste snelwegen van het land: heen- en terugrit kost ruim 20 euro", bron: "HLN", url: "https://www.nederlanders.fr/", datum: "2026-11-06T09:10:00Z", peil: [] }
+      ] },
+      { label: "Algemeen nieuws", items: [
+        { titel: "Bijna 450 aanhoudingen in Frankrijk bij nieuwe grootschalige betogingen", bron: "de Volkskrant", url: "https://www.nederlanders.fr/", datum: "2026-11-06T22:06:00Z", peil: [] },
+        { titel: "Noodweer blijft Zuid-Frankrijk en Corsica teisteren: twee mensen verdrinken in auto", bron: "de Stentor", url: "https://www.nederlanders.fr/", datum: "2026-11-06T15:50:00Z", peil: [] }
+      ] }
+    ] });
+    return;
+  }
+
+  fetch("/api/selectie-feed", { cache: "no-store" })
+    .then(function (r) { return r.json(); })
+    .then(toon)
+    .catch(function () { document.getElementById("inhoud").innerHTML = '<div class="leeg">Nieuws is even niet bereikbaar.</div>'; });
+})();
+</script>
+</body>
+</html>

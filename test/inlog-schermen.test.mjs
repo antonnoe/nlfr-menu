@@ -171,7 +171,8 @@ test("de reviewtool laadt de inlogbundel uit deze repo, niet van een CDN", () =>
 test("de middleware bewaakt beide paden waarop de pagina te bereiken is", () => {
   // /review via cleanUrls, én het bestand zelf. Wie er één noemt, laat de
   // andere openstaan.
-  assert.match(middleware, /matcher: \["\/review", "\/review\.html"\]/);
+  // Sinds 7 november 2026 ook /selectie (go/no-go van de nieuwsselectie).
+  assert.match(middleware, /matcher: \["\/review", "\/review\.html", "\/selectie", "\/selectie\.html"\]/);
 });
 
 test("de middleware stuurt naar /login en laat niets door zonder oordeel", () => {
@@ -183,9 +184,11 @@ test("de middleware stuurt naar /login en laat niets door zonder oordeel", () =>
 });
 
 test("de middleware stuurt alleen naar een pad binnen deze site", () => {
-  const fn = middleware.slice(middleware.indexOf("function naarLogin"), middleware.indexOf("export default"));
-  assert.match(fn, /doel\.searchParams\.set\("terug", "\/review"\)/,
-    "alleen het pad, nooit een URL uit het verzoek");
+  // Het terugpad komt uit een vaste lijst (/review of /selectie), nooit uit het
+  // verzoek zelf.
+  const fn = middleware.slice(middleware.indexOf("function terugPad"), middleware.indexOf("export default"));
+  assert.match(fn, /doel\.searchParams\.set\("terug", terugPad\(url\)\)/);
+  assert.match(fn, /\? "\/selectie" : "\/review"/, "alleen vaste paden, nooit een URL uit het verzoek");
 });
 
 test("de redirect naar de login wordt niet gecachet", () => {

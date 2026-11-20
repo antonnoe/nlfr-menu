@@ -542,7 +542,7 @@
       '<span class="sc" title="Score">' + (sc == null ? "–" : sc) + "</span>" +
       '<button type="button" class="mid" data-uit="' + id + '" aria-expanded="' + open + '">' +
       '<span class="t">' + (vr === "merkwaardig" ? '<span class="mw">Merkwaardig</span>' : "") + esc(it.kop) + "</span>" +
-      '<span class="s">' + esc(soortT) + (it.bron ? " · " + esc(it.bron) : "") + (tijd(it.tijd) ? " · " + tijd(it.tijd) : "") + " · <b>" + advies + "</b>" +
+      '<span class="s">' + esc(soortT) + (LABEL[vr] ? " · " + esc(LABEL[vr]) : "") + (it.bron ? " · " + esc(it.bron) : "") + (tijd(it.tijd) ? " · " + tijd(it.tijd) : "") + " · <b>" + advies + "</b>" +
       (!it.ai ? ' · <span class="let">geen AI-oordeel</span>' : "") + "</span></button>" +
       '<span class="kn"><button type="button" class="rk ja" data-ja="' + id + '" aria-label="Ja, zoals voorgesteld" title="Ja, zoals voorgesteld">✓</button>' +
       '<button type="button" class="rk" data-nee="' + id + '" aria-label="Nee" title="Nee">✕</button></span>';

@@ -294,7 +294,7 @@
     var verborgen = items.length - zicht.length;
     document.querySelectorAll("[data-tab]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.tab === tab)); });
     var vandaag = new Date().toDateString();
-    var gekozen = (sel.recent || []).filter(function (b) { return new Date(b.besluitOp).toDateString() === vandaag; });
+    var gekozen = (sel.vandaag || sel.recent || []).filter(function (b) { return new Date(b.besluitOp).toDateString() === vandaag; });
     var pubs = (rev.publicaties || []).filter(function (p) { return new Date(p.gepubliceerdOp).toDateString() === vandaag; });
     document.querySelector('[data-tab="kiezen"]').textContent = "Te kiezen (" + zicht.length + ")";
     document.querySelector('[data-tab="gekozen"]').textContent = "Gekozen vandaag (" + (gekozen.length + pubs.length) + ")";
@@ -334,6 +334,17 @@
   //  krantenbericht of meteo: Zijbalk (go) of Weg (no-go).
   // Elke keuze over een bericht uit /review wordt ook in de selectie vastgelegd:
   // zo is het van deze pagina af en leert de AI ervan.
+  // Mislukt de tweede stap, dan het zojuist vastgelegde besluit terugdraaien:
+  // anders verdwijnt het bericht van deze pagina terwijl het nog live staat.
+  // (Lukt publiceren maar het besluit niet, dan staat de synthese hierna als
+  // gepubliceerd bericht in de lijst en kan de keuze opnieuw.)
+  function terugBijFout(besluit, tweede) {
+    return tweede.then(function (r) {
+      if (r.ok || !besluit.besluit) return r;
+      return post("/api/selectie", { actie: "herstel", id: besluit.besluit.id }).then(function () { return r; }, function () { return r; });
+    });
+  }
+
   function kies(id, plek, bevestigd) {
     var it = vind(id); if (!it) return;
     var cat = gekozenRubriek(it);
@@ -346,7 +357,7 @@
     } else if (it.soort === "overheid" || it.soort === "publicatie") {
       stap = post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, zijbalk: zij, categorie: cat || undefined }).then(function (d) {
         if (!d.ok || plek !== "weg") return d;
-        return post("/api/review", it.soort === "overheid" ? { actie: "verwijder-overheid", id: id } : { actie: "depubliceer", id: id });
+        return terugBijFout(d, post("/api/review", it.soort === "overheid" ? { actie: "verwijder-overheid", id: id } : { actie: "depubliceer", id: id }));
       });
     } else if (plek === "nieuwspagina" || plek === "beide") {
       stap = post("/api/review", { actie: "publiceer", id: id, tekst: it.tekst, bevestigd: bevestigd === true }).then(function (d) {
@@ -356,7 +367,7 @@
     } else {
       stap = post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, zijbalk: zij, categorie: cat || undefined }).then(function (d) {
         if (!d.ok || plek !== "weg") return d;
-        return post("/api/review", { actie: "weg", id: id });
+        return terugBijFout(d, post("/api/review", { actie: "weg", id: id }));
       });
     }
     stap.then(function (d) {
@@ -392,7 +403,16 @@
       return;
     }
     if (d.herstel) { post("/api/selectie", { actie: "herstel", id: d.herstel }).then(function (r) { melding(r.ok ? "Teruggedraaid" : r.fout || "Mislukt."); laad(); }); return; }
-    if (d.depub) { post("/api/review", { actie: "depubliceer", id: d.depub }).then(function (r) { melding(r.ok ? "Van de nieuwspagina gehaald" : r.fout || "Mislukt."); laad(); }); return; }
+    if (d.depub) {
+      // Staat de synthese ook in de zijbalk (met een link naar de nieuwspagina),
+      // dan gaat hij daar ook uit: anders linkt de zijbalk naar iets dat weg is.
+      var zb = (sel.redactie || []).filter(function (b) { return b.reviewId === d.depub && b.besluit === "go"; })[0];
+      post("/api/review", { actie: "depubliceer", id: d.depub }).then(function (r) {
+        if (!r.ok) { melding(r.fout || "Mislukt."); laad(); return; }
+        (zb ? post("/api/selectie", { actie: "herstel", id: zb.id }) : Promise.resolve({ ok: true })).then(function () { melding(zb ? "Van de nieuwspagina en uit de zijbalk gehaald" : "Van de nieuwspagina gehaald"); laad(); });
+      });
+      return;
+    }
   });
 
   laad();

@@ -77,6 +77,9 @@ export default async function handler(req, res) {
       kandidaten: tonen,
       verborgen: kandidaten.length - tonen.length,
       recent,
+      // Keuzes van de laatste 36 uur, zonder de grens van 40 van "recent": de
+      // redactiepagina haalt er zelf "vandaag" uit (op de klok van de lezer).
+      vandaag: besluiten.filter((b) => Date.parse(b.besluitOp || "") > Date.now() - 36 * 3600 * 1000),
       telling: { besluiten: besluiten.length, go, nogo: besluiten.length - go },
       ronde,
       geblokkeerd: (blokkade && blokkade.bronnen) || [],

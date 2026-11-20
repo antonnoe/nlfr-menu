@@ -4,7 +4,8 @@
 // ALLOWED_LOGIN_EMAILS, gecontroleerd HIER in de route (de middleware bewaakt
 // alleen de pagina).
 //
-// GET  -> { kandidaten (score hoog -> laag), recent (laatste beslissingen), ronde }
+// GET  -> { kandidaten (vers, per verhaal één, score hoog -> laag; zie
+//          kandidatenVoorScherm), verborgen, recent (laatste beslissingen), ronde }
 // POST -> { actie: "go" | "nogo", id, categorie? }
 //         go/nogo: kandidaat wordt een blijvende beslissing (geen TTL). Een
 //         gekozen categorie overschrijft het voorstel van het model.
@@ -23,6 +24,7 @@ import {
   SCAN_SEL_KANDIDAAT,
   SCAN_SEL_BESLUIT,
   SEL_KANDIDAAT_TTL_S,
+  kandidatenVoorScherm,
 } from "../lib/selectie/kern.js";
 
 function leesBody(req) {
@@ -52,13 +54,14 @@ export default async function handler(req, res) {
       listJSON(SCAN_SEL_BESLUIT),
       getJSON(KEY_SEL_RONDE),
     ]);
-    kandidaten.sort((a, b) => ((b.ai && b.ai.score) ?? -1) - ((a.ai && a.ai.score) ?? -1) || String(b.datum || "").localeCompare(String(a.datum || "")));
+    const tonen = kandidatenVoorScherm(kandidaten, besluiten);
     const recent = besluiten.sort((a, b) => String(b.besluitOp || "").localeCompare(String(a.besluitOp || ""))).slice(0, 40);
     const go = besluiten.filter((b) => b.besluit === "go").length;
     return res.status(200).json({
       ok: true,
       categorieen: CATEGORIEEN.map((k) => ({ key: k, label: CATEGORIE_LABEL[k] })),
-      kandidaten,
+      kandidaten: tonen,
+      verborgen: kandidaten.length - tonen.length,
       recent,
       telling: { besluiten: besluiten.length, go, nogo: besluiten.length - go },
       ronde,

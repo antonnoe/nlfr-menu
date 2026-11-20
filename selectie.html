@@ -90,7 +90,7 @@
   function toonRonde() {
     var el = document.getElementById("ronde"), r = data.ronde;
     if (!r) { el.textContent = "Nog geen selectieronde gedraaid. De eerste komt binnen het uur."; return; }
-    var t = "Laatste ronde " + datum(r.op) + " · " + r.gevonden + " berichten bekeken, " + r.nieuw + " nieuw · PEIL " + (r.peil && r.peil.versie ? "v" + r.peil.versie : "niet geladen") + " · " + data.telling.besluiten + " keuzes bewaard";
+    var t = "Laatste ronde " + datum(r.op) + " · " + r.gevonden + " berichten bekeken, " + r.nieuw + " nieuw · PEIL " + (r.peil && r.peil.versie ? "v" + r.peil.versie : "niet geladen") + " · " + data.telling.besluiten + " keuzes bewaard" + (data.verborgen ? " · " + data.verborgen + " oudere of dubbele niet getoond" : "");
     el.textContent = t;
     el.className = "ronde" + (r.modelFout || (r.peil && r.peil.fout) ? " fout" : "");
     if (r.modelFout) el.textContent += " · AI-oordeel mislukt: " + r.modelFout;
@@ -125,7 +125,7 @@
     var gekozen = cat === "geen" ? "algemeen" : cat;
     var opties = data.categorieen.map(function (c) { return '<option value="' + c.key + '"' + (c.key === gekozen ? " selected" : "") + ">" + esc(c.label) + "</option>"; }).join("");
     return '<div class="kaart" id="k-' + esc(k.id) + '">' +
-      '<div class="kop"><span class="score' + kl + '">' + (score == null ? "?" : score) + '</span><span class="soort">' + esc(k.soort) + "</span><span>" + esc(k.bron) + (k.land ? " (" + esc(k.land) + ")" : "") + " · " + datum(k.datum) + "</span></div>" +
+      '<div class="kop"><span class="score' + kl + '">' + (score == null ? "?" : score) + '</span><span class="soort">' + esc(k.soort) + "</span><span>" + esc(k.bron) + (k.land ? " (" + esc(k.land) + ")" : "") + " · " + datum(k.datum) + (k.ookBij && k.ookBij.length ? " · ook bij " + esc(k.ookBij.join(", ")) : "") + "</span></div>" +
       '<a class="titel" href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.titel) + "</a>" +
       (ai ? '<p class="reden">' + esc(ai.reden) + "</p>" : '<p class="reden"><i>Nog geen AI-oordeel; volgt in de volgende ronde.</i></p>') +
       peilBlok(ai) +

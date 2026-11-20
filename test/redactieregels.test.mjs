@@ -345,3 +345,21 @@ test("buitenlandKenmerk: gelden-per-zin en het kenmerk is benoembaar (voor de cr
   assert.match(R.buitenlandKenmerk("AOW voor wie in het buitenland woont"), /buitenland/);
   assert.equal(R.buitenlandKenmerk("Zr.Ms. Evertsen in de Rode Zee"), null);
 });
+
+test("R17 zinsgrens: kop telt mee met de eerste zin van de samenvatting; afkortingen breken geen zin", () => {
+  assert.ok(R.raaktBuitenland("Kabinet past AOW aan.", "Ook in het buitenland."));
+  assert.ok(R.raaktBuitenland("Pensioen", "Uitbetaling aan gepensioneerden in het buitenland"));
+  // verder in de samenvatting (niet de eerste zin) telt niet
+  assert.ok(!R.raaktBuitenland("Kabinet past AOW aan", "Het kabinet wil dit snel regelen. Ook in het buitenland is er aandacht."));
+  // afkortingen en datums
+  assert.ok(R.raaktBuitenland("Nieuwe regels", "De AOW is o.a. aangepast voor wie in het buitenland woont."));
+  assert.equal(R.raaktBuitenland("Zr.Ms. Evertsen helpt schepen", "Het schip is op 20.11.2026 in het buitenland ingezet."), false);
+  assert.equal(R.raaktBuitenland("Pensioen en AOW", "Op 20.11.2026 besloten. Ministers zijn in het buitenland."), false);
+  assert.ok(R.buitenlandKenmerk("AOW", "Voor wie ca. 20.5 jaar in het buitenland woont, ook o.a. in Frankrijk."));
+});
+
+test("redactie.html: overheid, ook onder 'Al automatisch live', stuurt de echte nieuwspagina-keuze en live:true mee", () => {
+  const html = lees("../redactie.html");
+  assert.match(html, /opPagina: it\.soort === "overheid" \|\| it\.wacht \? !!k\.nieuwspagina : true/);
+  assert.match(html, /live: !weg && \(it\.soort === "overheid" \|\| it\.wacht\) && k\.nieuwspagina \? true : undefined/);
+});

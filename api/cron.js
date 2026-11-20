@@ -266,7 +266,7 @@ export default async function handler(req, res) {
     console.log(`[cron] overheidpoort: ok=${overheidPoort.ok} wacht=${overheidPoort.wacht} afgewezen=${overheidPoort.afgewezen} gewijzigd=${overheidPoort.gewijzigd} eraf=${overheidPoort.eraf} docs=${overheidBehouden.length}`);
     // Per bericht dat live staat: kop, wie het doorliet en of het een bewuste keuze was (om een ruime doorlaat te vinden).
     for (const d of overheidBehouden) {
-      if (d && d.poort && d.poort.status === "ok") console.log(`[cron] overheid ok: "${String(d.kop || "").slice(0, 80)}" door=${d.poort.door || "-"} keuze=${d.poort.keuze === true} score=${d.poort.score ?? "-"} kenmerk=${buitenlandKenmerk(`${d.kop || ""}. ${d.samenvatting || ""}`) || "-"}`);
+      if (d && d.poort && d.poort.status === "ok") console.log(`[cron] overheid ok: "${String(d.kop || "").slice(0, 80)}" door=${d.poort.door || "-"} keuze=${d.poort.keuze === true} score=${d.poort.score ?? "-"} kenmerk=${buitenlandKenmerk(d.kop || "", d.samenvatting || "") || "-"}`);
     }
   } catch (e) {
     overheidPoort = { overgeslagen: e instanceof Error ? e.message : String(e) };

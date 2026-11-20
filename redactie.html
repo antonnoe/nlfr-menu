@@ -593,7 +593,8 @@
       if (it.soort === "kandidaat") return post("/api/selectie", { actie: zij.length ? "go" : "nogo", id: id, categorie: c, kanalen: zij, reden: reden, voorstel: voorstelLijst(it) });
       if (it.soort === "overheid" || it.soort === "publicatie") {
         // Eén verzoek: besluit en (de)publiceren, verwijderen of kanalen gaan samen.
-        return post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c, elders: elders, opPagina: it.wacht ? !!k.nieuwspagina : true, reden: reden, weg: weg || undefined, voorstel: voorstelLijst(it), act: weg || (it.wacht && !k.nieuwspagina) ? undefined : act, live: !weg && it.wacht && k.nieuwspagina ? true : undefined });
+        // Overheid: ook op een regel onder "Al automatisch live" telt alleen de echte keuze: nieuwspagina aan = live:true (keuze:true), uit = van de site.
+        return post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c, elders: elders, opPagina: it.soort === "overheid" || it.wacht ? !!k.nieuwspagina : true, reden: reden, weg: weg || undefined, voorstel: voorstelLijst(it), act: weg || ((it.soort === "overheid" || it.wacht) && !k.nieuwspagina) ? undefined : act, live: !weg && (it.soort === "overheid" || it.wacht) && k.nieuwspagina ? true : undefined });
       }
       // concept: één verzoek volstaat (kop en tekst, publiceren en het redactiebesluit gaan mee),
       // zodat een sluitende pagina niets half achterlaat. Is een eerdere poging voor de helft

@@ -185,6 +185,8 @@
   var VOLGT = "Volgt de nieuwspagina: zet eerst de nieuwspagina aan.";
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  // Oude kandidaten bevatten soms nog tekencodes als &#xE9; (é): hier omzetten.
+  function tekens(s) { return String(s == null ? "" : s).replace(/&(?:amp;)?#x([\da-f]+);/gi, function (_, h) { return String.fromCodePoint(parseInt(h, 16)); }).replace(/&(?:amp;)?#(\d+);/g, function (_, d) { return String.fromCodePoint(+d); }); }
   function veilig(u) { return /^https:\/\//.test(String(u || "")) ? String(u) : ""; }
   function tijd(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }); }
   function urlSleutel(u) {
@@ -287,8 +289,8 @@
       if (gebruikt[k.id]) return;
       var ai = k.ai, v = ai && ai.plek ? ai.plek : "zijbalk";
       if (v === "nieuwspagina" || v === "beide") v = "zijbalk";
-      items.push({ soort: "kandidaat", id: k.id, tijd: k.datum || k.gevondenOp, kop: (ai && ai.titelNl) || k.titel,
-        origineel: ai && ai.titelNl && ai.titelNl !== k.titel ? k.titel : "", tekst: "", bron: k.bron, bronNaam: k.bron,
+      items.push({ soort: "kandidaat", id: k.id, tijd: k.datum || k.gevondenOp, kop: tekens((ai && ai.titelNl) || k.titel),
+        origineel: ai && ai.titelNl && ai.titelNl !== k.titel ? tekens(k.titel) : "", tekst: "", bron: k.bron, bronNaam: k.bron,
         url: veilig(k.url), ai: ai, voorstel: v, altijd: false, kSoort: k.soort });
     });
     items.sort(function (a, b) { return (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0); });

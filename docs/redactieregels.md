@@ -22,6 +22,7 @@ Alleen regels die al besloten zijn of al in de code stonden. Status: besloten = 
 - **R14** (besloten) Een bericht dat alleen op nieuwspagina, nieuwsbrief of Infopoche komt is een go met lege zijbalkkanalen, geen no-go; alleen Weg is een no-go. Herkomst: Herstelronde onzichtbare fouten (20-11-2026).
 - **R15** (besloten) Geen ledennamen en geen auteursnamen in de nieuwsbrief. Herkomst: nlfr-nieuwsbrief CLAUDE.md (besluit opdrachtgever); bewaakt in die repo.
 - **R16** (besloten) Een artikel staat nooit op twee opeenvolgende dagen in de nieuwsbrief. Herkomst: nlfr-nieuwsbrief CLAUDE.md; bewaakt in die repo.
+- **R17** (besloten) Nederlands binnenlands nieuws en bestuur (benoemingen, vacatures, Kamerbrieven, defensie-inzet, binnenlandse regelingen) is alleen relevant als het Nederlanders in Frankrijk of het buitenland raakt (AOW en pensioen, belasting buitenland, zorgverzekering verdragslanden, paspoort, rijbewijs en consulaire zaken, kiezers in het buitenland). De prompt laat zulke berichten onder de drempel scoren en de poort laat een Rijksoverheid-bericht zonder zo'n kenmerk niet live zonder keuze van de redactie. Herkomst: Besluit opdrachtgever 20-11-2026 (Caribisch Nederland en irrelevante Rijksoverheid-berichten).
 
 ## De vijf plekken
 
@@ -58,6 +59,6 @@ Alleen bij een kennisdomein: geld, bureaucratie, zorg, wonen.
 
 ## Twijfelgevallen
 
-- Nederlands binnenlands bestuur (benoemingen, vacatures) staat niet als besloten regel; de poort leunt op de modelscore. Zie het rapport van 20-11-2026.
+- R17: de kenmerken van "raakt het buitenland" (`NL_BUITENLAND_RAAKT`) zijn een ruime lijst woordbegins; de IBO-melding over ouderen (20-11) valt er niet onder en blijft een twijfelgeval.
 - R03, R15 en R16 worden in nlfr-nieuwsbrief bewaakt, niet in nlfr-menu.
 - De getallen bij R13 (15, en 40 voor Google News) zijn een voorstel.

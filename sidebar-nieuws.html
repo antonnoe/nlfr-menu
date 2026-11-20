@@ -17,6 +17,8 @@
   a { text-decoration:none; }
   .blok { border:1.5px solid #800000; border-radius:6px; padding:8px 9px 6px; }
   .hoofd { display:flex; align-items:center; justify-content:space-between; font:700 10.5px/1.2 Poppins, sans-serif; letter-spacing:.01em; text-transform:uppercase; color:#800000; margin-bottom:2px; }
+  .hoofdlink { color:#800000; display:inline-flex; gap:4px; align-items:center; }
+  .hoofdlink:hover { text-decoration:underline; }
   .cat { font:700 10px/1.2 Poppins, sans-serif; text-transform:uppercase; letter-spacing:.02em; color:#1f6d30; margin:10px 0 3px; }
   .item { padding:5px 0; border-bottom:1px solid #f1e9e7; }
   .item:last-child { border-bottom:0; }
@@ -33,7 +35,7 @@
 </head>
 <body>
 <div class="blok">
-  <div class="hoofd"><span>Frankrijk in het nieuws</span></div>
+  <div class="hoofd"><a class="hoofdlink" href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_top">Frankrijknieuws <span aria-hidden="true">→</span></a></div>
   <div id="inhoud"><div class="leeg">Nieuws wordt geladen…</div></div>
   <a class="voet" href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_top">Meer nieuws over Frankrijk →</a>
 </div>

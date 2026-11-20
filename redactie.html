@@ -36,6 +36,7 @@
   .status.fout { color:#8a4b00; }
   .dag { font-family:Poppins,sans-serif; font-weight:700; font-size:13px; color:var(--zacht); text-transform:uppercase; letter-spacing:.03em; margin-top:6px; }
   article { background:#fff; border:1px solid var(--rand); border-left:6px solid var(--e); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  article.open .tekst { display:block; -webkit-line-clamp:unset; overflow:visible; }
   article.bezig { opacity:.45; pointer-events:none; }
   article.k-a { border-left-color:var(--a); } article.k-b { border-left-color:var(--b); } article.k-c { border-left-color:var(--c); }
   article.k-d { border-left-color:var(--d); } article.k-e { border-left-color:var(--e); }
@@ -279,7 +280,7 @@
     var prio = it.ai && it.ai.prio ? " · prio " + esc(it.ai.prio) : "";
     var soortLabel = it.soort === "kandidaat" && it.kSoort === "meteo" ? "Meteo" : KLEUR[it.kleur];
     var kop = it.url ? '<a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.kop) + "</a>" : esc(it.kop);
-    var h = '<article class="k-' + it.kleur + '" id="i-' + esc(it.id) + '">' +
+    var h = '<article class="k-' + it.kleur + (open[it.id] ? " open" : "") + '" id="i-'  + esc(it.id) + '">' +
       '<div class="meta"><span class="tijd">' + tijd(it.tijd) + "</span><span>" + esc(it.bron) + "</span></div>" +
       "<h2>" + kop + "</h2>";
     if (it.tekst) h += '<p class="tekst">' + esc(it.tekst) + "</p>";

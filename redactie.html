@@ -106,6 +106,40 @@
   .beheer a { display:flex; align-items:center; min-height:52px; padding:0 14px; border-top:1px solid #eee5e2; color:var(--brand); font-weight:700; text-decoration:none; font-size:17px; }
   .beheer .kopje { padding:10px 14px 4px; font-size:16px; color:var(--zacht); font-weight:700; }
   .leeg { background:var(--ok-zacht); color:var(--ok); border-radius:14px; padding:16px; font-weight:700; text-align:center; }
+  /* Dagscherm (20-11-2026, mock-up https://claude.ai/artifact/8VyrDR5Tzf9wfem2Tp71hW):
+     één regel per bericht met ✓ en ✕, tik op de kop klapt open; tabs bovenaan. */
+  .tabs { display:flex; gap:6px; overflow-x:auto; }
+  .tab { flex:0 0 auto; }
+  .tab { min-height:44px; border-radius:999px; border:1px solid var(--lijn); background:#fff; color:var(--zacht); font-weight:700; font-size:15px; padding:0 12px; }
+  .tab[aria-selected="true"] { background:var(--brand); border-color:var(--brand); color:#fff; }
+  .lijst.compact { gap:0; background:var(--vlak); border:1px solid var(--lijn); border-radius:14px; overflow:hidden; }
+  .lijst.compact > div { border-top:1px solid #eee5e2; }
+  .lijst.compact > div:first-child { border-top:0; }
+  .rij { display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:8px; align-items:center; padding:6px 8px 6px 6px; }
+  .rij.open { background:var(--brand-zacht); }
+  .rij .sc { font-weight:700; font-size:14px; color:var(--zacht); text-align:center; font-variant-numeric:tabular-nums; }
+  .rij .mid { min-width:0; background:none; border:0; padding:4px 0; text-align:left; color:var(--tekst); }
+  .rij .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-weight:700; font-size:16px; line-height:1.3; overflow:hidden; }
+  .rij.open .t { display:block; }
+  .rij .s { display:block; font-size:14px; color:var(--zacht); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rij .s b { color:var(--brand); }
+  .rij .s .let { color:var(--oranje); font-weight:700; }
+  .rij .mw { background:#f2b84b; color:#2b2010; border-radius:4px; padding:0 5px; font-size:12px; font-weight:700; margin-right:4px; }
+  .rij .kn { display:flex; gap:6px; }
+  .rk { width:44px; height:44px; border-radius:10px; border:1px solid var(--lijn); background:#fff; font-size:20px; font-weight:700; line-height:1; color:var(--tekst); padding:0; }
+  .rk.ja { background:var(--brand); border-color:var(--brand); color:#fff; }
+  .rij .meer { grid-column:2 / -1; display:flex; flex-direction:column; gap:10px; padding:2px 0 8px; }
+  .rij .meer .samenvatting { font-size:16px; }
+  .rij .meer .waarom { font-size:15px; color:var(--zacht); margin:0; }
+  .rij .meer .klein-knoppen { display:flex; gap:8px; flex-wrap:wrap; }
+  .rij .meer .knop { min-height:44px; font-size:16px; }
+  .rij .bron a { font-size:15px; }
+  .lijst.compact .kaart { border:0; border-radius:0; }
+  .lijst.compact .klaar { border:0; border-left:6px solid var(--ok); border-radius:0; padding:6px 10px; opacity:.75; }
+  .lijst.compact .klaar.nee { border-left-color:#9b9290; }
+  .lijst.compact .klaar.wacht { border-left-color:var(--oranje); opacity:1; }
+  .lijst.compact .klaar .terug { min-height:44px; }
+  .reden-knop { min-height:44px; background:none; border:0; color:var(--brand); font-weight:700; font-size:15px; padding:0 6px; text-decoration:underline; }
   @media (min-width:900px) {
     .kop { padding:14px 28px; }
     .wrap { max-width:1100px; display:grid; grid-template-columns:300px 1fr; gap:28px; padding:20px 28px 40px; }
@@ -136,7 +170,7 @@
   // Alle toestand van de pagina. De kaarten worden per bericht getekend, nooit
   // allemaal tegelijk: getypte tekst (st.cn) blijft staan, ook als elders een
   // bericht wordt geplaatst of de laadbeurt klaar is.
-  var st = { besluit: {}, open: {}, cn: {}, fout: {}, gedaan: {}, bewaard: {}, autoWeg: {}, autoBezig: {}, toch: [], lijst: [], auto: [], nietAi: [] };
+  var st = { tab: "beslis", uit: {}, redenOpen: {}, besluit: {}, open: {}, cn: {}, fout: {}, gedaan: {}, bewaard: {}, autoWeg: {}, autoBezig: {}, toch: [], lijst: [], auto: [], nietAi: [] };
   var PLEKKEN = []; // [id, naam, uitleg] uit /api/selectie (lib/redactieregels.js)
   var NAAM = {};
   var LABEL = {};
@@ -369,7 +403,7 @@
   function tekenRomp() {
     $("dag").textContent = (function () { var t = new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" }); return t.charAt(0).toUpperCase() + t.slice(1); })();
     var romp = $("romp");
-    var uitleg = "Hieronder staat alleen wat jouw beslissing nodig heeft. Klopt het voorstel, tik dan op <b>Ja</b>.";
+    var uitleg = "Per bericht: <b>✓</b> plaatst zoals voorgesteld, <b>✕</b> slaat over. Tik op een kop voor de tekst en meer keuzes.";
     $("zij").innerHTML = '<p class="uitleg">' + uitleg + "</p>" + beheerHtml();
     if (!geladen) {
       romp.innerHTML = laadFoutTekst
@@ -377,17 +411,23 @@
         : '<p class="status">Laden…</p>';
       werkTeller(); return;
     }
-    var r = sel.ronde;
+    var r = sel.ronde, tb = st.tab;
+    var nLive = st.auto.filter(function (it) { return !st.autoWeg[it.id]; }).length;
     romp.innerHTML =
-      '<p class="uitleg alleen-smal">' + uitleg + "</p>" +
-      leerHtml() +
+      '<div class="tabs" role="tablist">' +
+      '<button type="button" class="tab" role="tab" data-tab="beslis" aria-selected="' + (tb === "beslis") + '">Beslissen <span id="tab-n"></span></button>' +
+      '<button type="button" class="tab" role="tab" data-tab="live" aria-selected="' + (tb === "live") + '">Live (' + nLive + ")</button>" +
+      '<button type="button" class="tab" role="tab" data-tab="weg" aria-selected="' + (tb === "weg") + '">Door AI overgeslagen (' + st.nietAi.length + ")</button></div>" +
       (r && r.modelFout ? '<p class="status" style="color:var(--oranje)">AI-oordeel mislukt: ' + esc(r.modelFout) + "</p>" : "") +
-      '<div id="auto">' + autoHtml() + "</div>" +
-      '<div class="lijst" id="lijst"></div>' +
+      '<div id="auto"' + (tb === "live" ? "" : " hidden") + ">" + autoHtml(true) + "</div>" +
+      '<div id="aiweg"' + (tb === "weg" ? "" : " hidden") + ">" + aiWegHtml(true) + "</div>" +
+      '<div id="beslis"' + (tb === "beslis" ? "" : " hidden") + ">" +
+      '<div class="lijst compact" id="lijst"></div>' +
+      '<div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">' +
       '<button type="button" class="rest" data-rest="1" id="rest">Rest van vandaag: nee</button>' +
       '<p class="rest-uitleg">Alles wat nog open staat wordt niet geplaatst. Je kunt het daarna vijf seconden ongedaan maken.</p>' +
-      '<div id="aiweg">' + aiWegHtml() + "</div>" +
-      '<div class="alleen-smal">' + beheerHtml() + "</div>" +
+      leerHtml() +
+      '<div class="alleen-smal">' + beheerHtml() + "</div></div></div>" +
       '<div class="toast" id="toast" hidden role="status"><span class="t"></span><button type="button" data-toast-terug="1">Ongedaan maken</button></div>';
     tekenLijst();
   }
@@ -423,11 +463,12 @@
   }
   function tekenLijst() {
     var l = $("lijst"); if (!l) return;
-    var html = "", groep = "";
-    var lijst = st.lijst.slice().sort(function (a, b) { return GROEPEN.indexOf(groepVan(a)) - GROEPEN.indexOf(groepVan(b)); });
+    var html = "";
+    // Eén lijst: door jou teruggehaald bovenaan, dan hoogste score eerst (zonder score: als 0, nieuwste eerst).
+    var lijst = st.lijst.slice().sort(function (a, b) {
+      return (b.toch ? 1 : 0) - (a.toch ? 1 : 0) || (score(b) || 0) - (score(a) || 0) || (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0);
+    });
     lijst.forEach(function (it) {
-      var g = groepVan(it);
-      if (g !== groep) { groep = g; html += '<div class="groep">' + esc(g) + "</div>"; }
       html += '<div data-item="' + esc(it.id) + '">' + itemHtml(it) + "</div>";
     });
     if (!lijst.length) html = '<div class="leeg">Niets te beslissen. De AI kijkt elk uur opnieuw.</div>';
@@ -443,6 +484,7 @@
   function werkTeller() {
     var n = st.lijst.filter(function (it) { return !st.besluit[it.id]; }).length;
     $("teller").textContent = !geladen ? "" : n === 0 ? "Alles gedaan" : "Nog " + n + " te doen";
+    var tn = $("tab-n"); if (tn) tn.textContent = "(" + n + ")";
     var r = $("rest");
     if (r) { r.disabled = n === 0; r.textContent = n ? "Rest van vandaag: nee (" + n + ")" : "Rest van vandaag: nee"; }
   }
@@ -458,6 +500,7 @@
     var zbAlleen = vk.zijbalk && PLEKKEN.every(function (p) { return p[0] === "zijbalk" || p[0] === "infofrankrijk" || !vk[p[0]]; });
     var kop = it.url ? '<a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.kop) + "</a>" : esc(it.kop);
     var f = st.fout[it.id];
+    if (!c) return rijHtml(it, vk, vr, zbAlleen, f);
     var h = '<article class="kaart">' +
       '<div class="soort">' + labelHtml(it) + "<span>" + esc(it.bron || "") + "</span>" + (tijd(it.tijd) ? "<span>· " + tijd(it.tijd) + "</span>" : "") + "</div>" +
       "<h2>" + kop + "</h2>" +
@@ -491,6 +534,35 @@
     }
     return h + "</article>";
   }
+  function rijHtml(it, vk, vr, zbAlleen, f) {
+    var id = esc(it.id), open = !!st.uit[it.id], sc = score(it);
+    var soortT = labelTekst(it);
+    var advies = r17(it) ? "Nee" : lijstTekst(vk);
+    var h = '<div class="rij' + (open ? " open" : "") + '">' +
+      '<span class="sc" title="Score">' + (sc == null ? "–" : sc) + "</span>" +
+      '<button type="button" class="mid" data-uit="' + id + '" aria-expanded="' + open + '">' +
+      '<span class="t">' + (vr === "merkwaardig" ? '<span class="mw">Merkwaardig</span>' : "") + esc(it.kop) + "</span>" +
+      '<span class="s">' + esc(soortT) + (it.bron ? " · " + esc(it.bron) : "") + (tijd(it.tijd) ? " · " + tijd(it.tijd) : "") + " · <b>" + advies + "</b>" +
+      (!it.ai ? ' · <span class="let">geen AI-oordeel</span>' : "") + "</span></button>" +
+      '<span class="kn"><button type="button" class="rk ja" data-ja="' + id + '" aria-label="Ja, zoals voorgesteld" title="Ja, zoals voorgesteld">✓</button>' +
+      '<button type="button" class="rk" data-nee="' + id + '" aria-label="Nee" title="Nee">✕</button></span>';
+    if (f) h += '<div class="meer"><div class="melding-kaart" role="alert"><span>' + esc(f.tekst) + "</span>" + (f.bevestig ? '<button type="button" class="knop" data-bevestig="' + id + '">Toch publiceren</button>' : "") + "</div></div>";
+    if (open) {
+      h += '<div class="meer">' +
+        (it.origineel ? '<p class="fr">' + esc(it.origineel) + "</p>" : "") +
+        (it.tekst ? '<p class="samenvatting">' + esc(it.tekst) + "</p>" : "") +
+        '<p class="waarom">Rubriek ' + esc(LABEL[vr]) + ". " + esc(waarom(it)) + "</p>" +
+        (it.url ? '<span class="bron"><a href="' + esc(veilig(it.url)) + '" target="_blank" rel="noopener">Bron: ' + esc(it.bron || "openen") + " ↗</a></span>" : "") +
+        '<div class="klein-knoppen">' + (zbAlleen ? "" : '<button type="button" class="knop" data-zb="' + id + '">Alleen zijbalk</button>') +
+        '<button type="button" class="knop" data-anders="' + id + '">Anders: plekken, rubriek of tekst</button></div></div>';
+    }
+    return h + "</div>";
+  }
+  function labelTekst(it) {
+    if (it.soort === "overheid") return "Overheid";
+    if (it.soort === "kandidaat") return it.kSoort === "meteo" ? "Meteo" : it.kSoort === "pers" || !it.kSoort ? "Eén krant" : "Bericht";
+    return "Synthese";
+  }
   function samenTekst(it, c) {
     var k = schoon(it, c.k);
     return PLEKKEN.some(function (p) { return k[p[0]]; }) ? "Komt op: " + lijstTekst(k) + ", rubriek " + esc(LABEL[c.rubriek]) + "." : "Nog geen plek gekozen: Plaats zo werkt pas met minstens één plek.";
@@ -505,7 +577,7 @@
     if (b.soort === "nee") {
       return '<div class="klaar nee' + (wacht || bezig ? " wacht" : "") + '"><div class="r1"><div class="wat"><b>' + kop + "</b><span>" +
         (wacht ? "Wordt niet geplaatst" : bezig ? "Opslaan…" : "Niet geplaatst") + (b.reden ? " · " + esc(b.reden) : "") + "</span></div>" + knop + "</div>" +
-        (b.rest ? "" : '<p class="reden-vraag">Waarom niet? Mag ook overslaan. De AI leert hiervan.</p><div class="chips reden">' + REDENEN.map(function (r) {
+        (b.rest ? "" : !st.redenOpen[it.id] ? '<button type="button" class="reden-knop" data-redenopen="' + esc(it.id) + '">Waarom niet? (mag overslaan)</button>' : '<p class="reden-vraag">Waarom niet? Mag ook overslaan. De AI leert hiervan.</p><div class="chips reden">' + REDENEN.map(function (r) {
           return '<button type="button" class="chip" data-reden="' + esc(r) + '" data-id="' + esc(it.id) + '" aria-pressed="' + (b.reden === r) + '">' + r + "</button>";
         }).join("") + "</div>") + "</div>";
     }
@@ -623,6 +695,9 @@
     var t = e.target.closest("button"); if (!t) return;
     var d = t.dataset, it;
     if (d.opnieuw) { laad(); return; }
+    if (d.tab) { kiesTab(d.tab); return; }
+    if (d.uit) { if (st.uit[d.uit]) delete st.uit[d.uit]; else st.uit[d.uit] = true; tekenItem(d.uit); return; }
+    if (d.redenopen) { st.redenOpen[d.redenopen] = true; tekenItem(d.redenopen); return; }
     if (d.ja) { it = vind(d.ja); if (it && r17(it)) { besluit(it, { soort: "nee", k: {}, rubriek: rubriekVoorstel(it) }); return; } if (it) besluit(it, { soort: "ja", k: voorstelK(it), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "", aangepast: false }); return; }
     if (d.zb) { it = vind(d.zb); if (it) besluit(it, { soort: "ja", k: schoon(it, { zijbalk: true }), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "", aangepast: false }); return; }
     if (d.nee) { it = vind(d.nee); if (it) besluit(it, { soort: "nee", k: {}, rubriek: rubriekVoorstel(it) }); return; }
@@ -681,7 +756,7 @@
     if (d.toch) {
       if (st.toch.indexOf(d.toch) < 0) st.toch.push(d.toch);
       var open1 = (document.querySelector("[data-aiweg]") || {}).open;
-      bouw(); tekenLijst(); $("aiweg").innerHTML = aiWegHtml(open1);
+      bouw(); tekenLijst(); $("aiweg").innerHTML = aiWegHtml(true); kiesTab("beslis");
       var nw = document.querySelector('[data-item="' + d.toch + '"]'); if (nw) nw.scrollIntoView({ block: "nearest" });
       return;
     }
@@ -696,6 +771,17 @@
       return;
     }
   });
+  // Tab wisselen zonder opnieuw te tekenen: de melding onderaan (Ongedaan maken) en
+  // getypte tekst blijven staan.
+  function kiesTab(t) {
+    st.tab = t;
+    ["beslis", "live", "weg"].forEach(function (k) {
+      var paneel = $(k === "beslis" ? "beslis" : k === "live" ? "auto" : "aiweg");
+      if (paneel) paneel.hidden = k !== t;
+      var knop = document.querySelector('[data-tab="' + k + '"]');
+      if (knop) knop.setAttribute("aria-selected", String(k === t));
+    });
+  }
   function herAuto() { var o = (document.querySelector("[data-auto]") || {}).open; $("auto").innerHTML = autoHtml(o); }
   $("ververs").addEventListener("click", function () {
     var open = Object.keys(st.besluit).some(function (id) { return st.besluit[id].status !== "klaar"; });

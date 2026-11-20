@@ -22,7 +22,7 @@ test("regelbestand en document zijn gelijk: elke regel-id en elke waarde staat i
   for (const p of R.PLEKKEN_VIJF) assert.ok(doc.includes(p.naam), `plek ${p.naam} ontbreekt`);
   for (const k of R.RUBRIEKEN) assert.ok(doc.includes(R.RUBRIEK_LABEL[k]), `rubriek ${k} ontbreekt`);
   for (const d of R.CAFE_DOMEINEN) assert.ok(doc.includes(d), `domein ${d} ontbreekt`);
-  for (const n of [R.SCORE_DREMPEL, R.MIN_KRANTEN, R.SELECTIE_MAX_PER_BRON, R.VOORBEELDEN_MAX_PER_SOORT, R.METEN_MIN_BESLUITEN, R.METEN_DAGEN]) {
+  for (const n of [R.SCORE_DREMPEL, R.LOS_SCORE_DREMPEL, R.MIN_KRANTEN, R.SELECTIE_MAX_PER_BRON, R.VOORBEELDEN_MAX_PER_SOORT, R.METEN_MIN_BESLUITEN, R.METEN_DAGEN]) {
     assert.ok(doc.includes(`\`${n}\``), `waarde ${n} ontbreekt (tussen backticks)`);
   }
   // en andersom: elke R-id in het document bestaat
@@ -66,6 +66,21 @@ test("een los krantenbericht krijgt nooit nieuwspagina, nieuwsbrief of Infopoche
   // onder de drempel: nergens
   const laag = leesModelAntwoord(JSON.stringify([{ nr: 1, score: SCORE_DREMPEL - 1, plekken: ["zijbalk"] }]), [items[0]]);
   assert.deepEqual(laag.get("a1").plekken, []);
+});
+
+test("losse kranten hebben drempel 70, overheid en meteo houden drempel 40", () => {
+  assert.equal(R.LOS_SCORE_DREMPEL, 70);
+  assert.equal(R.SCORE_DREMPEL, 40);
+  for (const [soort, grens] of [["pers", 70], ["overheid", 40], ["meteo", 40]]) {
+    for (const score of [grens - 1, grens]) {
+      const item = { id: "grens", soort, titel: "Grensgeval" };
+      for (const advies of [{ plekken: ["zijbalk"] }, { plek: "zijbalk" }]) {
+        const uit = leesModelAntwoord(JSON.stringify([{ nr: 1, score, ...advies }]), [item]);
+        assert.deepEqual(uit.get(item.id).plekken, score < grens ? [] : ["zijbalk"], `${soort}, score ${score}`);
+      }
+    }
+  }
+  assert.ok(SYSTEM_SELECTIE.includes(`onder de ${R.LOS_SCORE_DREMPEL}`));
 });
 
 test("toetsset: de zeven op de selectiestroom geven de verwachte uitkomst (30 tot 50 verzonnen koppen)", () => {
@@ -296,7 +311,7 @@ test("R17 op /redactie: de poort legt de reden vast en het voorstel is Nee, met 
   assert.match(html, /function r17\(it\)[^\n]*poort\.reden === "r17"/);
   assert.match(html, /if \(r17\(it\)\) return \{\}/);
   assert.match(html, /R17_REDEN = rg\.r17Reden/);
-  assert.match(html, /\(r17\(it\) \? "Nee" : lijstTekst\(vk\)\)/);
+  assert.match(html, /var advies = r17\(it\) \? "Nee" : lijstTekst\(vk\);/);
   assert.match(html, /if \(it && r17\(it\)\) \{ besluit\(it, \{ soort: "nee"/);
   assert.ok(!html.includes(R.R17_REDEN), "de redentekst staat niet in de pagina zelf");
   assert.match(lees("../api/selectie.js"), /r17Reden: R17_REDEN/);

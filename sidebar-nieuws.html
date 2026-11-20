@@ -128,7 +128,9 @@
     return;
   }
 
-  fetch("/api/selectie-feed", { cache: "no-store" })
+  // ?kanaal=infofrankrijk: het nieuwsblok op Infofrankrijk (#open); standaard de zijbalk van NLFR.
+  var kanaal = new URLSearchParams(location.search).get("kanaal") === "infofrankrijk" ? "?kanaal=infofrankrijk" : "";
+  fetch("/api/selectie-feed" + kanaal, { cache: "no-store" })
     .then(function (r) { return r.json(); })
     .then(toon)
     .catch(function () { document.getElementById("inhoud").innerHTML = '<div class="leeg">Nieuws is even niet bereikbaar.</div>'; });

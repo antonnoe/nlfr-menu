@@ -183,3 +183,9 @@ test("/api/actueel: een publicatie met kanalen geeft ze mee per artikel, zonder 
   assert.deepEqual(alle.find((a) => a.id === "p1").kanalen, { nieuwsbrief: false });
   assert.equal("kanalen" in alle.find((a) => a.id === "p2"), false);
 });
+
+test("zijbalknieuws met ?kanaal=infofrankrijk leest de Infofrankrijk-feed", () => {
+  const html = fs.readFileSync(new URL("../sidebar-nieuws.html", import.meta.url), "utf8");
+  assert.ok(html.includes('"/api/selectie-feed" + kanaal'));
+  assert.ok(html.includes('get("kanaal") === "infofrankrijk"'));
+});

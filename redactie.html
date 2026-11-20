@@ -165,6 +165,7 @@
 <script>
 (function () {
   "use strict";
+  var DREMPEL_LOS = 70; // los krantenbericht: pas vanaf deze score te beslissen (REDACTIE_DREMPEL_LOS)
   var DREMPEL = 40; // alleen een beginwaarde, overschreven door /api/selectie (één waarde: SCORE_DREMPEL in lib/config.js)
   var ONGEDAAN_MS = 5000;
   var rev = null, sel = null, geladen = false;
@@ -183,6 +184,8 @@
   var VOLGT = "Volgt de nieuwspagina: zet eerst de nieuwspagina aan.";
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  // Oude kandidaten bevatten soms nog tekencodes als &#xE9; (é): hier omzetten.
+  function tekens(s) { return String(s == null ? "" : s).replace(/&(?:amp;)?#x([\da-f]+);/gi, function (_, h) { return String.fromCodePoint(parseInt(h, 16)); }).replace(/&(?:amp;)?#(\d+);/g, function (_, d) { return String.fromCodePoint(+d); }); }
   function veilig(u) { return /^https:\/\//.test(String(u || "")) ? String(u) : ""; }
   function tijd(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }); }
   function urlSleutel(u) {
@@ -216,6 +219,7 @@
     Promise.all([haal("/api/review"), haal("/api/selectie")]).then(function (uit) {
       rev = uit[0]; sel = uit[1];
       if (sel && typeof sel.drempel === "number") DREMPEL = sel.drempel;
+      if (sel && typeof sel.drempelLos === "number") DREMPEL_LOS = sel.drempelLos;
       if (sel && sel.regels) {
         var rg = sel.regels;
         if (rg.losTekst) LOS = rg.losTekst;
@@ -284,8 +288,8 @@
       if (gebruikt[k.id]) return;
       var ai = k.ai, v = ai && ai.plek ? ai.plek : "zijbalk";
       if (v === "nieuwspagina" || v === "beide") v = "zijbalk";
-      items.push({ soort: "kandidaat", id: k.id, tijd: k.datum || k.gevondenOp, kop: (ai && ai.titelNl) || k.titel,
-        origineel: ai && ai.titelNl && ai.titelNl !== k.titel ? k.titel : "", tekst: "", bron: k.bron, bronNaam: k.bron,
+      items.push({ soort: "kandidaat", id: k.id, tijd: k.datum || k.gevondenOp, kop: tekens((ai && ai.titelNl) || k.titel),
+        origineel: ai && ai.titelNl && ai.titelNl !== k.titel ? tekens(k.titel) : "", tekst: "", bron: k.bron, bronNaam: k.bron,
         url: veilig(k.url), ai: ai, voorstel: v, altijd: false, kSoort: k.soort });
     });
     items.sort(function (a, b) { return (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0); });
@@ -315,7 +319,7 @@
       if (it.soort === "overheid" && it.poort && it.poort.door === "uitgesloten") return;
       if (it.soort === "overheid" && !it.wacht) { if (vanVandaag(it)) auto.push(it); return; }
       if (!recent(it)) return;
-      if (it.soort === "kandidaat" && !(score(it) != null && score(it) >= DREMPEL)) {
+      if (it.soort === "kandidaat" && !(score(it) != null && score(it) >= (it.kSoort === "pers" || !it.kSoort ? DREMPEL_LOS : DREMPEL))) {
         if (st.toch.indexOf(it.id) >= 0) { it.toch = true; lijst.push(it); } else nietAi.push(it);
         return;
       }
@@ -465,9 +469,11 @@
   function tekenLijst() {
     var l = $("lijst"); if (!l) return;
     var html = "";
-    // Eén lijst: door jou teruggehaald bovenaan, dan hoogste score eerst (zonder score: als 0, nieuwste eerst).
+    // Eén lijst: door jou teruggehaald bovenaan, dan syntheses en overheid (meer kranten of officieel),
+    // dan losse krantenberichten; binnen elke groep hoogste score eerst, dan nieuwste.
+    function groep(it) { return it.toch ? 0 : it.soort === "kandidaat" ? 2 : 1; }
     var lijst = st.lijst.slice().sort(function (a, b) {
-      return (b.toch ? 1 : 0) - (a.toch ? 1 : 0) || (score(b) || 0) - (score(a) || 0) || (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0);
+      return groep(a) - groep(b) || (score(b) || 0) - (score(a) || 0) || (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0);
     });
     lijst.forEach(function (it) {
       html += '<div data-item="' + esc(it.id) + '">' + itemHtml(it) + "</div>";

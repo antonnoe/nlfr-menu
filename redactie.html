@@ -90,7 +90,7 @@
   .klaar.wacht { border-left-color:var(--oranje); }
   .klaar .r1 { display:flex; align-items:center; gap:10px; }
   .klaar .wat { flex:1; min-width:0; font-size:16px; }
-  .klaar .wat b { display:block; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .klaar .wat b { display:block; font-size:16px; line-height:1.3; }
   .klaar .wat span { color:var(--zacht); }
   .terug { min-height:48px; min-width:48px; border-radius:12px; border:2px solid var(--tekst); background:#fff; font-weight:700; font-size:16px; padding:0 12px; white-space:nowrap; color:var(--tekst); }
   .terug.wijzig { border:1px solid var(--lijn); color:var(--brand); }
@@ -108,7 +108,7 @@
   .leeg { background:var(--ok-zacht); color:var(--ok); border-radius:14px; padding:16px; font-weight:700; text-align:center; }
   /* Dagscherm (20-11-2026, mock-up https://claude.ai/artifact/8VyrDR5Tzf9wfem2Tp71hW):
      één regel per bericht met ✓ en ✕, tik op de kop klapt open; tabs bovenaan. */
-  .tabs { display:flex; gap:6px; overflow-x:auto; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; }
   .tab { flex:0 0 auto; }
   .tab { min-height:44px; border-radius:999px; border:1px solid var(--lijn); background:#fff; color:var(--zacht); font-weight:700; font-size:15px; padding:0 12px; }
   .tab[aria-selected="true"] { background:var(--brand); border-color:var(--brand); color:#fff; }
@@ -119,9 +119,9 @@
   .rij.open { background:var(--brand-zacht); }
   .rij .sc { font-weight:700; font-size:14px; color:var(--zacht); text-align:center; font-variant-numeric:tabular-nums; }
   .rij .mid { min-width:0; background:none; border:0; padding:4px 0; text-align:left; color:var(--tekst); }
-  .rij .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-weight:700; font-size:16px; line-height:1.3; overflow:hidden; }
+  .rij .t { display:block; font-weight:700; font-size:16px; line-height:1.3; }
   .rij.open .t { display:block; }
-  .rij .s { display:block; font-size:14px; color:var(--zacht); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rij .s { display:block; font-size:14px; line-height:1.4; color:var(--zacht); }
   .rij .s b { color:var(--brand); }
   .rij .s .let { color:var(--oranje); font-weight:700; }
   .rij .mw { background:#f2b84b; color:#2b2010; border-radius:4px; padding:0 5px; font-size:12px; font-weight:700; margin-right:4px; }

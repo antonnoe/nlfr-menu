@@ -64,3 +64,11 @@ Per bericht kiest het model hooguit één tool uit de modulecatalogus van Infopo
 - Elke keuze over een bericht uit /review wordt een besluit in de selectie (actie `redactie` in /api/selectie, `redactieBesluit` in kern.js): go = zijbalk, no-go = niet in de zijbalk. Zo is het bericht van de pagina af en leert de AI ervan. In de zijbalk linkt een bericht dat op de nieuwspagina staat naar https://www.nederlanders.fr/page/actueel-frankrijknieuws; een synthese alleen in de zijbalk linkt naar de eerste krant.
 - Café Claude: het model kiest hooguit één kennisdomein uit modules.json van Infopoche (`cafeDomeinen`: geld, bureaucratie, zorg, wonen); de zijbalk toont dan die regel met diepe link. Past er geen, dan geen regel.
 - Elke ronde gaan drie porties van 12 naar het model (was twee), voor het grotere aanbod met de Franse kranten.
+
+## Vijf plekken per bericht (20-11-2026)
+
+Op /redactie kiest de redactie per bericht vijf plekken aan of uit: Nieuwspagina, Zijbalk, Nieuwsbrief, Infopoche en Infofrankrijk, en legt vast met "OK, plaatsen" (Weg haalt alles weg). Het voorstel van de AI staat gestippeld aan.
+
+- Zijbalk en Infofrankrijk: selectiebesluit met `kanalen` (`["zijbalk","infofrankrijk"]` of een deel). Een besluit zonder veld telt als alleen zijbalk. `/api/selectie-feed` geeft standaard de zijbalk, `?kanaal=infofrankrijk` (ook met `&format=rss`) het nieuwsblok van Infofrankrijk.
+- Nieuwsbrief en Infopoche lezen `/api/actueel`, dus kunnen alleen met de nieuwspagina erbij. Een publicatie of overheidsbericht krijgt `kanalen: {nieuwsbrief, infopoche}` (bij publiceer of via review-actie `kanalen`); `/api/actueel` geeft het veld per artikel mee als het gezet is. nlfr-nieuwsbrief en Infopoche (if-mobiel, nieuws-lib.js) slaan een artikel over bij `false`; zonder veld doet het overal mee.
+- Een los krantenbericht kan alleen naar de zijbalk en Infofrankrijk (huisregel minstens twee kranten).

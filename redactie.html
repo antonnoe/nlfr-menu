@@ -10,8 +10,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   /* Eén redactiepagina (20-11-2026, mock-up goedgekeurd door Anton):
-     alles in tijdsvolgorde, per bericht Nieuwspagina / Zijbalk / Beide / Weg,
-     het voorstel van de AI gestippeld. Telefoon eerst. */
+     alles in tijdsvolgorde, per bericht vijf plekken aan of uit (Nieuwspagina,
+     Zijbalk, Nieuwsbrief, Infopoche, Infofrankrijk), dan "OK, plaatsen" of Weg.
+     Wat de AI voorstelt staat gestippeld aan. Telefoon eerst. */
   :root { --brand:#800000; --tekst:#3a3230; --zacht:#6b5f5c; --lijn:#e3d3cf; --rand:#ecdcd8;
     --a:#b45309; --b:#1d4ed8; --c:#c2410c; --d:#15803d; --e:#6b7280; }
   * { box-sizing:border-box; }
@@ -51,15 +52,17 @@
   .extra a { color:#2f6b3d; font-weight:700; }
   .extra .gewijzigd { color:#8a4b00; font-weight:700; }
   .chips { display:flex; flex-wrap:wrap; gap:6px; }
-  .keuze { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
-  @media (max-width:600px) { .keuze { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .keuze { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; }
+  @media (max-width:600px) { .keuze { grid-template-columns:repeat(2,minmax(0,1fr)); } .keuze .knop:last-child { grid-column:1 / -1; } }
   .knop { font-family:Poppins,sans-serif; font-weight:700; font-size:15px; min-height:48px; border-radius:12px; padding:0 10px; border:1px solid var(--lijn); background:#fff; color:var(--tekst); cursor:pointer; }
-  .knop.voorstel { border:2px dashed var(--brand); color:var(--brand); }
+  .knop.voorstel { border:2px dashed var(--brand); color:var(--brand); background:#fbf3f1; }
+  .keuze .knop { font-size:14px; padding:0 6px; }
   .knop.aan { background:var(--brand); color:#fff; border-color:var(--brand); }
   .knop:disabled { opacity:.35; cursor:not-allowed; }
   .knop.klein { min-height:44px; font-size:13px; font-weight:600; color:var(--zacht); }
   .rij { display:flex; gap:8px; justify-content:space-between; }
   .rij .knop.aan { flex:1; }
+  .rij .knop.weg { color:#8a4b00; }
   .meer { border:1px solid var(--rand); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px; font-size:14px; }
   .meer textarea { width:100%; min-height:160px; font:inherit; font-size:15px; line-height:1.5; border:1px solid var(--lijn); border-radius:10px; padding:8px; }
   .waarschuwing { font-size:13.5px; color:#8a4b00; background:#fff7ed; border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:8px; }
@@ -77,6 +80,9 @@
     <div class="preview">
       <a href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_blank" rel="noopener">Bekijk nieuwspagina</a>
       <a href="/sidebar-nieuws" target="_blank" rel="noopener">Bekijk zijbalk</a>
+      <a href="https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief" target="_blank" rel="noopener" title="De laatst verstuurde nieuwsbrief">Bekijk nieuwsbrief</a>
+      <a href="https://infopoche.fr" target="_blank" rel="noopener">Bekijk Infopoche</a>
+      <a href="https://infofrankrijk.com/#open" target="_blank" rel="noopener">Bekijk Infofrankrijk</a>
     </div>
   </div>
   <div class="balk">
@@ -102,7 +108,8 @@
   var NIEUWSPAGINA = "https://www.nederlanders.fr/page/actueel-frankrijknieuws";
   var DREMPEL = 40;
   var rev = null, sel = null, tab = "kiezen", toonAlles = false;
-  var open = {}, waarschuwing = {}, rubriek = {};
+  var open = {}, waarschuwing = {}, rubriek = {}, keus = {};
+  var PLEKKEN = [["nieuwspagina", "Nieuwspagina"], ["zijbalk", "Zijbalk"], ["nieuwsbrief", "Nieuwsbrief"], ["infopoche", "Infopoche"], ["infofrankrijk", "Infofrankrijk"]];
   var LABEL = { algemeen: "Algemeen", regelgeving: "Wet- en regelgeving", ondernemers: "Ondernemers", reizen: "Reizen", meteo: "Meteo" };
   var VOLGORDE = ["algemeen", "regelgeving", "ondernemers", "reizen", "meteo"];
   var KLEUR = { a: "Synthese NL/BE", b: "Synthese FR", c: "Synthese NL+FR", d: ".gouv", e: "Krantenbericht" };
@@ -235,9 +242,41 @@
     return it.soort === "overheid" || it.kleur === "d" ? "regelgeving" : "";
   }
 
-  function knop(it, plek, label, mag, titel) {
-    var kl = "knop" + (it.voorstel === plek ? " voorstel" : "");
-    return '<button class="' + kl + '" type="button" data-plek="' + plek + '" data-id="' + esc(it.id) + '"' + (mag ? "" : " disabled") + (titel ? ' title="' + esc(titel) + '"' : "") + ">" + label + "</button>";
+  // Nieuwsbrief en Infopoche lezen de nieuwspagina (/api/actueel): zonder
+  // nieuwspagina kunnen ze niet. Een los krantenbericht kan alleen in de
+  // zijbalk en op Infofrankrijk (huisregel: minstens twee kranten).
+  function standaard(it) {
+    var v = it.voorstel, k = {};
+    if (it.soort === "kandidaat") { k.zijbalk = true; k.infofrankrijk = true; return k; }
+    if (it.soort === "concept") k.nieuwspagina = it.nieuwsMag && v !== "zijbalk";
+    else k.nieuwspagina = true;
+    k.nieuwsbrief = k.infopoche = k.nieuwspagina;
+    k.zijbalk = k.infofrankrijk = v === "zijbalk" || v === "beide" || !k.nieuwspagina;
+    return k;
+  }
+  function keuzeVan(it) { return keus[it.id] || standaard(it); }
+  var LOS = "Een los krantenbericht komt niet op de nieuwspagina (minstens twee kranten nodig).";
+  function plekMag(it, plek, k) {
+    if (plek === "zijbalk" || plek === "infofrankrijk") return "";
+    if (it.soort === "kandidaat") return plek === "nieuwspagina" ? LOS : "Alleen wat op de nieuwspagina staat, kan hier.";
+    if (it.soort !== "concept" && plek === "nieuwspagina") return "Staat al op de nieuwspagina. Weghalen kan met Weg.";
+    if (it.soort === "concept" && !it.nieuwsMag) return "De huisregel (minstens twee kranten) is niet gehaald.";
+    if (plek !== "nieuwspagina" && !k.nieuwspagina) return "Zet eerst de nieuwspagina aan.";
+    return "";
+  }
+  function schakelaar(it, plek, label, k) {
+    var nee = plekMag(it, plek, k), aan = !!k[plek];
+    var vast = it.soort !== "concept" && it.soort !== "kandidaat" && plek === "nieuwspagina";
+    var kl = "knop" + (aan ? (keus[it.id] || vast ? " aan" : " voorstel") : "");
+    return '<button class="' + kl + '" type="button" data-schakel="' + plek + '" data-id="' + esc(it.id) + '" aria-pressed="' + aan + '"' + (nee && !vast ? " disabled" : "") + (nee ? ' title="' + esc(nee) + '"' : "") + ">" + (aan ? "✓ " : "") + label + "</button>";
+  }
+  function schakel(id, plek) {
+    var it = vind(id); if (!it) return;
+    var k = Object.assign({}, keuzeVan(it));
+    if (plekMag(it, plek, k)) return;
+    k[plek] = !k[plek];
+    if (plek === "nieuwspagina") k.nieuwsbrief = k.infopoche = k.nieuwspagina;
+    keus[id] = k; teken();
   }
 
   function kaart(it) {
@@ -263,17 +302,12 @@
       var w = waarschuwing[it.id];
       h += '<div class="waarschuwing"><span>' + esc(w.fout) + "</span>" + (w.bevestig ? '<button class="knop" type="button" data-bevestig="' + esc(it.id) + '">Toch publiceren</button>' : "") + "</div>";
     }
-    h += '<div class="keuze">';
-    if (it.soort === "concept") {
-      h += knop(it, "nieuwspagina", "Nieuwspagina", it.nieuwsMag) + knop(it, "zijbalk", "Zijbalk", true) + knop(it, "beide", "Beide", it.nieuwsMag) + knop(it, "weg", "Weg", true);
-    } else if (it.soort === "overheid" || it.soort === "publicatie") {
-      h += '<button class="knop aan" type="button" data-plek="nieuwspagina" data-id="' + esc(it.id) + '">Nieuwspagina ✓</button>' + knop(it, "beide", "Ook zijbalk", true) + knop(it, "weg", "Weg", true);
-    } else {
-      var los = "Een los krantenbericht komt niet op de nieuwspagina (minstens twee kranten nodig).";
-      h += knop(it, "nieuwspagina", "Nieuwspagina", false, los) + knop(it, "zijbalk", "Zijbalk", true) + knop(it, "beide", "Beide", false, los) + knop(it, "weg", "Weg", true);
-    }
-    h += "</div>";
-    h += '<div class="rij"><button class="knop aan" type="button" data-plek="' + it.voorstel + '" data-id="' + esc(it.id) + '">OK, voorstel klopt</button><button class="knop klein" type="button" data-meer="' + esc(it.id) + '" aria-expanded="' + (open[it.id] ? "true" : "false") + '">Meer ' + (open[it.id] ? "▴" : "▾") + "</button></div>";
+    var k = keuzeVan(it);
+    h += '<div class="keuze" role="group" aria-label="Waar komt dit bericht">' + PLEKKEN.map(function (p) { return schakelaar(it, p[0], p[1], k); }).join("") + "</div>";
+    var iets = PLEKKEN.some(function (p) { return k[p[0]]; });
+    h += '<div class="rij"><button class="knop aan" type="button" data-plaats="' + esc(it.id) + '"' + (iets ? "" : " disabled") + ">OK, plaatsen</button>" +
+      '<button class="knop klein weg" type="button" data-weg="' + esc(it.id) + '">Weg</button>' +
+      '<button class="knop klein" type="button" data-meer="' + esc(it.id) + '" aria-expanded="' + (open[it.id] ? "true" : "false") + '">Meer ' + (open[it.id] ? "▴" : "▾") + "</button></div>";
     if (open[it.id]) {
       h += '<div class="meer">';
       if (it.soort === "concept") h += '<textarea data-tekst="' + esc(it.id) + '" aria-label="Tekst van de synthese">' + esc(it.tekst) + '</textarea><button class="knop klein" type="button" data-bewaar="' + esc(it.id) + '">Tekst opslaan</button>';
@@ -316,22 +350,27 @@
   function tekenGekozen(gekozen, pubs) {
     var h = "";
     pubs.forEach(function (p) {
-      h += '<div class="gekozen"><span class="w">Nieuwspagina</span><span class="t">' + esc(p.kop) + '</span><button class="knop klein" type="button" data-depub="' + esc(p.id) + '">Weghalen</button></div>';
+      var nk = p.kanalen || {}, mee = ["Nieuwspagina"];
+      if (nk.nieuwsbrief !== false) mee.push("nieuwsbrief");
+      if (nk.infopoche !== false) mee.push("Infopoche");
+      h += '<div class="gekozen"><span class="w">' + esc(mee.join(", ")) + '</span><span class="t">' + esc(p.kop) + '</span><button class="knop klein" type="button" data-depub="' + esc(p.id) + '">Weghalen</button></div>';
     });
     gekozen.forEach(function (b) {
-      h += '<div class="gekozen"><span class="w">' + (b.besluit === "go" ? "Zijbalk" + (b.categorie && LABEL[b.categorie] ? " · " + LABEL[b.categorie] : "") : "Niet in zijbalk") + '</span><span class="t">' + esc(b.titelRedactie || b.titel) + '</span><button class="knop klein" type="button" data-herstel="' + esc(b.id) + '">Terugdraaien</button></div>';
+      h += '<div class="gekozen"><span class="w">' + (b.besluit === "go" ? (Array.isArray(b.kanalen) ? b.kanalen : ["zijbalk"]).map(function (x) { return x === "zijbalk" ? "Zijbalk" : "Infofrankrijk"; }).join(", ") + (b.categorie && LABEL[b.categorie] ? " · " + LABEL[b.categorie] : "") : "Niet in zijbalk of Infofrankrijk") + '</span><span class="t">' + esc(b.titelRedactie || b.titel) + '</span><button class="knop klein" type="button" data-herstel="' + esc(b.id) + '">Terugdraaien</button></div>';
     });
-    return h ? h + '<p class="klein">Terugdraaien haalt een bericht uit de zijbalk en zet het terug op Te kiezen (een weggegooide synthese komt niet terug; een gepubliceerde synthese alleen het eerste etmaal). Weghalen haalt een synthese van de nieuwspagina.</p>' : '<div class="leeg">Vandaag nog niets gekozen.</div>';
+    return h ? h + '<p class="klein">Terugdraaien haalt een bericht uit de zijbalk en van Infofrankrijk en zet het terug op Te kiezen (een weggegooide synthese komt niet terug; een gepubliceerde synthese alleen het eerste etmaal). Weghalen haalt een synthese van de nieuwspagina.</p>' : '<div class="leeg">Vandaag nog niets gekozen.</div>';
   }
 
   function vind(id) { for (var i = 0; i < items.length; i++) if (items[i].id === id) return items[i]; return null; }
   function bezig(id, aan) { var el = document.getElementById("i-" + id); if (el) el.classList.toggle("bezig", aan); }
 
-  // Eén tik is één keuze. De stappen per soort bericht:
-  //  synthese:  Nieuwspagina = publiceren; Zijbalk = alleen zijbalk;
-  //             Beide = publiceren en zijbalk; Weg = uit /review.
-  //  overheid:  staat al op de nieuwspagina; Ook zijbalk; Weg = ook van de nieuwspagina.
-  //  krantenbericht of meteo: Zijbalk (go) of Weg (no-go).
+  // Schakelaars kiezen, "OK, plaatsen" legt vast. De stappen per soort bericht:
+  //  synthese:  nieuwspagina aan = publiceren (met nieuwsbrief/Infopoche ja of
+  //             nee); zijbalk en Infofrankrijk = selectiebesluit met kanalen;
+  //             Weg = uit /review.
+  //  overheid en gepubliceerde synthese: staan al op de nieuwspagina;
+  //             nieuwsbrief/Infopoche via review "kanalen"; Weg = ook van de nieuwspagina.
+  //  krantenbericht of meteo: zijbalk en/of Infofrankrijk (go) of Weg (no-go).
   // Elke keuze over een bericht uit /review wordt ook in de selectie vastgelegd:
   // zo is het van deze pagina af en leert de AI ervan.
   // Mislukt de tweede stap, dan het zojuist vastgelegde besluit terugdraaien:
@@ -345,38 +384,45 @@
     });
   }
 
-  function kies(id, plek, bevestigd) {
+  // k = de vijf plekken (true/false); weg = alles uit, ook van de nieuwspagina.
+  function kies(id, k, bevestigd) {
     var it = vind(id); if (!it) return;
     var cat = gekozenRubriek(it);
-    var zij = plek === "zijbalk" || plek === "beide";
-    if (zij && !cat) { melding("Kies eerst een rubriek."); return; }
+    var zij = [];
+    if (k.zijbalk) zij.push("zijbalk");
+    if (k.infofrankrijk) zij.push("infofrankrijk");
+    var act = { nieuwsbrief: !!k.nieuwsbrief, infopoche: !!k.infopoche };
+    var weg = !k.nieuwspagina && !zij.length;
+    if (zij.length && !cat) { melding("Kies eerst een rubriek."); return; }
     bezig(id, true); delete waarschuwing[id];
-    var stap;
+    var c = cat || undefined, stap;
     if (it.soort === "kandidaat") {
-      stap = post("/api/selectie", { actie: zij ? "go" : "nogo", id: id, categorie: cat || undefined });
+      stap = post("/api/selectie", { actie: zij.length ? "go" : "nogo", id: id, categorie: c, kanalen: zij });
     } else if (it.soort === "overheid" || it.soort === "publicatie") {
-      stap = post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, zijbalk: zij, categorie: cat || undefined }).then(function (d) {
-        if (!d.ok || plek !== "weg") return d;
-        return terugBijFout(d, post("/api/review", it.soort === "overheid" ? { actie: "verwijder-overheid", id: id } : { actie: "depubliceer", id: id }));
-      });
-    } else if (plek === "nieuwspagina" || plek === "beide") {
-      stap = post("/api/review", { actie: "publiceer", id: id, tekst: it.tekst, bevestigd: bevestigd === true }).then(function (d) {
+      stap = post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c }).then(function (d) {
         if (!d.ok) return d;
-        return post("/api/selectie", { actie: "redactie", herkomst: "publicatie", id: id, zijbalk: zij, categorie: cat || undefined });
+        if (weg) return terugBijFout(d, post("/api/review", it.soort === "overheid" ? { actie: "verwijder-overheid", id: id } : { actie: "depubliceer", id: id }));
+        return terugBijFout(d, post("/api/review", { actie: "kanalen", id: id, kanalen: act }));
+      });
+    } else if (k.nieuwspagina) {
+      stap = post("/api/review", { actie: "publiceer", id: id, tekst: it.tekst, bevestigd: bevestigd === true, kanalen: act }).then(function (d) {
+        if (!d.ok) return d;
+        return post("/api/selectie", { actie: "redactie", herkomst: "publicatie", id: id, kanalen: zij, categorie: c });
       });
     } else {
-      stap = post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, zijbalk: zij, categorie: cat || undefined }).then(function (d) {
-        if (!d.ok || plek !== "weg") return d;
+      stap = post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, kanalen: zij, categorie: c }).then(function (d) {
+        if (!d.ok || !weg) return d;
         return terugBijFout(d, post("/api/review", { actie: "weg", id: id }));
       });
     }
     stap.then(function (d) {
       if (!d.ok) {
         bezig(id, false);
-        waarschuwing[id] = { fout: d.fout || "Mislukt.", bevestig: !!d.bevestigingNodig, plek: plek };
+        waarschuwing[id] = { fout: d.fout || "Mislukt.", bevestig: !!d.bevestigingNodig, k: k };
         teken(); return;
       }
-      melding({ nieuwspagina: "Op de nieuwspagina", zijbalk: "In de zijbalk", beide: "Op de nieuwspagina en in de zijbalk", weg: "Weg" }[plek]);
+      delete keus[id];
+      melding(weg ? "Weg" : "Geplaatst: " + PLEKKEN.filter(function (p) { return k[p[0]]; }).map(function (p) { return p[1]; }).join(", "));
       laad();
     }).catch(function () { bezig(id, false); melding("Niet bereikbaar."); });
   }
@@ -387,10 +433,10 @@
     if (d.tab) { tab = d.tab; teken(); return; }
     if (d.alles) { toonAlles = d.alles === "1"; teken(); return; }
     if (d.rubriek) { rubriek[d.id] = d.rubriek; teken(); return; }
-    if (d.plek) {
-      kies(d.id, d.plek); return;
-    }
-    if (d.bevestig) { var w = waarschuwing[d.bevestig]; kies(d.bevestig, w ? w.plek : "nieuwspagina", true); return; }
+    if (d.schakel) { schakel(d.id, d.schakel); return; }
+    if (d.plaats) { var it = vind(d.plaats); if (it) kies(d.plaats, keuzeVan(it)); return; }
+    if (d.weg) { kies(d.weg, {}); return; }
+    if (d.bevestig) { var w = waarschuwing[d.bevestig]; if (w && w.k) kies(d.bevestig, w.k, true); return; }
     if (d.meer) { open[d.meer] = open[d.meer] ? false : true; teken(); return; }
     if (d.blokvraag) { open[d.blokvraag] = "blok"; teken(); return; }
     if (d.blokkeer) {

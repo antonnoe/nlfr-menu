@@ -170,7 +170,11 @@ test("nieuwsbrief en Infopoche: alleen booleans voor die twee sleutels gaan mee 
 
 test("/redactie heeft vijf plekken, Ja/Alleen zijbalk/Nee en Plaats zo, en beheer- en voorbeeldlinks", () => {
   const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
-  for (const p of ["nieuwspagina", "zijbalk", "nieuwsbrief", "infopoche", "infofrankrijk"]) assert.ok(html.includes(`["${p}", "`), p);
+  // de lijsten komen uit het regelbestand via /api/selectie, niet uit de pagina zelf
+  assert.match(html, /PLEKKEN = \(rg\.plekken \|\| \[\]\)\.map/);
+  assert.match(html, /REDENEN = rg\.redenen/);
+  assert.ok(!/var REDENEN = \["/.test(html) && !/var PLEKKEN = \[\[/.test(html) && !/var LABEL = \{ algemeen/.test(html));
+  assert.match(fs.readFileSync(new URL("../api/selectie.js", import.meta.url), "utf8"), /plekken: PLEKKEN_VIJF/);
   for (const t of ["Ja, zoals voorgesteld", "Alleen zijbalk", "Rest van vandaag: nee", "Al automatisch live vandaag", "Door de AI niet voorgesteld", "Anders: plekken, rubriek of tekst", "Plaats zo", "Ongedaan maken", "Opnieuw proberen", "Bekijken en beheer"]) assert.ok(html.includes(t), t);
   for (const u of ["/sidebar-nieuws", "nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", "https://infopoche.fr", "https://infofrankrijk.com/#open", 'href="/review"']) assert.ok(html.includes(u), u);
 });

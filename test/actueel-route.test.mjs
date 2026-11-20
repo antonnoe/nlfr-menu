@@ -40,6 +40,7 @@ function kvVoorraad() {
     kop: `Nederlandse kop ${n}`,
     samenvatting: `Nederlandse samenvatting ${n}.`,
     gepubliceerdOp: new Date(nu - n * 3600 * 1000).toISOString(),
+    poort: { status: "ok", score: 60, door: "model" }, // door de poort (zonder poortveld is een doc niet live)
   });
   return new Map([
     [`${KV_PREFIX}overheid:doc1`, JSON.stringify(doc(1))],

@@ -127,8 +127,8 @@ test("leren: eerdere go's en no-go's gaan als voorbeelden mee in de invoer", () 
     { besluit: "nogo", categorie: null, titel: "Veertien aapjes gestolen", besluitOp: "2026-11-06T11:00:00Z" },
   ];
   const invoer = bouwInvoer([{ soort: "pers", bron: "NOS", land: "NL", titel: "Test", peilAangeboden: [] }], voorbeeldenVoorModel(besluiten));
-  assert.match(invoer, /GO \[regelgeving\] CAK-bijdrage 2027/);
-  assert.match(invoer, /NO-GO Veertien aapjes gestolen/);
+  assert.match(invoer, /GO CAK-bijdrage 2027 \(gekozen: zijbalk; rubriek: regelgeving\)/);
+  assert.match(invoer, /NO-GO Veertien aapjes gestolen \(gekozen: weg\)/);
   assert.match(invoer, /#1 \[pers, NOS, NL\] Test/);
 });
 

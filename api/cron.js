@@ -261,6 +261,8 @@ export default async function handler(req, res) {
     const weg = new Set(overheidPoort.weg);
     for (let i = overheidBehouden.length - 1; i >= 0; i--) if (weg.has(overheidBehouden[i].id)) overheidBehouden.splice(i, 1);
     delete overheidPoort.weg;
+    // Zichtbaar in de logs (de JSON van de cron staat niet in de logs): zo is te zien of de poort draaide.
+    console.log(`[cron] overheidpoort: ok=${overheidPoort.ok} wacht=${overheidPoort.wacht} afgewezen=${overheidPoort.afgewezen} gewijzigd=${overheidPoort.gewijzigd} eraf=${overheidPoort.eraf} docs=${overheidBehouden.length}`);
   } catch (e) {
     overheidPoort = { overgeslagen: e instanceof Error ? e.message : String(e) };
     console.warn(`[cron] overheidpoort overgeslagen: ${overheidPoort.overgeslagen}`);
@@ -376,7 +378,7 @@ export default async function handler(req, res) {
     if (!d || !d.id) continue;
     const t = Date.parse(d.datum || d.gepubliceerdOp) || 0;
     if (!t || nu - t < OPNAME_GRENS_MS) {
-      if (!d.poort || d.poort.status === "ok") overheidLive.push(d);
+      if (d.poort && d.poort.status === "ok") overheidLive.push(d);
       continue;
     }
     if (d.poort && d.poort.status === "wacht") {

@@ -297,8 +297,12 @@
     return items;
   }
   function bronTekst(c, urls) {
+    // De namen van de kranten, niet alleen het aantal.
     var namen = (c.poort && c.poort.outletNamen) || c.outletNamen || [];
-    if (namen.length) return namen.length + (namen.length === 1 ? " krant" : " kranten");
+    if (!namen.length) namen = (c.bronnen || []).map(function (b) { return b.bron || b.naam || ""; });
+    var gezien = {};
+    namen = namen.map(function (x) { return String(x || "").trim(); }).filter(function (x) { var k = x.toLowerCase(); if (!x || gezien[k]) return false; gezien[k] = true; return true; });
+    if (namen.length) return namen.join(", ");
     return urls.length + (urls.length === 1 ? " bron" : " bronnen");
   }
   function score(it) { return it.ai && typeof it.ai.score === "number" ? it.ai.score : null; }

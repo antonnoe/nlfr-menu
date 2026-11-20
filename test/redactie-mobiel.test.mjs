@@ -83,9 +83,10 @@ async function scherm({ fout = false, traag = false } = {}) {
   };
 }
 
-test("redactie: syntheses zonder of met lage score en overheid gaan voor krant 98", async () => {
+test("redactie: syntheses en overheid gaan voor krant 98; synthese onder 40 naar overgeslagen", async () => {
   const s = await scherm(), lijst = s.elements.get("lijst").innerHTML;
-  for (const id of ["synthese", "laag", "publicatie", "overheid"]) {
+  assert.equal(s.st.nietAi.some((i) => i.id === "laag"), true);
+  for (const id of ["synthese", "publicatie", "overheid"]) {
     assert.ok(lijst.indexOf(`data-item="${id}"`) < lijst.indexOf('data-item="krant98"'), id);
   }
   assert.ok(lijst.indexOf('data-item="krant98"') < lijst.indexOf('data-item="krant70"'));
@@ -95,7 +96,7 @@ test("redactie: bestaande losse krant 69 verdwijnt uit de werklijst, 70 en meteo
   const s = await scherm();
   assert.equal(s.st.lijst.some((i) => i.id === "krant69"), false);
   assert.equal(s.st.nietAi.some((i) => i.id === "krant69"), true);
-  for (const id of ["krant70", "weer", "synthese", "laag", "overheid"]) assert.ok(s.st.lijst.some((i) => i.id === id), id);
+  for (const id of ["krant70", "weer", "synthese", "overheid"]) assert.ok(s.st.lijst.some((i) => i.id === id), id);
 });
 
 test("redactie: advies staat buiten de afgekapt weergegeven bronregel", async () => {
@@ -226,4 +227,25 @@ test("redactie: Wijzig haalt een opgeslagen keuze uit Gedaan en bewaart de gekoz
   assert.equal(s.st.cn.krant98.k.zijbalk, true);
   assert.equal(s.elements.get("gedaan").hidden, true);
   assert.equal(s.elements.get("gedaan-n").textContent, 0);
+});
+
+test("redactie: zelfde onderwerp (gedeelde bron of zelfde kopwoorden) staat één keer", async () => {
+  const html2 = html;
+  const zelfde = html2.match(/function kopWoorden[\s\S]*?\n  }\n/)[0];
+  const ctx = vm.createContext({ urlSleutel: (u) => u });
+  vm.runInContext(zelfde, ctx);
+  assert.equal(ctx.zelfdeOnderwerp({ kop: "Villepin kondigt presidentskandidatuur voor 2027 aan" }, { kop: "De Villepin kandideert voor presidentsverkiezingen 2027" }), true);
+  assert.equal(ctx.zelfdeOnderwerp({ kop: "a", urls: ["x"] }, { kop: "b", urls: ["x"] }), true);
+  assert.equal(ctx.zelfdeOnderwerp({ kop: "Eigen synthese" }, { kop: "Al verschenen synthese" }), false);
+});
+
+test("redactie: vier berichten over overstromingen Pas-de-Calais worden één (de synthese)", () => {
+  const zelfde = html.match(/function kopWoorden[\s\S]*?\n  }\n/)[0];
+  const ctx = vm.createContext({ urlSleutel: (u) => u });
+  vm.runInContext(zelfde, ctx);
+  const syn = { kop: "Overstromingen in Pas-de-Calais, noodplan geactiveerd" };
+  for (const k of ["Regen en overstromingen in Pas-de-Calais: nog steeds oranje alarm, wegen en huizen onder water",
+    "Prefect Pas-de-Calais: nog een ingewikkelde dag door aanhoudende overstromingen",
+    "Overstromingen in Pas-de-Calais: 35 gemeenten al onder water, één dorp geïsoleerd"]) assert.equal(ctx.zelfdeOnderwerp(syn, { kop: k }), true, k);
+  assert.equal(ctx.zelfdeOnderwerp(syn, { kop: "Franse huurprijsregulering twee jaar verlengd" }), false);
 });

@@ -10,6 +10,7 @@ import {
   bouwInvoer,
   bouwFeed,
   zoekGekoppeld,
+  zoekGekoppeldAlle,
   redactieBesluit,
   urlSleutel,
   FRANKRIJKNIEUWS_URL,
@@ -72,6 +73,7 @@ test("koppeling op bronlink: www, slash en querystring tellen niet", () => {
   const concept = { id: "c1", bronnen: [{ naam: "Le Monde", url: "https://www.lemonde.fr/a/b/" }, { naam: "NOS", url: "https://nos.nl/c?utm=1" }] };
   assert.equal(zoekGekoppeld(concept, kandidaten).id, "k2", "hoogste score wint");
   assert.equal(zoekGekoppeld({ id: "z", bronnen: [] }, kandidaten), null);
+  assert.deepEqual(zoekGekoppeldAlle(concept, kandidaten).map((k) => k.id), ["k2", "k1"], "alle bronartikelen, beste eerst");
 });
 
 const CONCEPT = { id: "abc12", kop: "Kop van de synthese", bronnen: [{ naam: "Le Monde", url: "https://www.lemonde.fr/a" }], aangemaaktOp: "2026-11-20T10:00:00Z" };
@@ -108,6 +110,19 @@ test("overheidsbericht krijgt standaard de rubriek Wet- en regelgeving", () => {
   assert.equal(besluit.categorie, "regelgeving");
   assert.equal(besluit.soort, "overheid");
   assert.equal(besluit.url, FRANKRIJKNIEUWS_URL);
+});
+
+test("selectie-API: opgenomen bronartikelen niet los op het scherm, terugdraaien geeft ze vrij", () => {
+  const api = fs.readFileSync(new URL("../api/selectie.js", import.meta.url), "utf8");
+  assert.match(api, /kandidaten\.filter\(\(k\) => !k\.opgenomen\)/);
+  assert.match(api, /opgenomen: uit\.besluit\.id/);
+  assert.match(api, /b\.redactie\.ook/);
+});
+
+test("/redactie toont gepubliceerde syntheses zonder zijbalkkeuze", () => {
+  const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
+  assert.match(html, /rev\.publicaties/);
+  assert.match(html, /actie: "depubliceer"/);
 });
 
 test("/redactie staat achter de login en roept beide backends aan", () => {

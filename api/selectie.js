@@ -35,7 +35,7 @@ import {
   kandidatenVoorScherm,
   zonderGeblokkeerd,
   bronSleutel,
-  zoekGekoppeld,
+  zoekGekoppeldAlle,
   redactieBesluit,
 } from "../lib/selectie/kern.js";
 import { KEY_CONCEPT, KEY_PUBLICATIE, KEY_OVERHEID } from "../lib/config.js";
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       getJSON(KEY_SEL_RONDE),
       getJSON(KEY_SEL_BLOKKADE),
     ]);
-    const tonen = kandidatenVoorScherm(zonderGeblokkeerd(kandidaten, blokkade), besluiten);
+    const tonen = kandidatenVoorScherm(zonderGeblokkeerd(kandidaten.filter((k) => !k.opgenomen), blokkade), besluiten);
     const recent = besluiten.sort((a, b) => String(b.besluitOp || "").localeCompare(String(a.besluitOp || ""))).slice(0, 40);
     const go = besluiten.filter((b) => b.besluit === "go").length;
     return res.status(200).json({
@@ -110,11 +110,15 @@ export default async function handler(req, res) {
     if (!sleutel) return res.status(400).json({ ok: false, fout: "Onbekende herkomst." });
     const [doc, kandidaten] = await Promise.all([getJSON(sleutel(id)), listJSON(SCAN_SEL_KANDIDAAT)]);
     if (!doc) return res.status(404).json({ ok: false, fout: "Bericht niet (meer) gevonden." });
-    const gekoppeld = zoekGekoppeld(doc, kandidaten);
+    const [gekoppeld = null, ...ook] = zoekGekoppeldAlle(doc, kandidaten);
     const uit = redactieBesluit({ herkomst, doc, gekoppeld, categorie, zijbalk: zijbalk !== false, door: deur.adres || null });
     if (uit.fout) return res.status(400).json({ ok: false, fout: uit.fout });
+    uit.besluit.redactie.ook = ook.map((k) => k.id);
     await setJSON(KEY_SEL_BESLUIT(uit.besluit.id), uit.besluit); // geen TTL
     if (gekoppeld) await del(KEY_SEL_KANDIDAAT(gekoppeld.id));
+    // De andere bronartikelen blijven bewaard (de ronde ziet ze als bekend),
+    // maar komen niet los op het scherm.
+    for (const k of ook) await setJSON(KEY_SEL_KANDIDAAT(k.id), { ...k, opgenomen: uit.besluit.id }, SEL_KANDIDAAT_TTL_S);
     return res.status(200).json({ ok: true, besluit: { id: uit.besluit.id, besluit: uit.besluit.besluit, categorie: uit.besluit.categorie } });
   }
 
@@ -151,6 +155,13 @@ export default async function handler(req, res) {
     // de kandidaat waarop het steunde, of alleen weg uit de zijbalk.
     if (b.redactie) {
       if (b.redactie.kandidaat) await setJSON(KEY_SEL_KANDIDAAT(id), b.redactie.kandidaat, SEL_KANDIDAAT_TTL_S);
+      for (const kid of b.redactie.ook || []) {
+        const k = /^[a-z0-9]{1,20}$/.test(String(kid)) ? await getJSON(KEY_SEL_KANDIDAAT(kid)) : null;
+        if (k && k.opgenomen === id) {
+          const { opgenomen, ...vrij } = k;
+          await setJSON(KEY_SEL_KANDIDAAT(kid), vrij, SEL_KANDIDAAT_TTL_S);
+        }
+      }
       await del(KEY_SEL_BESLUIT(id));
       return res.status(200).json({ ok: true });
     }

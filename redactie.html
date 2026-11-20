@@ -186,6 +186,20 @@
       items.push({ soort: "overheid", id: o.id, tijd: o.gepubliceerdOp || o.datum, kleur: "d", kop: o.kop || o.titelBron,
         tekst: o.samenvatting, bron: o.bron, url: veilig(o.url), ai: ai, voorstel: v, altijd: true });
     });
+    // Syntheses die al op de nieuwspagina staan maar nog geen zijbalkkeuze
+    // hebben (gepubliceerd via /review, of een keuze die is teruggedraaid).
+    var grensPub = Date.now() - 24 * 3600e3;
+    (rev.publicaties || []).forEach(function (c) {
+      if (klaar[c.id] || Date.parse(c.gepubliceerdOp || "") < grensPub) return;
+      var urls = (c.bronnen || []).map(function (b) { return b.url; });
+      var nl = urls.some(nlHost), fr = urls.some(function (u) { return !nlHost(u); });
+      var gek = koppel(urls);
+      var ai = gek ? gek.ai : null;
+      var v = ai && ai.plek ? ai.plek : "nieuwspagina";
+      if (v === "zijbalk") v = "beide";
+      items.push({ soort: "publicatie", id: c.id, tijd: c.gepubliceerdOp, kleur: nl && fr ? "c" : nl ? "a" : "b",
+        kop: c.kop, tekst: c.tekst, bron: (c.outletNamen || []).join(", "), ai: ai, url: "", voorstel: v, altijd: true });
+    });
     (sel.kandidaten || []).forEach(function (k) {
       if (gebruikt[k.id]) return;
       var ai = k.ai;
@@ -238,6 +252,7 @@
     if (it.tekst) h += '<p class="tekst">' + esc(it.tekst) + "</p>";
     else if (it.ai && it.ai.reden) h += '<p class="klein">' + esc(it.ai.reden) + "</p>";
     if (it.soort === "overheid") h += '<p class="klein">Staat al op de nieuwspagina (automatisch).</p>';
+    if (it.soort === "publicatie") h += '<p class="klein">Staat al op de nieuwspagina.</p>';
     if (it.weigering) h += '<p class="klein">Kan niet op de nieuwspagina: de huisregel (minstens twee kranten) is niet gehaald.</p>';
     h += extraBlok(it.ai);
     var r = gekozenRubriek(it);
@@ -251,7 +266,7 @@
     h += '<div class="keuze">';
     if (it.soort === "concept") {
       h += knop(it, "nieuwspagina", "Nieuwspagina", it.nieuwsMag) + knop(it, "zijbalk", "Zijbalk", true) + knop(it, "beide", "Beide", it.nieuwsMag) + knop(it, "weg", "Weg", true);
-    } else if (it.soort === "overheid") {
+    } else if (it.soort === "overheid" || it.soort === "publicatie") {
       h += '<button class="knop aan" type="button" data-plek="nieuwspagina" data-id="' + esc(it.id) + '">Nieuwspagina ✓</button>' + knop(it, "beide", "Ook zijbalk", true) + knop(it, "weg", "Weg", true);
     } else {
       var los = "Een los krantenbericht komt niet op de nieuwspagina (minstens twee kranten nodig).";
@@ -266,7 +281,7 @@
         if (open[it.id] === "blok") h += '<span>Weet je het zeker? Berichten van ' + esc(it.bronNaam) + ' komen dan niet meer binnen.</span><div class="rij"><button class="knop" type="button" data-blokkeer="' + esc(it.bronNaam) + '">Ja, blokkeren</button><button class="knop klein" type="button" data-meer="' + esc(it.id) + '">Nee</button></div>';
         else h += '<button class="knop klein" type="button" data-blokvraag="' + esc(it.id) + '">Bron blokkeren: ' + esc(it.bronNaam) + "</button>";
       }
-      if (it.soort === "overheid") h += '<span class="klein">Weg haalt het bericht ook van de nieuwspagina.</span>';
+      if (it.soort === "overheid" || it.soort === "publicatie") h += '<span class="klein">Weg haalt het bericht ook van de nieuwspagina.</span>';
       h += "</div>";
     }
     return h + "</article>";
@@ -306,7 +321,7 @@
     gekozen.forEach(function (b) {
       h += '<div class="gekozen"><span class="w">' + (b.besluit === "go" ? "Zijbalk" + (b.categorie && LABEL[b.categorie] ? " · " + LABEL[b.categorie] : "") : "Niet in zijbalk") + '</span><span class="t">' + esc(b.titelRedactie || b.titel) + '</span><button class="knop klein" type="button" data-herstel="' + esc(b.id) + '">Terugdraaien</button></div>';
     });
-    return h ? h + '<p class="klein">Terugdraaien haalt een bericht uit de zijbalk en zet het terug op Te kiezen (een weggegooide synthese komt niet terug). Weghalen haalt een synthese van de nieuwspagina.</p>' : '<div class="leeg">Vandaag nog niets gekozen.</div>';
+    return h ? h + '<p class="klein">Terugdraaien haalt een bericht uit de zijbalk en zet het terug op Te kiezen (een weggegooide synthese komt niet terug; een gepubliceerde synthese alleen het eerste etmaal). Weghalen haalt een synthese van de nieuwspagina.</p>' : '<div class="leeg">Vandaag nog niets gekozen.</div>';
   }
 
   function vind(id) { for (var i = 0; i < items.length; i++) if (items[i].id === id) return items[i]; return null; }
@@ -328,10 +343,10 @@
     var stap;
     if (it.soort === "kandidaat") {
       stap = post("/api/selectie", { actie: zij ? "go" : "nogo", id: id, categorie: cat || undefined });
-    } else if (it.soort === "overheid") {
-      stap = post("/api/selectie", { actie: "redactie", herkomst: "overheid", id: id, zijbalk: zij, categorie: cat || undefined }).then(function (d) {
+    } else if (it.soort === "overheid" || it.soort === "publicatie") {
+      stap = post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, zijbalk: zij, categorie: cat || undefined }).then(function (d) {
         if (!d.ok || plek !== "weg") return d;
-        return post("/api/review", { actie: "verwijder-overheid", id: id });
+        return post("/api/review", it.soort === "overheid" ? { actie: "verwijder-overheid", id: id } : { actie: "depubliceer", id: id });
       });
     } else if (plek === "nieuwspagina" || plek === "beide") {
       stap = post("/api/review", { actie: "publiceer", id: id, tekst: it.tekst, bevestigd: bevestigd === true }).then(function (d) {
@@ -362,8 +377,6 @@
     if (d.alles) { toonAlles = d.alles === "1"; teken(); return; }
     if (d.rubriek) { rubriek[d.id] = d.rubriek; teken(); return; }
     if (d.plek) {
-      var it = vind(d.id);
-      if (it && it.soort === "overheid" && d.plek === "nieuwspagina") { kies(d.id, "nieuwspagina"); return; }
       kies(d.id, d.plek); return;
     }
     if (d.bevestig) { var w = waarschuwing[d.bevestig]; kies(d.bevestig, w ? w.plek : "nieuwspagina", true); return; }

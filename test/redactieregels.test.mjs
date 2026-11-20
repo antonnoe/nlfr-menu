@@ -172,7 +172,8 @@ test("live-scenario: alleen score vanaf de drempel of een plaatsing door de reda
   assert.equal(poortUitslag(d, {}).status, "wacht");
   const nieuw = { ...d, poort: { status: "wacht", score: null, door: null } };
   const keuze = { besluit: "go", redactie: { reviewId: d.id, herkomst: "overheid", nieuwspagina: true } };
-  assert.equal(poortUitslag(nieuw, { besluiten: [keuze] }).status, "ok");
+  assert.equal(poortUitslag(nieuw, { besluiten: [keuze] }).status, "wacht", "een besluit zonder poort.keuze telt niet");
+  assert.equal(poortUitslag({ ...nieuw, poort: { status: "ok", score: null, door: "redactie", keuze: true } }, { besluiten: [keuze] }).status, "ok");
 });
 
 test("de cron en /api/actueel kennen geen 'zonder poortveld = live' meer", () => {
@@ -183,7 +184,7 @@ test("de cron en /api/actueel kennen geen 'zonder poortveld = live' meer", () =>
 
 test("R17: Rijksoverheid-berichten van 20-11 komen ook bij een hoge modelscore niet live, behalve wat Nederlanders in het buitenland raakt", () => {
   const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
-  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 13);
+  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 15);
   for (const o of set.overheid) {
     if (o.verwacht === "twijfel") continue;
     const d = { id: "x", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/x", thema: "nl-overheid", kop: o.kop, samenvatting: o.samenvatting };
@@ -318,4 +319,29 @@ test("R17 blijft staan over twee rondes, ook als de gekoppelde kandidaat uit het
   // maar een bericht dat inmiddels wel het buitenland raakt, verliest de markering
   const nieuw = { ...opslag.get(d.id), kop: "Pensioen van Nederlanders in Frankrijk" };
   assert.notEqual(poortUitslag(nieuw, {}).reden, "r17");
+});
+
+const ZES = ["Benoeming directeur-generaal", "Participatiewet", "burgemeestersvacature Lingewaard", "Zr.Ms. Evertsen", "Economische ministeries op Salon des maires", "IBO-onderzoek"];
+
+test("de zes berichten van de live-controle 19:07 zijn niet live, hoe ze ook gestempeld staan", () => {
+  const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
+  for (const k of ZES) {
+    const o = set.overheid.find((x) => x.kop.includes(k) && x.verwacht === "wacht");
+    assert.ok(o, k);
+    const d = { id: "z", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/z", thema: "nl-overheid", kop: o.kop, samenvatting: o.samenvatting };
+    const nietLive = (poort, ctx = {}) => assert.equal(poortUitslag({ ...d, poort }, ctx).status, "wacht", `${k}: ${JSON.stringify(poort)}`);
+    nietLive({ status: "ok", score: 2, door: "redactie" });
+    nietLive({ status: "ok", score: 5, door: "redactie" });
+    nietLive({ status: "ok", score: 55, door: "model" });
+    nietLive({ status: "wacht" }, { besluiten: [{ besluit: "go", redactie: { reviewId: "z", herkomst: "overheid", nieuwspagina: true } }] });
+    nietLive({ status: "ok", score: 3, door: "redactie" }, { besluiten: [{ besluit: "go", redactie: { reviewId: "z", herkomst: "overheid", nieuwspagina: true } }] });
+    nietLive({ status: "wacht" }, { besluiten: [{ besluit: "go", url: d.url, kanalen: ["zijbalk"] }], kandidaten: [{ url: d.url, ai: { score: 55 } }] });
+    assert.equal(poortUitslag({ ...d }, { besluiten: [{ besluit: "nogo", redactie: { reviewId: "z", herkomst: "overheid" } }] }).status, "wacht");
+  }
+});
+
+test("buitenlandKenmerk: gelden-per-zin en het kenmerk is benoembaar (voor de cron-log)", () => {
+  assert.equal(R.buitenlandKenmerk("De AOW en het pensioen zijn goed. In het buitenland ligt dat anders."), null);
+  assert.match(R.buitenlandKenmerk("AOW voor wie in het buitenland woont"), /buitenland/);
+  assert.equal(R.buitenlandKenmerk("Zr.Ms. Evertsen in de Rode Zee"), null);
 });

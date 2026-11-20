@@ -141,6 +141,7 @@
   var LABEL = {};
   var VOLGORDE = ["algemeen", "regelgeving", "ondernemers", "reizen", "meteo"];
   var REDENEN = [];
+  var R17_REDEN = ""; // uit /api/selectie (lib/redactieregels.js)
   var GROEPEN = ["Door jou teruggehaald", "Meerdere kranten", "Overheid, de AI twijfelt", "Eén krant"];
   var LOS = "Eén krant: volgens de huisregel niet op nieuwspagina, nieuwsbrief en Infopoche."; // overschreven door sel.regels.losTekst (lib/redactieregels.js)
   var VOLGT = "Volgt de nieuwspagina: zet eerst de nieuwspagina aan.";
@@ -186,6 +187,7 @@
         NAAM = {}; (rg.plekken || []).forEach(function (p) { NAAM[p.id] = p.kort; });
         LABEL = {}; (rg.rubrieken || []).forEach(function (r) { LABEL[r.key] = r.label; });
         REDENEN = rg.redenen || [];
+        R17_REDEN = rg.r17Reden || "";
       }
       if (!rev.ok || !sel.ok) { laadFout(rev.fout || sel.fout || "Fout bij laden."); return; }
       geladen = true; bouw(); tekenRomp();
@@ -312,7 +314,10 @@
   // het modelvoorstel in vijf plekken (ai.plekken); een synthese uit meerdere kranten
   // leidt zijn voorstel los af, want het oordeel is van één losse krant en mag de
   // nieuwspagina niet afsluiten.
+  // R17: de poort hield dit overheidsbericht tegen als Nederlands binnenlands nieuws (poort.reden).
+  function r17(it) { return it.soort === "overheid" && !!(it.poort && it.poort.reden === "r17"); }
   function voorstelK(it) {
+    if (r17(it)) return {}; // geen nieuwspagina, nieuwsbrief of Infopoche: het voorstel is Nee
     var P = it.ai && Array.isArray(it.ai.plekken) && it.ai.plekken.length ? it.ai.plekken : null;
     var k = {};
     if (it.soort === "kandidaat") {
@@ -353,6 +358,7 @@
     return st.cn[it.id];
   }
   function waarom(it) {
+    if (r17(it)) return R17_REDEN;
     if (!it.ai) return "De AI heeft dit bericht nog niet beoordeeld; dit is de veilige standaard.";
     if (it.ai.reden) return it.ai.reden;
     return "Voorstel van de AI.";
@@ -456,7 +462,7 @@
       "<h2>" + kop + "</h2>" +
       (it.origineel ? '<p class="fr">' + esc(it.origineel) + "</p>" : "") +
       (it.tekst ? '<p class="samenvatting">' + esc(it.tekst) + "</p>" : "") +
-      '<div class="voorstel">Voorstel: <b>' + lijstTekst(vk) + "</b>" +
+      '<div class="voorstel">Voorstel: <b>' + (r17(it) ? "Nee" : lijstTekst(vk)) + "</b>" +
       '<span class="waarom">Rubriek ' + esc(LABEL[vr]) + ". " + esc(waarom(it)) + "</span>" +
       (!it.ai ? '<span class="let">Geen AI-oordeel: kijk even of het klopt.</span>' : "") + "</div>";
     if (f) h += '<div class="melding-kaart" role="alert"><span>' + esc(f.tekst) + "</span>" + (f.bevestig ? '<button type="button" class="knop" data-bevestig="' + esc(it.id) + '">Toch publiceren</button>' : "") + "</div>";
@@ -615,7 +621,7 @@
     var t = e.target.closest("button"); if (!t) return;
     var d = t.dataset, it;
     if (d.opnieuw) { laad(); return; }
-    if (d.ja) { it = vind(d.ja); if (it) besluit(it, { soort: "ja", k: voorstelK(it), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "", aangepast: false }); return; }
+    if (d.ja) { it = vind(d.ja); if (it && r17(it)) { besluit(it, { soort: "nee", k: {}, rubriek: rubriekVoorstel(it) }); return; } if (it) besluit(it, { soort: "ja", k: voorstelK(it), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "", aangepast: false }); return; }
     if (d.zb) { it = vind(d.zb); if (it) besluit(it, { soort: "ja", k: schoon(it, { zijbalk: true }), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "", aangepast: false }); return; }
     if (d.nee) { it = vind(d.nee); if (it) besluit(it, { soort: "nee", k: {}, rubriek: rubriekVoorstel(it) }); return; }
     if (d.anders) { st.open[d.anders] = true; tekenItem(d.anders); var x = document.querySelector('[data-item="' + d.anders + '"] .anders'); if (x) x.scrollIntoView({ block: "nearest" }); return; }

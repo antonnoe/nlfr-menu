@@ -247,3 +247,28 @@ test("een synthese leidt zijn voorstel los af en het besluit meet tegen het geto
   assert.ok(p.plekken.includes("nieuwspagina"));
   assert.deepEqual(p.voorstelPlekken, ["nieuwspagina"]);
 });
+
+// ---- Vervolg: /redactie bij een R17-bericht --------------------------------------
+test("R17 op /redactie: de poort legt de reden vast en het voorstel is Nee, met de reden uit de API", async () => {
+  const d = { id: "r17", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/r17", thema: "nl-overheid", kop: "Benoeming directeur-generaal", samenvatting: "Een benoeming.", gepubliceerdOp: "2026-11-20T08:00:00Z" };
+  const u = poortUitslag(d, { kandidaten: [{ url: d.url, ai: { score: 80 } }] });
+  assert.equal(u.status, "wacht");
+  assert.equal(u.reden, "r17");
+  // verwerkPoort schrijft de reden op, ook bij een doc dat al op wacht stond
+  const opslag = new Map([[d.id, { ...d, poort: { status: "wacht", score: null, door: null } }]]);
+  const tel = await verwerkPoort([opslag.get(d.id)], { kandidaten: [{ url: d.url, ai: { score: 80 } }], besluiten: [] }, {
+    lees: async (x) => structuredClone(opslag.get(x.id)), schrijf: async (x) => { opslag.set(x.id, structuredClone(x)); }, verwijder: async () => {}, afgewezen: async () => {},
+  }, NU);
+  assert.equal(tel.gewijzigd, 1);
+  assert.equal(opslag.get(d.id).poort.reden, "r17");
+  // de pagina: geen eigen lijst of tekst, het voorstel is Nee
+  const html = lees("../redactie.html");
+  assert.match(html, /function r17\(it\)[^\n]*poort\.reden === "r17"/);
+  assert.match(html, /if \(r17\(it\)\) return \{\}/);
+  assert.match(html, /R17_REDEN = rg\.r17Reden/);
+  assert.match(html, /\(r17\(it\) \? "Nee" : lijstTekst\(vk\)\)/);
+  assert.match(html, /if \(it && r17\(it\)\) \{ besluit\(it, \{ soort: "nee"/);
+  assert.ok(!html.includes(R.R17_REDEN), "de redentekst staat niet in de pagina zelf");
+  assert.match(lees("../api/selectie.js"), /r17Reden: R17_REDEN/);
+  assert.equal(R.R17_REDEN, "Nederlands binnenlands nieuws, raakt Nederlanders in het buitenland niet");
+});

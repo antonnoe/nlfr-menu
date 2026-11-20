@@ -68,8 +68,10 @@ test("3. poort: ok blijft ok (ook als de kandidaat verlopen is); een nogo wint v
 
 test("3. poort: een go van de redactie op een oud live bericht blijft; op een nieuw wachtend bericht niet", () => {
   const go = { besluit: "go", redactie: { reviewId: "o1" } };
-  assert.equal(poortUitslag(DOC(), { besluiten: [go] }).status, "ok");
+  // Variant B (20-11-2026): een go-besluit zonder poort.keuze telt niet meer.
+  assert.equal(poortUitslag(DOC(), { besluiten: [go] }).status, "wacht");
   assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { besluiten: [go] }).status, "wacht", "zijbalk-go zet het niet op de nieuwspagina");
+  assert.equal(poortUitslag(DOC({ poort: { status: "ok", door: "redactie", keuze: true } }), { besluiten: [go] }).status, "ok", "expliciete plaatsing blijft");
 });
 
 test("3. overheidIsLive: alleen ok = live; ontbrekend veld of wacht = niet", () => {
@@ -220,13 +222,17 @@ test("F3. de keuze van de redactie gaat voor de score", () => {
   const alleenZij = redactieBesluit({ herkomst: "overheid", doc: DOC(), kanalen: ["zijbalk"], opPagina: false }).besluit;
   assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { kandidaten: [KAND(90)], besluiten: [alleenZij] }).status, "wacht");
   const metPagina = redactieBesluit({ herkomst: "overheid", doc: DOC(), kanalen: ["zijbalk"], opPagina: true }).besluit;
-  assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { kandidaten: [KAND(10)], besluiten: [metPagina] }).status, "ok");
+  // nieuwspagina:true in het besluit alleen is geen keuze (de pagina slaat dat ook op voor al-live regels): keuze:true is nodig.
+  assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { kandidaten: [KAND(10)], besluiten: [metPagina] }).status, "wacht");
+  assert.equal(poortUitslag(DOC({ poort: { status: "ok", door: "redactie", keuze: true } }), { kandidaten: [KAND(10)], besluiten: [metPagina] }).status, "ok");
   assert.ok(!html.includes("geen score van"), "geen onjuiste uitleg over de score");
 });
 
-test("F7. een go van het oude selectiescherm (zonder redactie) telt voor de poort", () => {
+test("F7. een go van het oude selectiescherm (zonder redactie) telt NIET meer voor de poort (variant B)", () => {
   const go = { id: "k1", besluit: "go", url: "https://www.rijksoverheid.nl/a", kanalen: ["zijbalk"] };
-  assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { besluiten: [go] }).status, "ok");
+  assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { besluiten: [go] }).status, "wacht");
+  assert.equal(poortUitslag(DOC(), { besluiten: [go] }).status, "wacht");
+  assert.equal(poortUitslag(DOC({ poort: { status: "ok", door: "redactie", keuze: true } }), { besluiten: [go] }).status, "ok");
 });
 
 test("F5. verwerkPoort leest het bericht opnieuw vlak voor het schrijven: een tussentijdse redactiekeuze blijft", async () => {
@@ -304,10 +310,10 @@ test("B. alles zonder besluit uit 36 uur staat in de lijst, niet alleen kalender
   assert.match(html, /if \(!recent\(it\)\) return;/);
 });
 
-test("D. oud overheidsbericht (geen poortveld) met een nog bestaand besluit blijft live", () => {
+test("D. oud overheidsbericht (geen poortveld) met een besluit zonder keuze:true is niet live (variant B)", () => {
   const nogo = { besluit: "nogo", redactie: { reviewId: "o1" } };
-  assert.equal(poortUitslag(DOC(), { kandidaten: [KAND(5)], besluiten: [nogo] }).status, "ok");
-  assert.equal(poortUitslag(DOC(), { kandidaten: [KAND(5)], besluiten: [{ besluit: "go", redactie: { reviewId: "o1" } }] }).status, "ok");
+  assert.equal(poortUitslag(DOC(), { kandidaten: [KAND(5)], besluiten: [nogo] }).status, "wacht");
+  assert.equal(poortUitslag(DOC(), { kandidaten: [KAND(5)], besluiten: [{ besluit: "go", redactie: { reviewId: "o1" } }] }).status, "wacht");
 });
 
 test("E. na een tik 700 ms geen tikken op de lijst", () => {

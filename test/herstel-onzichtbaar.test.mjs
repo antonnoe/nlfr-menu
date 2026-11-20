@@ -72,8 +72,8 @@ test("3. poort: een go van de redactie op een oud live bericht blijft; op een ni
   assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { besluiten: [go] }).status, "wacht", "zijbalk-go zet het niet op de nieuwspagina");
 });
 
-test("3. overheidIsLive: ontbrekend veld of ok = live, wacht = niet", () => {
-  assert.equal(overheidIsLive(DOC()), true);
+test("3. overheidIsLive: alleen ok = live; ontbrekend veld of wacht = niet", () => {
+  assert.equal(overheidIsLive(DOC()), false);
   assert.equal(overheidIsLive(DOC({ poort: { status: "ok" } })), true);
   assert.equal(overheidIsLive(DOC({ poort: { status: "wacht" } })), false);
 });

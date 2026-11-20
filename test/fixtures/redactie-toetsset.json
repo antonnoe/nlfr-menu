@@ -1,0 +1,225 @@
+{
+ "_uitleg": "Verzonnen koppen (geen echte berichten) met de verwachte uitkomst van de zeven (R11). verwacht: 'weg' = gezeefd, 'door' = door. Bij een nieuwe zeefregel: eerst hier toevoegen.",
+ "items": [
+  {
+   "titel": "Un homme interpellé après un cambriolage à Bergerac",
+   "land": "FR",
+   "bron": "faits divers",
+   "verwacht": "weg",
+   "reden": "",
+   "bekendGat": true
+  },
+  {
+   "titel": "Brandstichting in Nîmes: verdachte aangehouden",
+   "land": "NL",
+   "bron": "faits divers",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Meurtre à Marseille : un suspect en garde à vue",
+   "land": "FR",
+   "bron": "faits divers",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Vrouw neergestoken in Lyon, dader voortvluchtig",
+   "land": "NL",
+   "bron": "faits divers",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Vol à main armée dans une bijouterie de Toulouse",
+   "land": "FR",
+   "bron": "faits divers",
+   "verwacht": "weg",
+   "reden": "",
+   "bekendGat": true
+  },
+  {
+   "titel": "Ligue 1 : Lyon bat Nice 2-1 en match avancé",
+   "land": "FR",
+   "bron": "sport",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Ajax wint met 3-0 van PSV in de Eredivisie",
+   "land": "NL",
+   "bron": "sport",
+   "verwacht": "weg",
+   "reden": "",
+   "bekendGat": true
+  },
+  {
+   "titel": "Rugby : le XV de France s'impose face aux Gallois",
+   "land": "FR",
+   "bron": "sport",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Tour de France 2027: parcours bekendgemaakt",
+   "land": "NL",
+   "bron": "sport",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Aardbeving in Indonesië eist tientallen levens",
+   "land": "NL",
+   "bron": "buitenland",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Séisme au Népal : le bilan s'alourdit",
+   "land": "FR",
+   "bron": "buitenland",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Verkiezingen in Argentinië: peiling wijst op nek-aan-nekrace",
+   "land": "NL",
+   "bron": "buitenland",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Nigeria : des dizaines d'enlèvements dans le nord du pays",
+   "land": "FR",
+   "bron": "buitenland",
+   "verwacht": "weg",
+   "reden": ""
+  },
+  {
+   "titel": "Nieuwe regels voor consumentenkrediet in Frankrijk vanaf 20 november",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Taxe foncière 2026 : les dates à retenir pour payer",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Overstromingen in Pas-de-Calais houden aan",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Bruxelles impose de nouvelles règles aux banques, la France devra adapter sa loi",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Europese Commissie scherpt regels aan; ook Nederland moet aanpassen",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Incendies en Catalogne près de la frontière française, des renforts envoyés",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Alerte orange aux orages dans le Var et les Alpes-Maritimes",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Staking bij de SNCF: veel treinen rijden niet in het weekend",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "MaPrimeRénov' : ce qui change au 1er janvier",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Zorgverzekering voor Nederlanders in Frankrijk: wat verandert er",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Grève dans les aéroports parisiens : vols annulés",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Woonlandfactor en AOW: de regels voor pensionado's in Frankrijk",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Tunnel du Mont-Blanc fermé pour travaux la nuit",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Kerstmarkten in Frankrijk: dit zijn de grootste",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Droogte in de Dordogne: waterbeperkingen verlengd",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Sport : routes coupées autour de Roland-Garros, circulation perturbée",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Macron kondigt nieuwe begroting aan",
+   "land": "NL",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  },
+  {
+   "titel": "Le gouvernement Lecornu présente son budget 2027",
+   "land": "FR",
+   "bron": "doorlaten",
+   "verwacht": "door",
+   "reden": ""
+  }
+ ]
+}

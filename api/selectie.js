@@ -44,8 +44,10 @@ import {
   kanalenVan,
   leesReden,
   SEL_LEES_UREN,
+  meetVoorstel,
 } from "../lib/selectie/kern.js";
 import { slaRedactieBesluitOp } from "../lib/selectie/redactie-opslag.js";
+import { PLEKKEN_VIJF, LOS_PLEKKEN, LOS_TEKST } from "../lib/redactieregels.js";
 import { KEY_CONCEPT, KEY_PUBLICATIE, KEY_OVERHEID, SCORE_DREMPEL } from "../lib/config.js";
 
 function leesBody(req) {
@@ -84,6 +86,10 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       drempel: SCORE_DREMPEL,
+      // Het regelbestand voor de pagina (één bron: lib/redactieregels.js).
+      regels: { plekken: PLEKKEN_VIJF, losPlekken: LOS_PLEKKEN, losTekst: LOS_TEKST },
+      // "Deze week klopte het voorstel bij x van de y berichten" (alleen tonen bij meting.tonen).
+      meting: meetVoorstel(besluiten),
       categorieen: CATEGORIEEN.map((k) => ({ key: k, label: CATEGORIE_LABEL[k] })),
       kandidaten: tonen,
       verborgen: kandidaten.length - tonen.length,

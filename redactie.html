@@ -31,6 +31,7 @@
   .wrap { max-width:760px; margin:0 auto; }
   .romp { padding:12px 16px 32px; display:flex; flex-direction:column; gap:14px; }
   .zij { display:none; }
+  .leer { margin:6px 0 0; font-size:16px; color:var(--zacht); }
   .uitleg { margin:0; font-size:16px; color:var(--zacht); }
   .status { margin:0; font-size:16px; color:var(--zacht); }
   .fout-blok { background:#fff7ed; color:var(--oranje); border-radius:14px; padding:14px; font-size:16px; display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
@@ -141,7 +142,7 @@
   var VOLGORDE = ["algemeen", "regelgeving", "ondernemers", "reizen", "meteo"];
   var REDENEN = ["Niet relevant", "Dubbel", "Te oud", "Buitenland"];
   var GROEPEN = ["Door jou teruggehaald", "Meerdere kranten", "Overheid, de AI twijfelt", "Eén krant"];
-  var LOS = "Eén krant: volgens de huisregel niet op nieuwspagina, nieuwsbrief en Infopoche.";
+  var LOS = "Eén krant: volgens de huisregel niet op nieuwspagina, nieuwsbrief en Infopoche."; // overschreven door sel.regels.losTekst (lib/redactieregels.js)
   var VOLGT = "Volgt de nieuwspagina: zet eerst de nieuwspagina aan.";
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -167,11 +168,18 @@
       return r.json();
     });
   }
+  // "Deze week klopte het voorstel bij x van de y berichten": alleen bij minstens 5 besluiten.
+  function leerHtml() {
+    var m = sel && sel.meting;
+    if (!m || !m.tonen) return "";
+    return '<p class="leer">Deze week klopte het voorstel bij ' + m.klopt + " van de " + m.totaal + " berichten.</p>";
+  }
   function laad() {
     geladen = false; laadFoutTekst = ""; tekenRomp();
     Promise.all([haal("/api/review"), haal("/api/selectie")]).then(function (uit) {
       rev = uit[0]; sel = uit[1];
       if (sel && typeof sel.drempel === "number") DREMPEL = sel.drempel;
+      if (sel && sel.regels && sel.regels.losTekst) LOS = sel.regels.losTekst;
       if (!rev.ok || !sel.ok) { laadFout(rev.fout || sel.fout || "Fout bij laden."); return; }
       geladen = true; bouw(); tekenRomp();
     }).catch(function (e) { if (!e || e.message !== "login") laadFout("Niet bereikbaar. Probeer het zo opnieuw."); });
@@ -342,6 +350,7 @@
     var r = sel.ronde;
     romp.innerHTML =
       '<p class="uitleg alleen-smal">' + uitleg + "</p>" +
+      leerHtml() +
       (r && r.modelFout ? '<p class="status" style="color:var(--oranje)">AI-oordeel mislukt: ' + esc(r.modelFout) + "</p>" : "") +
       '<div id="auto">' + autoHtml() + "</div>" +
       '<div class="lijst" id="lijst"></div>' +

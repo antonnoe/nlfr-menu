@@ -94,5 +94,21 @@
     .catch(function () { document.getElementById("inhoud").innerHTML = '<div class="leeg">Nieuws is even niet bereikbaar.</div>'; });
 })();
 </script>
+<script>
+// Hoogte doorgeven aan de zijbalk van Nederlanders.fr, zodat het iframe precies
+// zo hoog wordt als de inhoud (geen witruimte, niets afgekapt). Zelfde aanpak als
+// het menu ({nlfrMenuHeight}); de zijbalk luistert alleen naar deze herkomst.
+(function () {
+  if (window.parent === window) return;
+  var vorige = 0;
+  function meld() {
+    var h = Math.ceil(document.body.getBoundingClientRect().bottom + window.scrollY);
+    if (h && h !== vorige) { vorige = h; window.parent.postMessage({ nlfrNieuwsHeight: h }, "*"); }
+  }
+  if (window.ResizeObserver) new ResizeObserver(meld).observe(document.body);
+  window.addEventListener("load", meld);
+  setTimeout(meld, 1500);
+})();
+</script>
 </body>
 </html>

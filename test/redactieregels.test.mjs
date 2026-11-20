@@ -272,3 +272,21 @@ test("R17 op /redactie: de poort legt de reden vast en het voorstel is Nee, met 
   assert.match(lees("../api/selectie.js"), /r17Reden: R17_REDEN/);
   assert.equal(R.R17_REDEN, "Nederlands binnenlands nieuws, raakt Nederlanders in het buitenland niet");
 });
+
+test("R17 blijft staan over twee rondes, ook als de gekoppelde kandidaat uit het venster is (Codex P2 PR 80)", async () => {
+  const d = { id: "r18", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/r18", thema: "nl-overheid", kop: "Benoeming directeur-generaal", samenvatting: "Een benoeming.", gepubliceerdOp: "2026-11-20T08:00:00Z", poort: { status: "ok", score: 80, door: "model" } };
+  const opslag = new Map([[d.id, structuredClone(d)]]);
+  const io = { lees: async (x) => structuredClone(opslag.get(x.id)), schrijf: async (x) => { opslag.set(x.id, structuredClone(x)); }, verwijder: async () => {}, afgewezen: async () => {} };
+  // ronde 1: kandidaat nog in het venster
+  await verwerkPoort([opslag.get(d.id)], { kandidaten: [{ url: d.url, ai: { score: 80 } }], besluiten: [] }, io, NU);
+  assert.equal(opslag.get(d.id).poort.reden, "r17");
+  // ronde 2: geen kandidaat meer, dus geen score
+  const tel = await verwerkPoort([opslag.get(d.id)], { kandidaten: [], besluiten: [] }, io, NU + 3600e3);
+  assert.equal(opslag.get(d.id).poort.status, "wacht");
+  assert.equal(opslag.get(d.id).poort.reden, "r17", "de markering blijft bij ontbrekende score");
+  assert.equal(opslag.get(d.id).poort.score, 80);
+  assert.equal(tel.gewijzigd, 0);
+  // maar een bericht dat inmiddels wel het buitenland raakt, verliest de markering
+  const nieuw = { ...opslag.get(d.id), kop: "Pensioen van Nederlanders in Frankrijk" };
+  assert.notEqual(poortUitslag(nieuw, {}).reden, "r17");
+});

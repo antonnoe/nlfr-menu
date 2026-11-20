@@ -85,14 +85,15 @@
   textarea { min-height:160px; line-height:1.5; }
   .samen { font-size:16px; color:var(--zacht); margin:0; }
   .rij2 { display:grid; grid-template-columns:2fr 1fr; gap:10px; }
-  .klaar { background:var(--vlak); border:1px solid var(--lijn); border-left:6px solid var(--ok); border-radius:14px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  .klaar { background:var(--vlak); border:1px solid var(--lijn); border-left:6px solid var(--ok); border-radius:14px; padding:8px 12px; display:flex; flex-direction:column; gap:2px; }
+  .klaar .kk { font-size:15px; line-height:1.3; }
   .klaar.nee { border-left-color:#9b9290; }
   .klaar.wacht { border-left-color:var(--oranje); }
   .klaar .r1 { display:flex; align-items:center; gap:10px; }
-  .klaar .wat { flex:1; min-width:0; font-size:16px; }
+  .klaar .wat { flex:1; min-width:0; font-size:14px; color:var(--zacht); }
   .klaar .wat b { display:block; font-size:16px; line-height:1.3; }
   .klaar .wat span { color:var(--zacht); }
-  .terug { min-height:48px; min-width:48px; border-radius:12px; border:2px solid var(--tekst); background:#fff; font-weight:700; font-size:16px; padding:0 12px; white-space:nowrap; color:var(--tekst); }
+  .terug { min-height:40px; min-width:44px; border-radius:12px; border:2px solid var(--tekst); background:#fff; font-weight:700; font-size:16px; padding:0 12px; white-space:nowrap; color:var(--tekst); }
   .terug.wijzig { border:1px solid var(--lijn); color:var(--brand); }
   .reden-vraag { font-size:16px; color:var(--zacht); margin:0; }
   .chips.reden .chip { min-height:44px; font-size:16px; }
@@ -138,8 +139,8 @@
   .lijst.compact .klaar { border:0; border-left:6px solid var(--ok); border-radius:0; padding:6px 10px; opacity:.75; }
   .lijst.compact .klaar.nee { border-left-color:#9b9290; }
   .lijst.compact .klaar.wacht { border-left-color:var(--oranje); opacity:1; }
-  .lijst.compact .klaar .terug { min-height:44px; }
-  .reden-knop { min-height:44px; background:none; border:0; color:var(--brand); font-weight:700; font-size:15px; padding:0 6px; text-decoration:underline; }
+  .lijst.compact .klaar .terug { min-height:40px; font-size:14px; }
+  .reden-knop { min-height:32px; background:none; border:0; color:var(--brand); font-weight:700; font-size:14px; padding:0 4px; text-decoration:underline; }
   @media (min-width:900px) {
     .kop { padding:14px 28px; }
     .wrap { max-width:1100px; display:grid; grid-template-columns:300px 1fr; gap:28px; padding:20px 28px 40px; }
@@ -575,14 +576,15 @@
       : b.vast ? "" : '<button type="button" class="terug wijzig" data-wijzig="' + esc(it.id) + '">Wijzig</button>';
     var kop = esc(b.kop || it.kop);
     if (b.soort === "nee") {
-      return '<div class="klaar nee' + (wacht || bezig ? " wacht" : "") + '"><div class="r1"><div class="wat"><b>' + kop + "</b><span>" +
-        (wacht ? "Wordt niet geplaatst" : bezig ? "Opslaan…" : "Niet geplaatst") + (b.reden ? " · " + esc(b.reden) : "") + "</span></div>" + knop + "</div>" +
-        (b.rest ? "" : !st.redenOpen[it.id] ? '<button type="button" class="reden-knop" data-redenopen="' + esc(it.id) + '">Waarom niet? (mag overslaan)</button>' : '<p class="reden-vraag">Waarom niet? Mag ook overslaan. De AI leert hiervan.</p><div class="chips reden">' + REDENEN.map(function (r) {
+      return '<div class="klaar nee' + (wacht || bezig ? " wacht" : "") + '"><b class="kk">' + kop + '</b><div class="r1"><span class="wat">' +
+        (wacht ? "Wordt niet geplaatst" : bezig ? "Opslaan…" : "Niet geplaatst") + (b.reden ? " · " + esc(b.reden) : "") +
+        (b.rest || b.reden || st.redenOpen[it.id] ? "" : ' <button type="button" class="reden-knop" data-redenopen="' + esc(it.id) + '">waarom?</button>') + "</span>" + knop + "</div>" +
+        (b.rest || !st.redenOpen[it.id] ? "" : '<p class="reden-vraag">Waarom niet? Mag ook overslaan. De AI leert hiervan.</p><div class="chips reden">' + REDENEN.map(function (r) {
           return '<button type="button" class="chip" data-reden="' + esc(r) + '" data-id="' + esc(it.id) + '" aria-pressed="' + (b.reden === r) + '">' + r + "</button>";
         }).join("") + "</div>") + "</div>";
     }
-    return '<div class="klaar' + (wacht || bezig ? " wacht" : "") + '"><div class="r1"><div class="wat"><b>' + kop + "</b><span>" +
-      (wacht ? "Wordt geplaatst: " : bezig ? "Opslaan: " : "Geplaatst: ") + lijstTekst(b.k) + " · " + esc(LABEL[b.rubriek]) + (b.aangepast ? " · tekst aangepast" : "") + "</span></div>" + knop + "</div></div>";
+    return '<div class="klaar' + (wacht || bezig ? " wacht" : "") + '"><b class="kk">' + kop + '</b><div class="r1"><span class="wat">' +
+      (wacht ? "Wordt geplaatst: " : bezig ? "Opslaan: " : "Geplaatst: ") + lijstTekst(b.k) + " · " + esc(LABEL[b.rubriek]) + (b.aangepast ? " · tekst aangepast" : "") + "</span>" + knop + "</div></div>";
   }
 
   // ---------- besluiten ----------

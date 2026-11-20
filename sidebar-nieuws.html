@@ -84,12 +84,19 @@
     return '<div class="peil">Handig hierbij: <a href="' + esc(toolUrl(i.tool.url)) + '" target="_blank" rel="noopener">' + esc(i.tool.naam) + " →</a></div>";
   }
 
+  // Café Claude alleen met het kennisdomein dat bij het bericht past (de AI kiest
+  // er hooguit één uit modules.json); past er geen, dan geen regel.
+  function cafe(i) {
+    if (!i.cafe || !/^https:\/\//.test(String(i.cafe.url || ""))) return "";
+    return '<div class="peil"><a href="' + esc(i.cafe.url) + '" target="_blank" rel="noopener">' + esc(i.cafe.tekst) + " →</a></div>";
+  }
+
   function toon(feed) {
     var el = document.getElementById("inhoud");
     if (!feed.categorieen || !feed.categorieen.length) { el.innerHTML = '<div class="leeg">Vandaag nog geen nieuws uitgelicht. Al het Frankrijknieuws staat via de link hieronder.</div>'; return; }
     el.innerHTML = feed.categorieen.map(function (c) {
       return '<div class="cat">' + esc(c.label) + "</div>" + c.items.map(function (i) {
-        return '<div class="item"><a class="t" href="' + esc(veiligUrl(i.url)) + '" target="_blank" rel="noopener">' + (i.kleur ? '<span class="stip ' + esc(i.kleur) + '"></span>' : "") + esc(i.titel) + '</a><div class="meta">' + esc(i.bron) + (i.datum ? " · " + dag(i.datum) : "") + "</div>" + peil(i) + tool(i) + "</div>";
+        return '<div class="item"><a class="t" href="' + esc(veiligUrl(i.url)) + '" target="_blank" rel="noopener">' + (i.kleur ? '<span class="stip ' + esc(i.kleur) + '"></span>' : "") + esc(i.titel) + '</a><div class="meta">' + esc(i.bron) + (i.datum ? " · " + dag(i.datum) : "") + "</div>" + peil(i) + tool(i) + cafe(i) + "</div>";
       }).join("");
     }).join("");
   }

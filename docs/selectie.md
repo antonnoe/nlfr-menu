@@ -54,3 +54,13 @@ Per bericht kiest het model hooguit één tool uit de modulecatalogus van Infopo
 
 - Knop "Bron blokkeren" op elke kaart van /selectie (keuze Anton). Lijst in KV `selectie:bronblokkade` (geen TTL), onder "Geblokkeerde bronnen" met "Weer toelaten". Vergelijking op bronnaam zonder hoofdletters. Geblokkeerde bronnen verdwijnen van het kiesscherm en gaan niet meer naar het model.
 - Zijbalk: zacht roze achtergrond (#fbf0ee). Op een telefoon (pointer coarse of mobiele user-agent) opent een link naar een Infofrankrijk-artikel als `https://infopoche.fr/#/artikel/<slug>`; andere adressen blijven gelijk.
+
+## Eén redactiepagina /redactie (20-11-2026)
+
+- Mock-up goedgekeurd door Anton: https://claude.ai/artifact/E14grS28REn49q2ygFhJ4t. Vervangt in de praktijk /review en /selectie voor het dagelijkse kiezen; die blijven bestaan (Café Jeudi, IF-verwijzingen, bronnenstatus staan nog op /review).
+- Eén lijst, nieuwste bovenaan: syntheses uit /review (kleur NL/BE, FR of NL+FR naar de hosts van de bronlinks), overheidsberichten van de laatste 72 uur (.gouv, staan automatisch op de nieuwspagina) en de kandidaten van de selectie (krantenberichten, meteo). Kandidaten onder score 40 zijn verborgen achter "toon alles"; syntheses en overheid staan er altijd.
+- Per bericht Nieuwspagina, Zijbalk, Beide of Weg; het AI-voorstel (veld `plek` van het model) is gestippeld en "OK, voorstel klopt" voert het uit. Een los krantenbericht kan niet op de nieuwspagina (huisregel: minstens twee kranten).
+- Een kandidaat met dezelfde bronlink als een synthese of overheidsbericht gaat daarin op (`zoekGekoppeld`): zijn AI-oordeel met PEIL, tool en Café Claude hoort er dan bij.
+- Elke keuze over een bericht uit /review wordt een besluit in de selectie (actie `redactie` in /api/selectie, `redactieBesluit` in kern.js): go = zijbalk, no-go = niet in de zijbalk. Zo is het bericht van de pagina af en leert de AI ervan. In de zijbalk linkt een bericht dat op de nieuwspagina staat naar https://www.nederlanders.fr/page/actueel-frankrijknieuws; een synthese alleen in de zijbalk linkt naar de eerste krant.
+- Café Claude: het model kiest hooguit één kennisdomein uit modules.json van Infopoche (`cafeDomeinen`: geld, bureaucratie, zorg, wonen); de zijbalk toont dan die regel met diepe link. Past er geen, dan geen regel.
+- Elke ronde gaan drie porties van 12 naar het model (was twee), voor het grotere aanbod met de Franse kranten.

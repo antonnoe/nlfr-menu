@@ -13,6 +13,11 @@
 //         wordt weer kandidaat.
 //         { actie: "blokkeer" | "deblokkeer", bron }: een nieuwsbron onder
 //         embargo zetten of weer vrijgeven.
+//         { actie: "redactie", herkomst: "concept"|"publicatie"|"overheid", id,
+//           zijbalk: true|false, categorie? }: keuze op de redactiepagina
+//         /redactie voor een synthese of overheidsbericht uit /review. true =
+//         naar de zijbalk (go), false = niet (no-go, bericht is afgehandeld).
+//         Zie redactieBesluit in kern.js.
 
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { toegangVanVerzoek } from "../lib/auth-node.js";
@@ -30,7 +35,10 @@ import {
   kandidatenVoorScherm,
   zonderGeblokkeerd,
   bronSleutel,
+  zoekGekoppeldAlle,
+  redactieBesluit,
 } from "../lib/selectie/kern.js";
+import { KEY_CONCEPT, KEY_PUBLICATIE, KEY_OVERHEID } from "../lib/config.js";
 
 function leesBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
@@ -60,7 +68,7 @@ export default async function handler(req, res) {
       getJSON(KEY_SEL_RONDE),
       getJSON(KEY_SEL_BLOKKADE),
     ]);
-    const tonen = kandidatenVoorScherm(zonderGeblokkeerd(kandidaten, blokkade), besluiten);
+    const tonen = kandidatenVoorScherm(zonderGeblokkeerd(kandidaten.filter((k) => !k.opgenomen), blokkade), besluiten);
     const recent = besluiten.sort((a, b) => String(b.besluitOp || "").localeCompare(String(a.besluitOp || ""))).slice(0, 40);
     const go = besluiten.filter((b) => b.besluit === "go").length;
     return res.status(200).json({
@@ -69,14 +77,22 @@ export default async function handler(req, res) {
       kandidaten: tonen,
       verborgen: kandidaten.length - tonen.length,
       recent,
+      // Keuzes van de laatste 36 uur, zonder de grens van 40 van "recent": de
+      // redactiepagina haalt er zelf "vandaag" uit (op de klok van de lezer).
+      vandaag: besluiten.filter((b) => Date.parse(b.besluitOp || "") > Date.now() - 36 * 3600 * 1000),
       telling: { besluiten: besluiten.length, go, nogo: besluiten.length - go },
       ronde,
       geblokkeerd: (blokkade && blokkade.bronnen) || [],
+      // Voor /redactie: welke berichten uit /review al een keuze hebben, en de
+      // kandidaten waarop ze steunen (die horen niet nog eens op het scherm).
+      redactie: besluiten
+        .filter((b) => b.redactie && b.redactie.reviewId && Date.parse(b.besluitOp || "") > Date.now() - 7 * 86400 * 1000)
+        .map((b) => ({ id: b.id, reviewId: b.redactie.reviewId, herkomst: b.redactie.herkomst, besluit: b.besluit, categorie: b.categorie, titel: b.titel, besluitOp: b.besluitOp })),
     });
   }
 
   if (req.method !== "POST") return res.status(405).json({ ok: false, fout: "Alleen GET en POST." });
-  const { actie, id, categorie, bron } = leesBody(req);
+  const { actie, id, categorie, bron, herkomst, zijbalk } = leesBody(req);
 
   if (actie === "blokkeer" || actie === "deblokkeer") {
     const naam = String(bron || "").trim().slice(0, 100);
@@ -90,6 +106,23 @@ export default async function handler(req, res) {
 
   if (!id || typeof id !== "string" || !/^[a-z0-9]{1,20}$/.test(id)) {
     return res.status(400).json({ ok: false, fout: "Ongeldig id." });
+  }
+
+  if (actie === "redactie") {
+    const sleutel = { concept: KEY_CONCEPT, publicatie: KEY_PUBLICATIE, overheid: KEY_OVERHEID }[herkomst];
+    if (!sleutel) return res.status(400).json({ ok: false, fout: "Onbekende herkomst." });
+    const [doc, kandidaten] = await Promise.all([getJSON(sleutel(id)), listJSON(SCAN_SEL_KANDIDAAT)]);
+    if (!doc) return res.status(404).json({ ok: false, fout: "Bericht niet (meer) gevonden." });
+    const [gekoppeld = null, ...ook] = zoekGekoppeldAlle(doc, kandidaten);
+    const uit = redactieBesluit({ herkomst, doc, gekoppeld, categorie, zijbalk: zijbalk !== false, door: deur.adres || null });
+    if (uit.fout) return res.status(400).json({ ok: false, fout: uit.fout });
+    uit.besluit.redactie.ook = ook.map((k) => k.id);
+    await setJSON(KEY_SEL_BESLUIT(uit.besluit.id), uit.besluit); // geen TTL
+    if (gekoppeld) await del(KEY_SEL_KANDIDAAT(gekoppeld.id));
+    // De andere bronartikelen blijven bewaard (de ronde ziet ze als bekend),
+    // maar komen niet los op het scherm.
+    for (const k of ook) await setJSON(KEY_SEL_KANDIDAAT(k.id), { ...k, opgenomen: uit.besluit.id }, SEL_KANDIDAAT_TTL_S);
+    return res.status(200).json({ ok: true, besluit: { id: uit.besluit.id, besluit: uit.besluit.besluit, categorie: uit.besluit.categorie } });
   }
 
   if (actie === "go" || actie === "nogo") {
@@ -121,6 +154,20 @@ export default async function handler(req, res) {
     // lesmateriaal, en wie later wil weten wat er gebeurde kan het nalezen.
     const nu = new Date().toISOString();
     await setJSON(KEY_SEL_HISTORIE(id, nu.replace(/[^0-9]/g, "")), { ...b, teruggedraaidOp: nu, teruggedraaidDoor: deur.adres || null });
+    // Een besluit vanaf de redactiepagina is geen kandidaat geweest: terug naar
+    // de kandidaat waarop het steunde, of alleen weg uit de zijbalk.
+    if (b.redactie) {
+      if (b.redactie.kandidaat) await setJSON(KEY_SEL_KANDIDAAT(id), b.redactie.kandidaat, SEL_KANDIDAAT_TTL_S);
+      for (const kid of b.redactie.ook || []) {
+        const k = /^[a-z0-9]{1,20}$/.test(String(kid)) ? await getJSON(KEY_SEL_KANDIDAAT(kid)) : null;
+        if (k && k.opgenomen === id) {
+          const { opgenomen, ...vrij } = k;
+          await setJSON(KEY_SEL_KANDIDAAT(kid), vrij, SEL_KANDIDAAT_TTL_S);
+        }
+      }
+      await del(KEY_SEL_BESLUIT(id));
+      return res.status(200).json({ ok: true });
+    }
     await setJSON(KEY_SEL_KANDIDAAT(id), kandidaat, SEL_KANDIDAAT_TTL_S);
     await del(KEY_SEL_BESLUIT(id));
     return res.status(200).json({ ok: true });

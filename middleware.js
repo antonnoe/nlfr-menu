@@ -27,14 +27,15 @@ import { supabaseOmgeving, toegang, COOKIE_NAAM, schrijfCookie } from "./lib/aut
 export const config = {
   // /selectie is het go/no-go-scherm van de nieuwsselectie (sinds 7 november
   // 2026), achter dezelfde deur als /review.
-  matcher: ["/review", "/review.html", "/selectie", "/selectie.html"],
+  matcher: ["/review", "/review.html", "/selectie", "/selectie.html", "/redactie", "/redactie.html"],
 };
 
 // Terug naar het scherm waar de bezoeker heen wilde, uit een VASTE lijst: nooit
 // een pad uit het verzoek zelf.
 function terugPad(url) {
   try {
-    return new URL(url).pathname.startsWith("/selectie") ? "/selectie" : "/review";
+    const pad = new URL(url).pathname;
+    return pad.startsWith("/selectie") ? "/selectie" : pad.startsWith("/redactie") ? "/redactie" : "/review";
   } catch {
     return "/review";
   }

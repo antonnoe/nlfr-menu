@@ -695,7 +695,7 @@
     var t = e.target.closest("button"); if (!t) return;
     var d = t.dataset, it;
     if (d.opnieuw) { laad(); return; }
-    if (d.tab) { st.tab = d.tab; tekenRomp(); return; }
+    if (d.tab) { kiesTab(d.tab); return; }
     if (d.uit) { if (st.uit[d.uit]) delete st.uit[d.uit]; else st.uit[d.uit] = true; tekenItem(d.uit); return; }
     if (d.redenopen) { st.redenOpen[d.redenopen] = true; tekenItem(d.redenopen); return; }
     if (d.ja) { it = vind(d.ja); if (it && r17(it)) { besluit(it, { soort: "nee", k: {}, rubriek: rubriekVoorstel(it) }); return; } if (it) besluit(it, { soort: "ja", k: voorstelK(it), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "", aangepast: false }); return; }
@@ -756,7 +756,7 @@
     if (d.toch) {
       if (st.toch.indexOf(d.toch) < 0) st.toch.push(d.toch);
       var open1 = (document.querySelector("[data-aiweg]") || {}).open;
-      bouw(); tekenLijst(); $("aiweg").innerHTML = aiWegHtml(open1);
+      bouw(); tekenLijst(); $("aiweg").innerHTML = aiWegHtml(true); kiesTab("beslis");
       var nw = document.querySelector('[data-item="' + d.toch + '"]'); if (nw) nw.scrollIntoView({ block: "nearest" });
       return;
     }
@@ -771,6 +771,17 @@
       return;
     }
   });
+  // Tab wisselen zonder opnieuw te tekenen: de melding onderaan (Ongedaan maken) en
+  // getypte tekst blijven staan.
+  function kiesTab(t) {
+    st.tab = t;
+    ["beslis", "live", "weg"].forEach(function (k) {
+      var paneel = $(k === "beslis" ? "beslis" : k === "live" ? "auto" : "aiweg");
+      if (paneel) paneel.hidden = k !== t;
+      var knop = document.querySelector('[data-tab="' + k + '"]');
+      if (knop) knop.setAttribute("aria-selected", String(k === t));
+    });
+  }
   function herAuto() { var o = (document.querySelector("[data-auto]") || {}).open; $("auto").innerHTML = autoHtml(o); }
   $("ververs").addEventListener("click", function () {
     var open = Object.keys(st.besluit).some(function (id) { return st.besluit[id].status !== "klaar"; });

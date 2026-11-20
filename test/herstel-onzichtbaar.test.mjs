@@ -8,6 +8,7 @@ import http from "node:http";
 
 import { redactieBesluit, standaardRubriek, voorbeeldenVoorModel, SYSTEM_SELECTIE } from "../lib/selectie/kern.js";
 import { SCORE_DREMPEL } from "../lib/config.js";
+import { LOS_SCORE_DREMPEL } from "../lib/redactieregels.js";
 import { poortUitslag, verwerkPoort, overheidIsLive } from "../lib/overheidpoort.js";
 
 const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
@@ -41,11 +42,15 @@ test("2. rubriek: standaard vooraf ingevuld, geen weigering (pagina en server)",
 });
 
 // ---- 3. overheid achter een poort --------------------------------------------
-test("3. drempel: één waarde (config) voor model, kandidaten en pagina", () => {
+test("3. drempel: overheid 40, losse kranten 70, beide centraal en doorgegeven aan de pagina", () => {
   assert.equal(SCORE_DREMPEL, 40);
-  assert.match(SYSTEM_SELECTIE, new RegExp(`onder de ${SCORE_DREMPEL}\\.`));
+  assert.equal(LOS_SCORE_DREMPEL, 70);
+  assert.ok(SYSTEM_SELECTIE.includes(`onder de ${SCORE_DREMPEL} een lege lijst`));
+  assert.ok(SYSTEM_SELECTIE.includes(`onder de ${LOS_SCORE_DREMPEL} een lege lijst`));
   assert.match(lees("../api/selectie.js"), /drempel: SCORE_DREMPEL/);
+  assert.match(lees("../api/selectie.js"), /losDrempel: LOS_SCORE_DREMPEL/);
   assert.match(html, /if \(sel && typeof sel\.drempel === "number"\) DREMPEL = sel\.drempel/);
+  assert.match(html, /if \(sel && typeof sel\.losDrempel === "number"\) LOS_DREMPEL = sel\.losDrempel/);
   assert.ok(!/score < 40/.test(lees("../lib/selectie/kern.js")));
 });
 
@@ -299,10 +304,11 @@ test("A. één verzoek volstaat: weg van een synthese en publiceren met besluit 
   assert.match(rv, /hervat: true/);
 });
 
-test("A. de pagina stuurt wat wacht direct met keepalive bij pagehide en verborgen tabblad", () => {
+test("A. pagehide spoelt met keepalive, een verborgen tabblad behoudt de vijf seconden", () => {
   assert.match(html, /keepalive: wegGaand/);
   assert.match(html, /addEventListener\("pagehide", spoel\)/);
-  assert.match(html, /visibilityState === "hidden"\) spoel\(\)/);
+  assert.match(html, /wegGaand = document\.visibilityState === "hidden";/);
+  assert.doesNotMatch(html, /visibilityState === "hidden"\) spoel\(\)/);
 });
 
 test("B. alles zonder besluit uit 36 uur staat in de lijst, niet alleen kalender-vandaag", () => {

@@ -47,7 +47,8 @@ Alleen bij een kennisdomein: geld, bureaucratie, zorg, wonen.
 
 ## Waarden
 
-- Drempel (SCORE_DREMPEL): `40`. Eén plek; config.js, prompt, poort, kandidatenfilter en /redactie volgen dit.
+- Drempel voor overheid en overige berichten (SCORE_DREMPEL): `40`. De overheidspoort blijft deze waarde volgen.
+- Drempel voor losse krantenberichten (LOS_SCORE_DREMPEL): `70`. De selectieprompt, modelverwerking en /redactie volgen deze waarde; syntheses worden hier niet op gefilterd.
 - Minimum aantal kranten voor een synthese (MIN_KRANTEN): `2`.
 - Selectiestroom: per bron per ronde hooguit `15` nieuwste berichten (SELECTIE_MAX_PER_BRON); uitzonderingen per bron in SELECTIE_MAX_PER_BRON_UITZONDERING (Google News NL en BE: 40, een voorstel).
 - Leersignaal: hooguit `25` voorbeelden per soort (go, no-go), eerst de besluiten waarin voorstel en keuze verschilden.

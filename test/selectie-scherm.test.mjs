@@ -45,8 +45,10 @@ test("toolcatalogus: alleen af, zichtbaar en met https-adres; artikel gaat voor"
     { id: "taal", naam: "TaalHulp", status: "in ontwikkeling", url: "https://t.app" },
     { id: "uit", naam: "Uit", status: "af", url: "https://u.app", zichtbaar: false },
     { id: "kal", naam: "Kalender", status: "af" },
+    { id: "veilig", naam: "Veiligheid", status: "deels af", url: "https://v.app" },
+    { id: "zonder", naam: "Zonder status", url: "https://z.app" },
   ] });
-  assert.deepEqual(t.map((x) => x.id), ["kompas", "auto"]);
+  assert.deepEqual(t.map((x) => x.id), ["kompas", "auto", "veilig"]);
   assert.equal(t[0].url, "https://infofrankrijk.com/financieel-kompas/");
 });
 

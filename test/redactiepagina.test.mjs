@@ -168,11 +168,20 @@ test("nieuwsbrief en Infopoche: alleen booleans voor die twee sleutels gaan mee 
   assert.equal(normActueelKanalen(null), null);
 });
 
-test("/redactie heeft vijf plekken, OK plaatsen en Weg, en voorbeeldknoppen voor alle vijf", () => {
+test("/redactie heeft vijf plekken, Ja/Alleen zijbalk/Nee en Plaats zo, en beheer- en voorbeeldlinks", () => {
   const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
   for (const p of ["nieuwspagina", "zijbalk", "nieuwsbrief", "infopoche", "infofrankrijk"]) assert.ok(html.includes(`["${p}", "`), p);
-  assert.ok(html.includes("OK, plaatsen") && html.includes("data-weg="));
-  for (const u of ["/sidebar-nieuws", "nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", "https://infopoche.fr", "https://infofrankrijk.com/#open"]) assert.ok(html.includes(u), u);
+  for (const t of ["Ja, zoals voorgesteld", "Alleen zijbalk", "Rest van vandaag: nee", "Al automatisch live vandaag", "Door de AI niet voorgesteld", "Anders: plekken, rubriek of tekst", "Plaats zo", "Ongedaan maken", "Opnieuw proberen", "Bekijken en beheer"]) assert.ok(html.includes(t), t);
+  for (const u of ["/sidebar-nieuws", "nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", "https://infopoche.fr", "https://infofrankrijk.com/#open", 'href="/review"']) assert.ok(html.includes(u), u);
+});
+
+test("/redactie is de ene ingang: tandwiel, login en /selectie verwijzen ernaar; /review blijft", () => {
+  const rd = (p) => fs.readFileSync(new URL(p, import.meta.url), "utf8");
+  assert.match(rd("../index.html"), /\["Redactie","\/redactie"/);
+  assert.match(rd("../login.html"), /return "\/redactie"/);
+  assert.match(rd("../api/auth-callback.js"), /stuurDoor\(res, "\/redactie"\)/);
+  assert.match(rd("../selectie.html"), /url=\/redactie/);
+  assert.ok(fs.existsSync(new URL("../review.html", import.meta.url)));
 });
 
 test("/api/actueel: een publicatie met kanalen geeft ze mee per artikel, zonder kanalen geen veld", () => {

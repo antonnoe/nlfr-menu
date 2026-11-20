@@ -666,10 +666,14 @@ export default async function handler(req, res) {
       if (!concept) {
         return res.status(404).json({ ok: false, fout: "Concept niet gevonden." });
       }
-      if (typeof body.tekst !== "string" || !body.tekst.trim()) {
+      // kop is optioneel (redactiepagina: kop en tekst samen aanpassen).
+      const nieuweKop = typeof body.kop === "string" ? body.kop.trim().slice(0, 300) : "";
+      const heeftTekst = typeof body.tekst === "string" && body.tekst.trim();
+      if (!heeftTekst && !nieuweKop) {
         return res.status(400).json({ ok: false, fout: "tekst vereist." });
       }
-      concept.tekst = body.tekst.trim();
+      if (nieuweKop) concept.kop = nieuweKop;
+      if (heeftTekst) concept.tekst = body.tekst.trim();
       concept.bewerktOp = new Date().toISOString();
       await setJSON(KEY_CONCEPT(id), concept, CONCEPT_TTL_S); // TTL vernieuwt
       return res.status(200).json({ ok: true, concept });
@@ -949,8 +953,24 @@ export default async function handler(req, res) {
       // volgorde als bij depubliceer: eerst het record, dan de momentopname.
       // WEG BLIJFT WEG: het afgewezen-merkteken (zoals bij persconcepten) houdt
       // de cron ervan af dit bericht uit de feed opnieuw live te zetten.
-      await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "redactie-weg" }, OVERHEID_TTL_S);
+      // Het bericht zelf blijft in het afgewezen-merkteken bewaard, zodat
+      // "herstel-overheid" (Terugzetten op /redactie) het kan terugzetten.
+      const oud = await getJSON(KEY_OVERHEID(id));
+      await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "redactie-weg", ...(oud ? { doc: oud } : {}) }, OVERHEID_TTL_S);
       await del(KEY_OVERHEID(id));
+      await vervalSnapshots();
+      return res.status(200).json({ ok: true, snapshotVervallen: true });
+    }
+
+    if (actie === "herstel-overheid") {
+      // Terugzetten van een met verwijder-overheid weggehaald bericht.
+      const merk = await getJSON(KEY_AFGEWEZEN(id));
+      if (!merk || merk.reden !== "redactie-weg" || !merk.doc) {
+        return res.status(404).json({ ok: false, fout: "Dit bericht kan niet meer worden teruggezet." });
+      }
+      const t = Date.parse(merk.doc.gepubliceerdOp || merk.doc.datum || "") || Date.now();
+      await setJSON(KEY_OVERHEID(id), merk.doc, Math.max(60, Math.round(OVERHEID_TTL_S - (Date.now() - t) / 1000)));
+      await del(KEY_AFGEWEZEN(id));
       await vervalSnapshots();
       return res.status(200).json({ ok: true, snapshotVervallen: true });
     }

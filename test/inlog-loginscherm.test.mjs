@@ -152,7 +152,7 @@ test("een sessie die de server goedkeurt stuurt door naar /review", async () => 
     },
   });
   await wikkelAf();
-  assert.deepEqual(tool.navigaties, ["/review"]);
+  assert.deepEqual(tool.navigaties, ["/redactie"]);
 });
 
 test("met een reden in de URL wordt er niet doorgestuurd, ook niet met een geldige sessie", async () => {

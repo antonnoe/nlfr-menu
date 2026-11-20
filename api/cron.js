@@ -246,6 +246,7 @@ export default async function handler(req, res) {
       listJSONStrikt(SCAN_SEL_BESLUIT),
     ]);
     overheidPoort = await verwerkPoort(overheidBehouden, { kandidaten: selKandidaten, besluiten: selBesluiten }, {
+      lees: (d) => getJSON(KEY_OVERHEID(d.id)),
       schrijf: (d, ttl) => setJSON(KEY_OVERHEID(d.id), d, ttl),
       verwijder: (d) => del(KEY_OVERHEID(d.id)),
       // Weg blijft weg: het merkteken houdt de cron van een tweede keer live zetten af.
@@ -374,9 +375,9 @@ export default async function handler(req, res) {
       continue;
     }
     if (d.poort && d.poort.status === "wacht") {
-      // Nooit door de poort gekomen: niet in het register (dat is het archief
-      // van wat live was), gewoon opruimen.
-      await del(KEY_OVERHEID(d.id));
+      // Niet live (de poort liet hem niet door): niet in het register, maar ook
+      // NIET gewist. Een bericht dat vroeger live stond mag niet stilletjes uit
+      // het archief verdwijnen; de TTL ruimt het uiteindelijk zelf op.
       continue;
     }
     if (registerBekend.has(d.id)) {

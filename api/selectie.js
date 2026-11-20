@@ -11,6 +11,8 @@
 //         gekozen categorie overschrijft het voorstel van het model.
 //         { actie: "herstel", id }: een beslissing ongedaan maken; het bericht
 //         wordt weer kandidaat.
+//         { actie: "reden", id, reden }: reden bij een Nee (Niet relevant, Dubbel,
+//         Te oud, Buitenland) achteraf zetten; go/nogo/redactie nemen `reden` ook mee.
 //         { actie: "blokkeer" | "deblokkeer", bron }: een nieuwsbron onder
 //         embargo zetten of weer vrijgeven.
 //         { actie: "redactie", herkomst: "concept"|"publicatie"|"overheid", id,
@@ -40,6 +42,7 @@ import {
   standaardRubriek,
   leesKanalen,
   kanalenVan,
+  leesReden,
   SEL_BESLUIT_TTL_S,
   SEL_LEES_UREN,
 } from "../lib/selectie/kern.js";
@@ -129,7 +132,7 @@ export default async function handler(req, res) {
     const [doc, kandidaten] = await Promise.all([getJSON(sleutel(id)), listJSON(SCAN_SEL_KANDIDAAT, { sindsUren: SEL_LEES_UREN })]);
     if (!doc) return res.status(404).json({ ok: false, fout: "Bericht niet (meer) gevonden." });
     const [gekoppeld = null, ...ook] = zoekGekoppeldAlle(doc, kandidaten);
-    const uit = redactieBesluit({ herkomst, doc, gekoppeld, categorie, zijbalk: zijbalk !== false, kanalen, elders, opPagina: body.opPagina === false ? false : null, door: deur.adres || null });
+    const uit = redactieBesluit({ herkomst, doc, gekoppeld, categorie, zijbalk: zijbalk !== false, kanalen, elders, reden: body.reden, weg: body.weg === true, opPagina: body.opPagina === false ? false : null, door: deur.adres || null });
     if (uit.fout) return res.status(400).json({ ok: false, fout: uit.fout });
     uit.besluit.redactie.ook = ook.map((k) => k.id);
     await setJSON(KEY_SEL_BESLUIT(uit.besluit.id), uit.besluit, SEL_BESLUIT_TTL_S);
@@ -152,6 +155,7 @@ export default async function handler(req, res) {
       kanalen: actie === "go" ? kanalen || ["zijbalk"] : [],
       categorie: gekozen,
       categorieDoorRedactie: Boolean(categorie && categorie !== voorstel),
+      ...(leesReden(body.reden) ? { reden: leesReden(body.reden) } : {}),
       besluitOp: new Date().toISOString(),
       door: deur.adres || null,
     };
@@ -160,10 +164,20 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, besluit: { id, besluit: actie, categorie: gekozen, kanalen: besluit.kanalen } });
   }
 
+  if (actie === "reden") {
+    // Reden bij een Nee achteraf (of wijzigen): bij het besluit bewaard als leerstof.
+    const b = await getJSON(KEY_SEL_BESLUIT(id));
+    if (!b) return res.status(404).json({ ok: false, fout: "Beslissing niet gevonden." });
+    const r = leesReden(body.reden);
+    if (r) b.reden = r; else delete b.reden;
+    await setJSON(KEY_SEL_BESLUIT(id), b, SEL_BESLUIT_TTL_S);
+    return res.status(200).json({ ok: true });
+  }
+
   if (actie === "herstel") {
     const b = await getJSON(KEY_SEL_BESLUIT(id));
     if (!b) return res.status(404).json({ ok: false, fout: "Beslissing niet gevonden." });
-    const { besluit, besluitOp, door, categorieDoorRedactie, kanalen: _k, ...kandidaat } = b;
+    const { besluit, besluitOp, door, categorieDoorRedactie, kanalen: _k, reden: _r, ...kandidaat } = b;
     // Het teruggedraaide besluit blijft bewaard (geen TTL): ook een correctie is
     // lesmateriaal, en wie later wil weten wat er gebeurde kan het nalezen.
     const nu = new Date().toISOString();

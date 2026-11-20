@@ -14,28 +14,23 @@ const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8
 const lees = (p) => fs.readFileSync(new URL(p, import.meta.url), "utf8");
 
 // ---- 1. tekstverlies -------------------------------------------------------
-test("1. /redactie: getypte tekst staat in tekstEdit en wordt niet door tekenen of laden teruggezet", () => {
-  assert.match(html, /var tekstEdit = \{\}/);
-  assert.match(html, /addEventListener\("input"[\s\S]{0,200}tekstEdit\[t\.dataset\.tekst\] = t\.value/);
-  assert.match(html, /esc\(huidigeTekst\(it\)\)/, "het tekstvak toont de getypte tekst");
+test("1. /redactie: getypte tekst staat in st.cn en wordt niet door tekenen of laden teruggezet", () => {
+  assert.match(html, /addEventListener\("input"[\s\S]{0,300}conceptVan\(it\)\.tekst = t\.value/);
+  assert.match(html, /esc\(c\.tekst\)/, "het tekstvak toont de getypte tekst");
   assert.ok(!/esc\(it\.tekst\) \+ '<\/textarea>/.test(html), "geen servertekst meer in het vak");
-  assert.match(html, /function huidigeTekst\(it\) \{ return tekstEdit\[it\.id\] != null \? tekstEdit\[it\.id\] : it\.tekst; \}/);
+  assert.match(html, /function tekenItem\(id\)/, "alleen de kaart die verandert wordt opnieuw getekend");
 });
 
-test("1. OK, plaatsen publiceert de tekst uit het vak, niet de servertekst", () => {
-  assert.match(html, /actie: "publiceer", id: id, tekst: tekstNu/);
+test("1. Plaats zo publiceert de tekst uit het vak, niet de servertekst", () => {
+  assert.match(html, /actie: "publiceer", id: id, tekst: b\.tekst/);
   assert.ok(!/actie: "publiceer", id: id, tekst: it\.tekst/.test(html));
-  assert.match(html, /if \(ta\) tekstEdit\[id\] = ta\.value;/, "het vak wordt vlak voor het plaatsen uitgelezen");
-});
-
-test("1. focus en cursor blijven bij het opnieuw tekenen", () => {
-  assert.match(html, /setSelectionRange\(van, tot\)/);
+  assert.match(html, /tekst: c3\.tekst/, "Plaats zo neemt de inhoud van de vakken");
 });
 
 // ---- 2. rubriek nooit verplicht ---------------------------------------------
 test("2. rubriek: standaard vooraf ingevuld, geen weigering (pagina en server)", () => {
   assert.ok(!html.includes("Kies eerst een rubriek"));
-  assert.match(html, /return "algemeen";/);
+  assert.match(html, /return "algemeen"; \/\/ nooit/);
   assert.equal(standaardRubriek("pers"), "algemeen");
   assert.equal(standaardRubriek("overheid"), "regelgeving");
   assert.equal(standaardRubriek("meteo"), "meteo");
@@ -67,7 +62,7 @@ test("3. poort: live alleen bij score >= drempel; zonder score of eronder wacht 
 
 test("3. poort: ok blijft ok (ook als de kandidaat verlopen is); een nogo wint van alles", () => {
   assert.equal(poortUitslag(DOC({ poort: { status: "ok", score: 70, door: "model" } }), { kandidaten: [] }).status, "ok");
-  const nogo = { besluit: "nogo", redactie: { reviewId: "o1" } };
+  const nogo = { besluit: "nogo", redactie: { reviewId: "o1", weg: true } };
   assert.equal(poortUitslag(DOC({ poort: { status: "ok" } }), { kandidaten: [KAND(90)], besluiten: [nogo] }).status, "afgewezen");
 });
 
@@ -86,7 +81,7 @@ test("3. overheidIsLive: ontbrekend veld of ok = live, wacht = niet", () => {
 test("3. verwerkPoort: haalt bestaande live berichten eraf, wist afgewezen en merkt ze af", async () => {
   const docs = [DOC({ id: "a" }), DOC({ id: "b", url: "https://x.nl/b" }), DOC({ id: "c", url: "https://x.nl/c", poort: { status: "wacht" } })];
   const kandidaten = [{ id: "ka", url: "https://www.rijksoverheid.nl/a", ai: { score: 12 } }, { id: "kb", url: "https://x.nl/b", ai: { score: 80 } }];
-  const besluiten = [{ besluit: "nogo", redactie: { reviewId: "c" } }];
+  const besluiten = [{ besluit: "nogo", redactie: { reviewId: "c", weg: true } }];
   const geschreven = [], weg = [], afgewezen = [];
   const tel = await verwerkPoort(docs, { kandidaten, besluiten }, {
     schrijf: async (d) => geschreven.push([d.id, d.poort.status]),
@@ -209,6 +204,64 @@ test("5. besluiten en historie krijgen een vervaltermijn; Gekozen-lijst herlaadt
   const api = lees("../api/selectie.js");
   assert.ok(!/setJSON\(KEY_SEL_BESLUIT\([^)]*\)\)?, [a-z.]+\);/.test(api.replace(/SEL_BESLUIT_TTL_S/g, "")) || api.includes("SEL_BESLUIT_TTL_S"));
   assert.equal((api.match(/SEL_BESLUIT_TTL_S\)/g) || []).length >= 3, true, "besluit, besluit van de redactie en historie hebben een TTL");
-  assert.match(html, /function klaar\(\) \{ lopend--; verouderd = true; \}/);
-  assert.ok(!/function klaar\(\) \{ lopend--; if \(!lopend\) laad\(\); \}/.test(html));
+  assert.ok(!/function besluit\([^)]*\) \{[^}]*laad\(\)/.test(html), "geen volledige herlaadbeurt na een klik");
+});
+
+// ---- Aanvulling keuring (F1 t/m F7) --------------------------------------------
+test("F1. een oud nogo-besluit zonder redactie.weg wijst niets af; een expliciete Weg wel", () => {
+  const oud = redactieBesluit({ herkomst: "overheid", doc: DOC(), kanalen: [] }).besluit; // zo schreef de vorige versie 'alleen nieuwspagina'
+  assert.equal(oud.besluit, "nogo");
+  assert.notEqual(poortUitslag(DOC({ poort: { status: "ok" } }), { besluiten: [oud] }).status, "afgewezen");
+  const weg = redactieBesluit({ herkomst: "overheid", doc: DOC(), kanalen: [], weg: true }).besluit;
+  assert.equal(poortUitslag(DOC({ poort: { status: "ok" } }), { besluiten: [weg] }).status, "afgewezen");
+});
+
+test("F3. de keuze van de redactie gaat voor de score", () => {
+  const alleenZij = redactieBesluit({ herkomst: "overheid", doc: DOC(), kanalen: ["zijbalk"], opPagina: false }).besluit;
+  assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { kandidaten: [KAND(90)], besluiten: [alleenZij] }).status, "wacht");
+  const metPagina = redactieBesluit({ herkomst: "overheid", doc: DOC(), kanalen: ["zijbalk"], opPagina: true }).besluit;
+  assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { kandidaten: [KAND(10)], besluiten: [metPagina] }).status, "ok");
+  assert.ok(!html.includes("geen score van"), "geen onjuiste uitleg over de score");
+});
+
+test("F7. een go van het oude selectiescherm (zonder redactie) telt voor de poort", () => {
+  const go = { id: "k1", besluit: "go", url: "https://www.rijksoverheid.nl/a", kanalen: ["zijbalk"] };
+  assert.equal(poortUitslag(DOC({ poort: { status: "wacht" } }), { besluiten: [go] }).status, "ok");
+});
+
+test("F5. verwerkPoort leest het bericht opnieuw vlak voor het schrijven: een tussentijdse redactiekeuze blijft", async () => {
+  const doc = DOC();
+  const vers = { ...doc, poort: { status: "ok", score: null, door: "redactie" }, kanalen: { nieuwsbrief: false } };
+  const geschreven = [];
+  await verwerkPoort([doc], { kandidaten: [KAND(5)] }, { lees: async () => vers, schrijf: async (d) => geschreven.push(d), verwijder: async () => {}, afgewezen: async () => {} });
+  assert.deepEqual(geschreven, [], "door de redactie geplaatst: niet overschreven");
+  const vers2 = { ...doc, kanalen: { infopoche: false } };
+  await verwerkPoort([doc], { kandidaten: [KAND(5)] }, { lees: async () => vers2, schrijf: async (d) => geschreven.push(d), verwijder: async () => {}, afgewezen: async () => {} });
+  assert.equal(geschreven.length, 1);
+  assert.deepEqual(geschreven[0].kanalen, { infopoche: false }, "de nieuwe kanaalkeuze blijft behouden");
+  assert.equal(geschreven[0].poort.status, "wacht");
+  assert.match(lees("../api/cron.js"), /lees: \(d\) => getJSON\(KEY_OVERHEID\(d\.id\)\)/);
+});
+
+test("F2. een oud bericht dat de poort niet haalt wordt niet gewist uit de voorraad", () => {
+  const cron = lees("../api/cron.js");
+  const i = cron.indexOf('if (d.poort && d.poort.status === "wacht") {', cron.indexOf("REGISTEROPNAME"));
+  const blok = cron.slice(i, i + 500);
+  assert.ok(!/del\(KEY_OVERHEID/.test(blok.split("continue;")[0]), "geen del in de wacht-tak");
+});
+
+test("F4. mislukte ZADD markeert de index als vuil; opbouw met slot; diagnose schrijft niets", () => {
+  const st = lees("../lib/store.js");
+  assert.match(st, /cmd\(\["DEL", INDEX_MARKER\]\)/);
+  assert.match(st, /"NX", "EX", "120"/);
+  assert.match(st, /!opties\.nietBouwen\) await indexVerwijderen/);
+});
+
+test("Ongedaan maken: besluit gaat pas na vijf seconden naar de server; reden bij Nee", () => {
+  assert.match(html, /ONGEDAAN_MS = 5000/);
+  assert.match(html, /b\.timer = setTimeout\(function \(\) \{ opslaan\(it\.id\); \}, ONGEDAAN_MS\)/);
+  assert.match(html, /actie: "reden"/);
+  const b = redactieBesluit({ herkomst: "concept", doc: { id: "a1", kop: "k" }, kanalen: [], reden: "Dubbel" }).besluit;
+  assert.equal(b.reden, "Dubbel");
+  assert.equal(redactieBesluit({ herkomst: "concept", doc: { id: "a1", kop: "k" }, reden: "onzin" }).besluit.reden, undefined);
 });

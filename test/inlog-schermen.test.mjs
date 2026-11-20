@@ -81,7 +81,7 @@ test("de loginpagina stuurt nooit door naar een adres buiten deze site", () => {
   assert.match(login, /\/\^\\\/\[\^\\\/\]\/\.test\(ruw\)|\/\^\\\/\[\^\\\/\]\//,
     "er hoort een controle op een enkel beginnend schuin streepje te staan");
   const fn = login.slice(login.indexOf("function bestemming()"), login.indexOf("// De reden waarmee"));
-  assert.match(fn, /"\/review"/, "en een vaste terugval");
+  assert.match(fn, /"\/redactie"/, "en een vaste terugval");
 });
 
 test("de loginpagina stuurt niet door als er een reden in de URL staat", () => {

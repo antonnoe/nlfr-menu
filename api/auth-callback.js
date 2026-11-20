@@ -65,5 +65,5 @@ export default async function handler(req, res) {
     return stuurDoor(res, "/login?reden=geenrecht");
   }
 
-  return stuurDoor(res, "/review");
+  return stuurDoor(res, "/redactie");
 }

@@ -14,7 +14,7 @@ Alleen regels die al besloten zijn of al in de code stonden. Status: besloten = 
 - **R06** (besloten) Een bericht dat de redactie met Weg afwees blijft weg (afgewezen-merkteken). Herkomst: Herstelronde onzichtbare fouten (20-11-2026).
 - **R07** (besloten) Café Claude alleen bij een kennisdomein: geld, bureaucratie, zorg of wonen; past er geen, dan geen regel. Herkomst: docs/selectie.md, Eén redactiepagina (20-11-2026); lib/selectie/kern.js.
 - **R08** (besloten) De vijf plekken zijn nieuwspagina, nieuwsbrief, Infopoche, zijbalk en Infofrankrijk. Herkomst: docs/selectie.md, Vijf plekken per bericht (20-11-2026).
-- **R09** (besloten) De rubrieken zijn algemeen nieuws, ondernemersnieuws, reisnieuws, meteo en wet- en regelgeving; de rubriek is nooit verplicht (standaard algemeen, overheid regelgeving, meteo). Herkomst: REGIE.md besluit B2 (7-11-2026); herstelronde onzichtbare fouten.
+- **R09** (besloten) De rubrieken zijn algemeen nieuws, ondernemersnieuws, reisnieuws, meteo, wet- en regelgeving en merkwaardig (sinds 20-11-2026); de rubriek is nooit verplicht (standaard algemeen, overheid regelgeving, meteo). Herkomst: REGIE.md besluit B2 (7-11-2026); herstelronde onzichtbare fouten.
 - **R10** (code) Caribisch Nederland komt nooit live (harde uitsluiting); een Nederlands overheidsbericht moet ook door de relevantiezeef. Herkomst: lib/feeds.js nlOverheidUitgesloten en nlOverheidRelevant (PR 78).
 - **R11** (code) De zeven: faits divers, buitenland zonder Frankrijk-link en sport zonder Franse ploeg komen niet door; dit geldt voor de persstroom en nu ook voor de selectiestroom vóór het model. Herkomst: lib/feeds.js (faitsDiversDoorlaat, buitenlandDoorlaat, sportDoorlaat), lib/persmeting.js; selectie: deze ronde.
 - **R12** (code) NOS, VRT en NU.nl komen alleen door als het bericht over Frankrijk gaat (Frankrijk-woordenlijst). Herkomst: lib/selectie/bronnen.js, kern.js gaatOverFrankrijk.
@@ -39,6 +39,7 @@ Alleen regels die al besloten zijn of al in de code stonden. Status: besloten = 
 - Reisnieuws (`reizen`)
 - Meteo (`meteo`)
 - Wet- en regelgeving (`regelgeving`)
+- Merkwaardig (`merkwaardig`): vreemde of grappige voorvallen in Frankrijk, hooguit één tegelijk in de zijbalk, onderaan (besluit Anton 20-11-2026)
 
 ## Café Claude
 

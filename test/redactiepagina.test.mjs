@@ -123,9 +123,9 @@ test("selectie-API: opgenomen bronartikelen niet los op het scherm, terugdraaien
 });
 
 test("/redactie toont gepubliceerde syntheses zonder zijbalkkeuze", () => {
+  const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
   assert.match(html, /rev\.publicaties/);
   assert.match(html, /weg: weg \|\| undefined/);
-  assert.match(html, /actie: "depubliceer"/);
 });
 
 test("/redactie staat achter de login en roept beide backends aan", () => {

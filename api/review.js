@@ -52,6 +52,7 @@ import {
 import { vindGelijkenis, gelijkenis, vindPrimaireBron } from "../lib/gelijkenis.js";
 import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
 import { keurBronnen, bronUrlOordeel, bronVoorNaam } from "../lib/bronurl.js";
+import { overheidIsLive } from "../lib/overheidpoort.js";
 import { persTegelVanPublicatie, opgeslagenThema, normActueelKanalen } from "../lib/tegels.js";
 import {
   kandidaten as ifKandidaten,
@@ -407,7 +408,7 @@ export default async function handler(req, res) {
       // is dat de primaire bron. Signalering, geen blokkade — de redacteur
       // kiest tussen "Weg" en publiceren.
       c.primaireBron = c.poort.persconcept
-        ? vindPrimaireBron(c, overheid, registerRecords, nuMs)
+        ? vindPrimaireBron(c, overheid.filter(overheidIsLive), registerRecords, nuMs)
         : null;
     }
     // VOLGORDE VAN DE WACHTRIJ: breedste bronbasis eerst, daarbinnen het
@@ -932,6 +933,9 @@ export default async function handler(req, res) {
       const doc = await getJSON(KEY_OVERHEID(id));
       if (doc) {
         doc.kanalen = { ...(normActueelKanalen(doc.kanalen) || {}), ...kanalen };
+        // De redactie plaatst het bericht zelf op de nieuwspagina: dat is de
+        // poort (lib/overheidpoort.js). Zonder live:true blijft de stand zoals hij was.
+        if (body.live === true) doc.poort = { status: "ok", score: (doc.poort && doc.poort.score) ?? null, door: "redactie", op: new Date().toISOString() };
         const t = Date.parse(doc.gepubliceerdOp || doc.datum || "") || Date.now();
         await setJSON(KEY_OVERHEID(id), doc, Math.max(60, Math.round(OVERHEID_TTL_S - (Date.now() - t) / 1000)));
         await vervalSnapshots();
@@ -943,6 +947,9 @@ export default async function handler(req, res) {
     if (actie === "verwijder-overheid") {
       // Kill-switch voor een automatisch gepubliceerd overheidsbericht. Zelfde
       // volgorde als bij depubliceer: eerst het record, dan de momentopname.
+      // WEG BLIJFT WEG: het afgewezen-merkteken (zoals bij persconcepten) houdt
+      // de cron ervan af dit bericht uit de feed opnieuw live te zetten.
+      await setJSON(KEY_AFGEWEZEN(id), { id, op: new Date().toISOString(), reden: "redactie-weg" }, OVERHEID_TTL_S);
       await del(KEY_OVERHEID(id));
       await vervalSnapshots();
       return res.status(200).json({ ok: true, snapshotVervallen: true });

@@ -178,9 +178,9 @@ test("ronde in diagnose: geen modelaanroep, niets weggeschreven, PEIL en bronnen
   assert.ok(cak.peil.includes("p.xb.cak.woonlandfactor_fr"));
 });
 
-test("beslissingen krijgen GEEN TTL, kandidaten wel (bron)", () => {
+test("beslissingen krijgen een vervaltermijn van een half jaar, kandidaten van een week (bron)", () => {
   const api = fs.readFileSync(new URL("../api/selectie.js", import.meta.url), "utf8");
-  assert.match(api, /setJSON\(KEY_SEL_BESLUIT\(id\), besluit\);/);
+  assert.match(api, /setJSON\(KEY_SEL_BESLUIT\(id\), besluit, SEL_BESLUIT_TTL_S\)/);
   const ronde = fs.readFileSync(new URL("../lib/selectie/ronde.js", import.meta.url), "utf8");
   assert.match(ronde, /setJSON\(KEY_SEL_KANDIDAAT\(doc\.id\), doc, SEL_KANDIDAAT_TTL_S\)/);
 });

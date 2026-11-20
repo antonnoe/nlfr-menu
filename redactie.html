@@ -99,9 +99,12 @@
 <script>
 (function () {
   var NIEUWSPAGINA = "https://www.nederlanders.fr/page/actueel-frankrijknieuws";
-  var DREMPEL = 40;
+  var DREMPEL = 40; // overschreven door /api/selectie (één waarde: SCORE_DREMPEL in lib/config.js)
   var rev = null, sel = null, tab = "kiezen", toonAlles = false;
   var open = {}, waarschuwing = {}, rubriek = {}, keus = {}, weggezet = {}, lopend = 0;
+  // Wat de redacteur in een tekstvak typt, staat hier en nergens anders in de weg:
+  // een nieuwe tekening of laadbeurt zet het nooit terug naar de servertekst.
+  var tekstEdit = {}, verouderd = false;
   var PLEKKEN = [["nieuwspagina", "Nieuwspagina"], ["zijbalk", "Zijbalk"], ["nieuwsbrief", "Nieuwsbrief"], ["infopoche", "Infopoche"], ["infofrankrijk", "Infofrankrijk"]];
   var LABEL = { algemeen: "Algemeen", regelgeving: "Wet- en regelgeving", ondernemers: "Ondernemers", reizen: "Reizen", meteo: "Meteo" };
   var VOLGORDE = ["algemeen", "regelgeving", "ondernemers", "reizen", "meteo"];
@@ -139,7 +142,8 @@
 
   function laad() {
     Promise.all([haal("/api/review"), haal("/api/selectie")]).then(function (uit) {
-      rev = uit[0]; sel = uit[1];
+      rev = uit[0]; sel = uit[1]; verouderd = false;
+      if (sel && typeof sel.drempel === "number") DREMPEL = sel.drempel;
       if (!lopend) weggezet = {};
       if (!rev.ok || !sel.ok) { zetStatus((rev.fout || sel.fout || "Fout bij laden."), true); return; }
       teken();
@@ -184,8 +188,12 @@
       var ai = gek ? gek.ai : null;
       var v = ai && ai.plek ? ai.plek : "nieuwspagina";
       if (v === "zijbalk") v = "beide";
+      // Een bericht dat de poort nog niet door is (zonder score of onder de drempel)
+      // staat niet live: het komt als kandidaat, net als een krantenbericht.
+      var wacht = !!(o.poort && o.poort.status === "wacht");
+      if (wacht && !(ai && ai.plek)) v = "zijbalk";
       items.push({ soort: "overheid", id: o.id, tijd: o.gepubliceerdOp || o.datum, kleur: "d", kop: o.kop || o.titelBron,
-        tekst: o.samenvatting, bron: o.bron, url: veilig(o.url), ai: ai, voorstel: v, altijd: true });
+        tekst: o.samenvatting, bron: o.bron, url: veilig(o.url), ai: ai, voorstel: v, altijd: !wacht, wacht: wacht });
     });
     // Syntheses die al op de nieuwspagina staan maar nog geen zijbalkkeuze
     // hebben (gepubliceerd via /review, of een keuze die is teruggedraaid).
@@ -236,7 +244,9 @@
   function gekozenRubriek(it) {
     if (rubriek[it.id]) return rubriek[it.id];
     if (it.ai && LABEL[it.ai.categorie]) return it.ai.categorie;
-    return it.soort === "overheid" || it.kleur === "d" ? "regelgeving" : "";
+    if (it.soort === "overheid" || it.kleur === "d") return it.kSoort === "meteo" ? "meteo" : "regelgeving";
+    // Nooit verplicht: zonder AI-rubriek een redelijke standaard, vooraf ingevuld.
+    return "algemeen";
   }
 
   // Nieuwsbrief en Infopoche lezen de nieuwspagina (/api/actueel): zonder
@@ -246,24 +256,29 @@
     var v = it.voorstel, k = {};
     if (it.soort === "kandidaat") { k.zijbalk = true; k.infofrankrijk = true; return k; }
     if (it.soort === "concept") k.nieuwspagina = it.nieuwsMag && v !== "zijbalk";
+    else if (it.wacht) k.nieuwspagina = v === "nieuwspagina" || v === "beide";
     else k.nieuwspagina = true;
     k.nieuwsbrief = k.infopoche = k.nieuwspagina;
     k.zijbalk = k.infofrankrijk = v === "zijbalk" || v === "beide" || !k.nieuwspagina;
     return k;
   }
+  // De tekst die in het vak staat (of stond): wat de redacteur typte gaat voor.
+  function huidigeTekst(it) { return tekstEdit[it.id] != null ? tekstEdit[it.id] : it.tekst; }
   function keuzeVan(it) { return keus[it.id] || standaard(it); }
+  // Staat het bericht al op de nieuwspagina? (Een wachtend overheidsbericht niet.)
+  function opPagina(it) { return (it.soort === "overheid" && !it.wacht) || it.soort === "publicatie"; }
   var LOS = "Een los krantenbericht komt niet op de nieuwspagina (minstens twee kranten nodig).";
   function plekMag(it, plek, k) {
     if (plek === "zijbalk" || plek === "infofrankrijk") return "";
     if (it.soort === "kandidaat") return plek === "nieuwspagina" ? LOS : "Alleen wat op de nieuwspagina staat, kan hier.";
-    if (it.soort !== "concept" && plek === "nieuwspagina") return "Staat al op de nieuwspagina. Weghalen kan met Weg.";
+    if (opPagina(it) && plek === "nieuwspagina") return "Staat al op de nieuwspagina. Weghalen kan met Weg.";
     if (it.soort === "concept" && !it.nieuwsMag) return "De huisregel (minstens twee kranten) is niet gehaald.";
     if (plek !== "nieuwspagina" && !k.nieuwspagina) return "Zet eerst de nieuwspagina aan.";
     return "";
   }
   function schakelaar(it, plek, label, k) {
     var nee = plekMag(it, plek, k), aan = !!k[plek];
-    var vast = it.soort !== "concept" && it.soort !== "kandidaat" && plek === "nieuwspagina";
+    var vast = opPagina(it) && plek === "nieuwspagina";
     var kl = "knop" + (aan ? (keus[it.id] || vast ? " aan" : " voorstel") : "");
     return '<button class="' + kl + '" type="button" data-schakel="' + plek + '" data-id="' + esc(it.id) + '" aria-pressed="' + aan + '"' + (nee && !vast ? " disabled" : "") + (nee ? ' title="' + esc(nee) + '"' : "") + ">" + (aan ? "✓ " : "") + label + "</button>";
   }
@@ -291,7 +306,7 @@
       h += '<div class="waarschuwing"><span>' + esc(w.fout) + "</span>" + (w.bevestig ? '<button class="knop" type="button" data-bevestig="' + esc(it.id) + '">Toch publiceren</button>' : "") + "</div>";
     }
     var k = keuzeVan(it);
-    h += '<div class="keuze" role="group" aria-label="Waar komt dit bericht">' + PLEKKEN.filter(function (p) { return !plekMag(it, p[0], k) || (it.soort !== "concept" && it.soort !== "kandidaat" && p[0] === "nieuwspagina") || (it.soort === "concept" && it.nieuwsMag); }).map(function (p) { return schakelaar(it, p[0], p[1], k); }).join("") + "</div>";
+    h += '<div class="keuze" role="group" aria-label="Waar komt dit bericht">' + PLEKKEN.filter(function (p) { return !plekMag(it, p[0], k) || (opPagina(it) && p[0] === "nieuwspagina") || ((it.soort === "concept" || it.wacht) && it.nieuwsMag !== false); }).map(function (p) { return schakelaar(it, p[0], p[1], k); }).join("") + "</div>";
     var iets = PLEKKEN.some(function (p) { return k[p[0]]; });
     h += '<div class="rij"><button class="knop aan" type="button" data-plaats="' + esc(it.id) + '"' + (iets ? "" : " disabled") + ">OK, plaatsen</button>" +
       '<button class="knop klein weg" type="button" data-weg="' + esc(it.id) + '">Weg</button>' +
@@ -305,12 +320,13 @@
       h += '<span class="klein">Rubriek in zijbalk en Infofrankrijk:</span><div class="chips" role="group" aria-label="Rubriek">' + VOLGORDE.map(function (k) {
         return '<button class="chip" type="button" data-rubriek="' + k + '" data-id="' + esc(it.id) + '" aria-pressed="' + (r === k) + '">' + LABEL[k] + "</button>";
       }).join("") + "</div>";
-      if (it.soort === "concept") h += '<textarea data-tekst="' + esc(it.id) + '" aria-label="Tekst van de synthese">' + esc(it.tekst) + '</textarea><button class="knop klein" type="button" data-bewaar="' + esc(it.id) + '">Tekst opslaan</button>';
+      if (it.soort === "concept") h += '<textarea data-tekst="' + esc(it.id) + '" aria-label="Tekst van de synthese">' + esc(huidigeTekst(it)) + '</textarea><button class="knop klein" type="button" data-bewaar="' + esc(it.id) + '">Tekst opslaan</button>';
       if (it.soort === "kandidaat" && it.bronNaam) {
         if (open[it.id] === "blok") h += '<span>Weet je het zeker? Berichten van ' + esc(it.bronNaam) + ' komen dan niet meer binnen.</span><div class="rij"><button class="knop" type="button" data-blokkeer="' + esc(it.bronNaam) + '">Ja, blokkeren</button><button class="knop klein" type="button" data-meer="' + esc(it.id) + '">Nee</button></div>';
         else h += '<button class="knop klein" type="button" data-blokvraag="' + esc(it.id) + '">Bron blokkeren: ' + esc(it.bronNaam) + "</button>";
       }
-      if (it.soort === "overheid" || it.soort === "publicatie") h += '<span class="klein">Weg haalt het bericht ook van de nieuwspagina.</span>';
+      if (opPagina(it)) h += '<span class="klein">Weg haalt het bericht ook van de nieuwspagina.</span>';
+      else if (it.wacht) h += '<span class="klein">Nog niet live: het model gaf geen score van ' + DREMPEL + ' of hoger. Zet de nieuwspagina aan om het toch te plaatsen.</span>';
       h += "</div>";
     }
     return h + "</article>";
@@ -339,7 +355,13 @@
       if (d !== dag) { h += '<div class="dag">' + esc(d) + "</div>"; dag = d; }
       h += kaart(it);
     });
+    var fokus = document.activeElement, fid = fokus && fokus.dataset && fokus.dataset.tekst, van = 0, tot = 0;
+    if (fid) { van = fokus.selectionStart; tot = fokus.selectionEnd; }
     el.innerHTML = h;
+    if (fid) {
+      var nieuw = document.querySelector('[data-tekst="' + fid + '"]');
+      if (nieuw) { nieuw.focus(); try { nieuw.setSelectionRange(van, tot); } catch (e) {} }
+    }
   }
 
   function tekenGekozen(gekozen, pubs) {
@@ -388,7 +410,12 @@
     if (k.infofrankrijk) zij.push("infofrankrijk");
     var act = { nieuwsbrief: !!k.nieuwsbrief, infopoche: !!k.infopoche };
     var weg = !k.nieuwspagina && !zij.length;
-    if (zij.length && !cat) { open[id] = true; teken(); melding("Kies eerst een rubriek (onder Meer)."); return; }
+    // Ook op de nieuwspagina, in de nieuwsbrief of Infopoche (zonder zijbalk): dat
+    // is een go voor het leren, geen no-go.
+    var elders = !!(k.nieuwspagina || k.nieuwsbrief || k.infopoche);
+    var ta = document.querySelector('[data-tekst="' + id + '"]');
+    if (ta) tekstEdit[id] = ta.value;
+    var tekstNu = huidigeTekst(it);
     // Meteen van het scherm; opslaan gebeurt op de achtergrond. Mislukt het,
     // dan komt het bericht terug met de foutmelding.
     delete waarschuwing[id]; weggezet[id] = true; lopend++; teken();
@@ -396,15 +423,17 @@
     if (it.soort === "kandidaat") {
       stap = post("/api/selectie", { actie: zij.length ? "go" : "nogo", id: id, categorie: c, kanalen: zij });
     } else if (it.soort === "overheid" || it.soort === "publicatie") {
-      stap = post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c }).then(function (d) {
+      stap = post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c, elders: elders, opPagina: it.wacht ? !!k.nieuwspagina : true }).then(function (d) {
         if (!d.ok) return d;
         if (weg) return terugBijFout(d, post("/api/review", it.soort === "overheid" ? { actie: "verwijder-overheid", id: id } : { actie: "depubliceer", id: id }));
-        return terugBijFout(d, post("/api/review", { actie: "kanalen", id: id, kanalen: act }));
+        // Een wachtend overheidsbericht zonder nieuwspagina blijft niet-live.
+        if (it.wacht && !k.nieuwspagina) return d;
+        return terugBijFout(d, post("/api/review", { actie: "kanalen", id: id, kanalen: act, live: it.wacht ? true : undefined }));
       });
     } else if (k.nieuwspagina) {
-      stap = post("/api/review", { actie: "publiceer", id: id, tekst: it.tekst, bevestigd: bevestigd === true, kanalen: act }).then(function (d) {
+      stap = post("/api/review", { actie: "publiceer", id: id, tekst: tekstNu, bevestigd: bevestigd === true, kanalen: act }).then(function (d) {
         if (!d.ok) return d;
-        return post("/api/selectie", { actie: "redactie", herkomst: "publicatie", id: id, kanalen: zij, categorie: c });
+        return post("/api/selectie", { actie: "redactie", herkomst: "publicatie", id: id, kanalen: zij, categorie: c, elders: elders });
       });
     } else {
       stap = post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, kanalen: zij, categorie: c }).then(function (d) {
@@ -412,23 +441,30 @@
         return terugBijFout(d, post("/api/review", { actie: "weg", id: id }));
       });
     }
-    function klaar() { lopend--; if (!lopend) laad(); }
+    // Geen volledige herlaadbeurt na een klik: het bericht is al van het scherm
+    // (weggezet) en de lijst "Gekozen vandaag" wordt pas ververst als je die opent.
+    function klaar() { lopend--; verouderd = true; }
     stap.then(function (d) {
       if (!d.ok) {
         delete weggezet[id];
         waarschuwing[id] = { fout: d.fout || "Mislukt.", bevestig: !!d.bevestigingNodig, k: k };
         teken(); klaar(); return;
       }
-      delete keus[id];
+      delete keus[id]; delete tekstEdit[id];
       klaar();
     }).catch(function () { delete weggezet[id]; teken(); klaar(); melding("Niet bereikbaar: " + (it.kop || "").slice(0, 40)); });
     melding(weg ? "Weg" : "Geplaatst: " + PLEKKEN.filter(function (p) { return k[p[0]]; }).map(function (p) { return p[1]; }).join(", "));
   }
 
+  document.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t && t.dataset && t.dataset.tekst) tekstEdit[t.dataset.tekst] = t.value;
+  });
+
   document.addEventListener("click", function (e) {
     var t = e.target.closest("button"); if (!t) return;
     var d = t.dataset;
-    if (d.tab) { tab = d.tab; teken(); return; }
+    if (d.tab) { tab = d.tab; teken(); if (tab === "gekozen" && verouderd && !lopend) laad(); return; }
     if (d.alles) { toonAlles = d.alles === "1"; teken(); return; }
     if (d.rubriek) { rubriek[d.id] = d.rubriek; teken(); return; }
     if (d.schakel) { schakel(d.id, d.schakel); return; }
@@ -443,7 +479,15 @@
     }
     if (d.bewaar) {
       var ta = document.querySelector('[data-tekst="' + d.bewaar + '"]');
-      post("/api/review", { actie: "bewerk", id: d.bewaar, tekst: ta ? ta.value : "" }).then(function (r) { melding(r.ok ? "Tekst opgeslagen" : r.fout || "Mislukt."); if (r.ok) laad(); });
+      var nieuweTekst = ta ? ta.value : (tekstEdit[d.bewaar] != null ? tekstEdit[d.bewaar] : "");
+      post("/api/review", { actie: "bewerk", id: d.bewaar, tekst: nieuweTekst }).then(function (r) {
+        melding(r.ok ? "Tekst opgeslagen" : r.fout || "Mislukt.");
+        if (!r.ok) return;
+        // Lokaal bijwerken, geen herlaadbeurt: het vak behoudt zijn inhoud.
+        delete tekstEdit[d.bewaar];
+        (rev.concepten || []).forEach(function (c) { if (c.id === d.bewaar) c.tekst = nieuweTekst; });
+        teken();
+      });
       return;
     }
     if (d.herstel) { post("/api/selectie", { actie: "herstel", id: d.herstel }).then(function (r) { melding(r.ok ? "Teruggedraaid" : r.fout || "Mislukt."); laad(); }); return; }

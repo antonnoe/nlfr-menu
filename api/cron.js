@@ -45,7 +45,9 @@
 // reviewtool toont het onder een lege conceptlijst en scripts/sonde.mjs toetst
 // het (I14, I15). Een stap die niets logt, kan niet bewaakt worden.
 
-import { haalAlleItems, buitenlandDoorlaatNL, hashId, nlOverheidRelevant } from "../lib/feeds.js";
+import { haalAlleItems, buitenlandDoorlaatNL, hashId, nlOverheidUitgesloten } from "../lib/feeds.js";
+import { verwerkPoort } from "../lib/overheidpoort.js";
+import { SEL_LEES_UREN, SCAN_SEL_KANDIDAAT, SCAN_SEL_BESLUIT } from "../lib/selectie/kern.js";
 import { outletNamen } from "../lib/cluster.js";
 import {
   nieuweMeting,
@@ -58,7 +60,7 @@ import {
   storingRegel,
 } from "../lib/persmeting.js";
 import { structureelGeldig } from "../lib/poort.js";
-import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
+import { getJSON, setJSON, del, listJSON, listJSONStrikt, kvBeschikbaar } from "../lib/store.js";
 import { synthetiseer, samenvatOverheid, overheidUitFeed } from "../lib/synthese.js";
 import {
   CONCEPT_TTL_S,
@@ -161,7 +163,7 @@ export default async function handler(req, res) {
   // overgeslagen — maar zonder modelaanroep en zonder één KV-schrijf.
   if (diagnose) {
     const { geschikt } = weegPersInvoer(items, nu, meting);
-    const bestaandeDiag = await listJSON(SCAN_CONCEPT);
+    const bestaandeDiag = await listJSON(SCAN_CONCEPT, { nietBouwen: true });
     meting.openstaandeConcepten = bestaandeDiag.length;
     meting.ruimte = Math.max(0, MAX_OPENSTAANDE_CONCEPTEN - bestaandeDiag.length);
     meting.limiet = Math.min(MAX_SYNTHESE_PER_RONDE, meting.ruimte);
@@ -219,14 +221,43 @@ export default async function handler(req, res) {
   const { behouden: overheidBehouden, weg: overheidWeg } = dedupOverheid(overheidVoorraad);
   for (const d of overheidWeg) if (d && d.id) await del(KEY_OVERHEID(d.id));
   const overheidSamengevoegd = overheidWeg.length;
-  // Rijksoverheid-berichten die de lezer in Frankrijk niet raken (zie
-  // nlOverheidRelevant): ook wat al in de voorraad staat gaat eruit.
+  // Harde uitsluiting: Caribisch Nederland komt nooit live, ook niet als het al
+  // in de voorraad staat. Wat de lezer WEL raakt, beslist de poort hieronder.
   let overheidNietRelevant = 0;
-  for (const d of overheidBehouden) {
-    if (d && d.id && d.thema === "nl-overheid" && !nlOverheidRelevant(`${d.kop || ""} ${d.samenvatting || ""}`)) {
+  for (const d of [...overheidBehouden]) {
+    if (d && d.id && d.thema === "nl-overheid" && nlOverheidUitgesloten(`${d.kop || ""} ${d.samenvatting || ""}`)) {
       await del(KEY_OVERHEID(d.id));
+      overheidBehouden.splice(overheidBehouden.indexOf(d), 1);
       overheidNietRelevant += 1;
     }
+  }
+  // DE POORT (lib/overheidpoort.js): alleen live met modelscore >= drempel (of
+  // door de redactie geplaatst); anders "wacht" en komt het als kandidaat op
+  // /redactie. Ook wat al live stond wordt zo getoetst en gaat eraf. Bij een
+  // opslagstoring wordt niets gewijzigd (geen massale terugzetting op een
+  // lege lijst).
+  let overheidPoort = { overgeslagen: null };
+  try {
+    // Normaal alleen recente kandidaten; zolang er berichten van vóór de poort
+    // zijn (geen veld `poort`) alle nog bestaande, zodat hun oude score meetelt.
+    const sinds = overheidBehouden.some((d) => d && !d.poort) ? 8 * 24 : SEL_LEES_UREN;
+    const [selKandidaten, selBesluiten] = await Promise.all([
+      listJSONStrikt(SCAN_SEL_KANDIDAAT, { sindsUren: sinds }),
+      listJSONStrikt(SCAN_SEL_BESLUIT),
+    ]);
+    overheidPoort = await verwerkPoort(overheidBehouden, { kandidaten: selKandidaten, besluiten: selBesluiten }, {
+      schrijf: (d, ttl) => setJSON(KEY_OVERHEID(d.id), d, ttl),
+      verwijder: (d) => del(KEY_OVERHEID(d.id)),
+      // Weg blijft weg: het merkteken houdt de cron van een tweede keer live zetten af.
+      afgewezen: (d) => setJSON(KEY_AFGEWEZEN(d.id), { id: d.id, op: new Date().toISOString(), reden: "redactie-weg" }, OVERHEID_TTL_S),
+    }, nu);
+    // Afgewezen docs zijn uit de opslag; ook uit de lijst die hieronder dedupt.
+    const weg = new Set(overheidPoort.weg);
+    for (let i = overheidBehouden.length - 1; i >= 0; i--) if (weg.has(overheidBehouden[i].id)) overheidBehouden.splice(i, 1);
+    delete overheidPoort.weg;
+  } catch (e) {
+    overheidPoort = { overgeslagen: e instanceof Error ? e.message : String(e) };
+    console.warn(`[cron] overheidpoort overgeslagen: ${overheidPoort.overgeslagen}`);
   }
 
   // Het register is de ketencontext: nieuwe berichten worden hiertegen getoetst.
@@ -244,7 +275,7 @@ export default async function handler(req, res) {
     // een Franse bron kost een modelaanroep. Ze mogen elkaars ruimte niet
     // opeten — zie MAX_OVERHEID_NL_PER_RONDE in lib/config.js.
     const alNederlands = item.taal === "nl";
-    if (alNederlands && !nlOverheidRelevant(`${item.titel || ""} ${item.samenvatting || ""}`)) {
+    if (alNederlands && nlOverheidUitgesloten(`${item.titel || ""} ${item.samenvatting || ""}`)) {
       overheidVerwerkt.push({ id: hashId(item.url), status: "niet-relevant", bron: item.bron });
       continue;
     }
@@ -252,6 +283,11 @@ export default async function handler(req, res) {
     const id = hashId(item.url);
     if (await getJSON(KEY_OVERHEID(id))) {
       overheidVerwerkt.push({ id, status: "overgeslagen" });
+      continue;
+    }
+    // Door de redactie weggegooid: blijft weg, ook als het nog in de feed staat.
+    if (await getJSON(KEY_AFGEWEZEN(id))) {
+      overheidVerwerkt.push({ id, status: "afgewezen", bron: item.bron });
       continue;
     }
     // Zelfde bericht, andere feed of andere tracking-parameter? Dan geen tweede
@@ -288,6 +324,8 @@ export default async function handler(req, res) {
         samenvatting, // NL
         model,
         gepubliceerdOp: new Date().toISOString(),
+        // Niet live tot de poort het doorlaat (modelscore) of de redactie het plaatst.
+        poort: { status: "wacht", score: null, door: null, op: new Date().toISOString() },
       };
       // KETEN-DETECTIE. Toetst dit bericht tegen het register én de live
       // overheidsvoorraad in dezelfde rubriek. Een match BLOKKEERT DE LIVEGANG
@@ -305,7 +343,7 @@ export default async function handler(req, res) {
       overheidBehouden.push(doc); // volgende items in deze ronde hiertegen dedupen
       if (alNederlands) nieuwOverheidNL += 1;
       else nieuwOverheid += 1;
-      overheidVerwerkt.push({ id, status: "live", bron: item.bron, model: model || "geen (feedtekst)" });
+      overheidVerwerkt.push({ id, status: "wacht-op-poort", bron: item.bron, model: model || "geen (feedtekst)" });
     } catch (e) {
       overheidVerwerkt.push({
         id,
@@ -332,7 +370,13 @@ export default async function handler(req, res) {
     if (!d || !d.id) continue;
     const t = Date.parse(d.datum || d.gepubliceerdOp) || 0;
     if (!t || nu - t < OPNAME_GRENS_MS) {
-      overheidLive.push(d);
+      if (!d.poort || d.poort.status === "ok") overheidLive.push(d);
+      continue;
+    }
+    if (d.poort && d.poort.status === "wacht") {
+      // Nooit door de poort gekomen: niet in het register (dat is het archief
+      // van wat live was), gewoon opruimen.
+      await del(KEY_OVERHEID(d.id));
       continue;
     }
     if (registerBekend.has(d.id)) {
@@ -717,8 +761,8 @@ export default async function handler(req, res) {
     totaalItems: items.length,
     overheid: {
       kandidaten: overheidItems.length,
-      nieuwLive: nieuwOverheid,
-      samengevoegd: overheidSamengevoegd, nietRelevant: overheidNietRelevant, // dubbele records uit de voorraad gehaald
+      nieuwLive: nieuwOverheid, // nieuw in de voorraad (live pas na de poort)
+      samengevoegd: overheidSamengevoegd, nietRelevant: overheidNietRelevant, poort: overheidPoort, // dubbele records uit de voorraad gehaald
       dubbelOvergeslagen: overheidDubbelOvergeslagen, // instroom die al bestond
       ketenVragen, // nieuwe berichten met een openstaande keten-vraag
       voorraad: overheidLive.length,

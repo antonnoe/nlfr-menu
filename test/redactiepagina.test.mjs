@@ -81,8 +81,8 @@ test("koppeling op bronlink: www, slash en querystring tellen niet", () => {
 
 const CONCEPT = { id: "abc12", kop: "Kop van de synthese", bronnen: [{ naam: "Le Monde", url: "https://www.lemonde.fr/a" }], aangemaaktOp: "2026-11-20T10:00:00Z" };
 
-test("synthese alleen in de zijbalk: link naar de eerste krant, rubriek verplicht", () => {
-  assert.match(redactieBesluit({ herkomst: "concept", doc: CONCEPT }).fout, /rubriek/);
+test("synthese alleen in de zijbalk: link naar de eerste krant, rubriek nooit verplicht", () => {
+  assert.equal(redactieBesluit({ herkomst: "concept", doc: CONCEPT }).besluit.categorie, "algemeen", "zonder rubriek een standaardrubriek, geen weigering");
   const { besluit } = redactieBesluit({ herkomst: "concept", doc: CONCEPT, categorie: "algemeen" });
   assert.equal(besluit.id, "rabc12");
   assert.equal(besluit.url, "https://www.lemonde.fr/a");
@@ -190,14 +190,13 @@ test("zijbalknieuws met ?kanaal=infofrankrijk leest de Infofrankrijk-feed", () =
   assert.ok(html.includes('get("kanaal") === "infofrankrijk"'));
 });
 
-test("Rijksoverheid-zeef: Caribisch Nederland en binnenlands nieuws eruit, buitenland en belasting erin", async () => {
-  const { nlOverheidRelevant } = await import("../lib/feeds.js");
-  assert.equal(nlOverheidRelevant("Verbetering leefomgeving Bonaire, Sint Eustatius en Saba"), false);
-  assert.equal(nlOverheidRelevant("Belasting in Caribisch Nederland omlaag"), false);
-  assert.equal(nlOverheidRelevant("Openstelling burgemeestersvacature Lingewaard"), false);
-  assert.equal(nlOverheidRelevant("Zr.Ms. Evertsen helpt schepen beschermen"), false);
-  assert.equal(nlOverheidRelevant("Kabinet zet werk en meedoen centraal"), false);
-  assert.equal(nlOverheidRelevant("AOW-leeftijd stijgt in 2032"), true);
-  assert.equal(nlOverheidRelevant("Nieuwe regels voor Nederlanders in het buitenland bij verkiezingen"), true);
-  assert.equal(nlOverheidRelevant("Paspoort aanvragen wordt duurder"), true);
+test("Rijksoverheid: alleen Caribisch Nederland is hard uitgesloten; de rest beslist de modelscore (poort)", async () => {
+  const { nlOverheidUitgesloten } = await import("../lib/feeds.js");
+  assert.equal(nlOverheidUitgesloten("Verbetering leefomgeving Bonaire, Sint Eustatius en Saba"), true);
+  assert.equal(nlOverheidUitgesloten("Belasting in Caribisch Nederland omlaag"), true);
+  assert.equal(nlOverheidUitgesloten("AOW-leeftijd stijgt in 2032"), false);
+  assert.equal(nlOverheidUitgesloten("Openstelling burgemeestersvacature Lingewaard"), false, "geen trefwoordenlijst meer: dit regelt de poort");
+  const feeds = fs.readFileSync(new URL("../lib/feeds.js", import.meta.url), "utf8");
+  assert.ok(!feeds.includes("NL_OVERHEID_DOEL"), "de te zwakke doellijst is vervallen");
 });
+

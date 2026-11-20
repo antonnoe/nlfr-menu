@@ -73,12 +73,13 @@ test("listJSON haalt in batches van MGET_BATCH op, niet één GET per sleutel", 
     "batches van hoogstens MGET_BATCH sleutels"
   );
   assert.equal(
-    commandos.filter((c) => c[0] === "GET").length,
+    commandos.filter((c) => c[0] === "GET" && c[1] !== "ix:klaar").length,
     0,
-    "geen enkele losse GET meer"
+    "geen enkele losse GET per document meer (alleen de indexmarker)"
   );
-  // Eén SCAN + drie MGET's: vier round-trips in plaats van 251.
-  assert.equal(commandos.length, 4);
+  // Deze namaak-KV kent geen index-opdrachten: marker-GET (mislukt), één SCAN
+  // als terugval en drie MGET's, in plaats van 251 round-trips.
+  assert.equal(commandos.length, 5);
 });
 
 test("null-waarden (tussen scan en lezen verlopen) worden stil overgeslagen", async () => {

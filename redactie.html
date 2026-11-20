@@ -22,7 +22,7 @@
   .kopregel { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
   h1 { margin:0; font-family:Poppins,sans-serif; font-size:26px; color:var(--brand); }
   .preview { display:flex; gap:8px; flex-wrap:wrap; }
-  .preview a { font-family:Poppins,sans-serif; font-weight:700; font-size:14px; min-height:44px; display:inline-flex; align-items:center; padding:0 12px; border-radius:12px; border:1px solid var(--lijn); background:#fff; text-decoration:none; }
+  .preview { gap:4px 12px; font-size:14px; } .preview a { font-weight:700; min-height:36px; display:inline-flex; align-items:center; }
   .balk { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
   .balk .rechts { margin-left:auto; font-size:13px; color:var(--zacht); }
   .balk .rechts button { font:inherit; color:var(--brand); background:none; border:0; text-decoration:underline; cursor:pointer; min-height:36px; padding:0 4px; }
@@ -46,7 +46,7 @@
   .score.hoog { color:#1f6d30; } .score.mid { color:#8a4b00; } .score.laag { color:var(--zacht); }
   h2 { margin:0; font-family:Poppins,sans-serif; font-size:18px; line-height:1.35; color:var(--brand); }
   h2 a { color:inherit; text-decoration:none; }
-  .tekst { margin:0; font-size:15px; line-height:1.6; white-space:pre-line; }
+  .tekst { margin:0; font-size:15px; line-height:1.6; white-space:pre-line; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
   .klein { margin:0; font-size:13px; color:var(--zacht); }
   .extra { font-size:13px; color:#2f6b3d; background:#eef4ee; border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:3px; }
   .extra a { color:#2f6b3d; font-weight:700; }
@@ -77,26 +77,18 @@
 <div class="pagina">
   <div class="kopregel">
     <h1>Redactie</h1>
-    <div class="preview">
-      <a href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_blank" rel="noopener">Bekijk nieuwspagina</a>
-      <a href="/sidebar-nieuws" target="_blank" rel="noopener">Bekijk zijbalk</a>
-      <a href="https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief" target="_blank" rel="noopener" title="De laatst verstuurde nieuwsbrief">Bekijk nieuwsbrief</a>
-      <a href="https://infopoche.fr" target="_blank" rel="noopener">Bekijk Infopoche</a>
-      <a href="https://infofrankrijk.com/#open" target="_blank" rel="noopener">Bekijk Infofrankrijk</a>
+    <div class="preview"><span style="color:var(--zacht)">Bekijk:</span>
+      <a href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_blank" rel="noopener">Nieuwspagina</a>
+      <a href="/sidebar-nieuws" target="_blank" rel="noopener">Zijbalk</a>
+      <a href="https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief" target="_blank" rel="noopener" title="De laatst verstuurde nieuwsbrief">Nieuwsbrief</a>
+      <a href="https://infopoche.fr" target="_blank" rel="noopener">Infopoche</a>
+      <a href="https://infofrankrijk.com/#open" target="_blank" rel="noopener">Infofrankrijk</a>
     </div>
   </div>
   <div class="balk">
     <button class="chip" type="button" data-tab="kiezen" aria-pressed="true">Te kiezen</button>
     <button class="chip" type="button" data-tab="gekozen" aria-pressed="false">Gekozen vandaag</button>
     <span class="rechts" id="filter"></span>
-  </div>
-  <div class="legenda">
-    <span><i class="blokje" style="background:var(--c)"></i>Synthese NL+FR</span>
-    <span><i class="blokje" style="background:var(--a)"></i>Synthese NL/BE</span>
-    <span><i class="blokje" style="background:var(--b)"></i>Synthese FR</span>
-    <span><i class="blokje" style="background:var(--d)"></i>.gouv, vrij te gebruiken</span>
-    <span><i class="blokje" style="background:var(--e)"></i>Kop van een krantenbericht</span>
-    <span><i class="blokje stip"></i>voorstel van de AI</span>
   </div>
   <div class="status" id="status">Laden…</div>
   <div id="lijst"></div>
@@ -222,7 +214,10 @@
   }
 
   function score(it) { return it.ai && typeof it.ai.score === "number" ? it.ai.score : null; }
-  function zichtbaar(it) { return it.altijd || toonAlles || (score(it) != null && score(it) >= DREMPEL); }
+  // Standaard alleen vandaag (op de klok van de lezer), en van de losse
+  // krantenberichten alleen wat de AI de moeite waard vindt. "Alles" toont de rest.
+  function vanVandaag(it) { var d = new Date(it.tijd); return !isNaN(d) && d.toDateString() === new Date().toDateString(); }
+  function zichtbaar(it) { return toonAlles || (vanVandaag(it) && (it.altijd || (score(it) != null && score(it) >= DREMPEL))); }
 
   function extraBlok(ai) {
     if (!ai) return "";
@@ -285,19 +280,10 @@
     var soortLabel = it.soort === "kandidaat" && it.kSoort === "meteo" ? "Meteo" : KLEUR[it.kleur];
     var kop = it.url ? '<a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.kop) + "</a>" : esc(it.kop);
     var h = '<article class="k-' + it.kleur + '" id="i-' + esc(it.id) + '">' +
-      '<div class="meta"><span class="tijd">' + tijd(it.tijd) + '</span><span class="soort" style="color:var(--' + it.kleur + ')">' + esc(soortLabel) + "</span><span>" + esc(it.bron) + '</span><span class="score ' + sk + '">' + (s == null ? "nog geen oordeel" : s + prio) + "</span></div>" +
+      '<div class="meta"><span class="tijd">' + tijd(it.tijd) + "</span><span>" + esc(it.bron) + "</span></div>" +
       "<h2>" + kop + "</h2>";
-    if (it.origineel) h += '<p class="klein">' + esc(it.origineel) + "</p>";
     if (it.tekst) h += '<p class="tekst">' + esc(it.tekst) + "</p>";
-    else if (it.ai && it.ai.reden) h += '<p class="klein">' + esc(it.ai.reden) + "</p>";
-    if (it.soort === "overheid") h += '<p class="klein">Staat al op de nieuwspagina (automatisch).</p>';
-    if (it.soort === "publicatie") h += '<p class="klein">Staat al op de nieuwspagina.</p>';
-    if (it.weigering) h += '<p class="klein">Kan niet op de nieuwspagina: de huisregel (minstens twee kranten) is niet gehaald.</p>';
-    h += extraBlok(it.ai);
     var r = gekozenRubriek(it);
-    h += '<div class="chips" role="group" aria-label="Rubriek in de zijbalk">' + VOLGORDE.map(function (k) {
-      return '<button class="chip" type="button" data-rubriek="' + k + '" data-id="' + esc(it.id) + '" aria-pressed="' + (r === k) + '">' + LABEL[k] + "</button>";
-    }).join("") + "</div>";
     if (waarschuwing[it.id]) {
       var w = waarschuwing[it.id];
       h += '<div class="waarschuwing"><span>' + esc(w.fout) + "</span>" + (w.bevestig ? '<button class="knop" type="button" data-bevestig="' + esc(it.id) + '">Toch publiceren</button>' : "") + "</div>";
@@ -310,6 +296,13 @@
       '<button class="knop klein" type="button" data-meer="' + esc(it.id) + '" aria-expanded="' + (open[it.id] ? "true" : "false") + '">Meer ' + (open[it.id] ? "▴" : "▾") + "</button></div>";
     if (open[it.id]) {
       h += '<div class="meer">';
+      h += '<p class="klein">' + esc(soortLabel) + (s == null ? "" : " · score " + s + prio) + (it.origineel ? " · " + esc(it.origineel) : "") + "</p>";
+      if (it.ai && it.ai.reden && !it.tekst) h += '<p class="klein">' + esc(it.ai.reden) + "</p>";
+      if (it.weigering) h += '<p class="klein">Kan niet op de nieuwspagina: de huisregel (minstens twee kranten) is niet gehaald.</p>';
+      h += extraBlok(it.ai);
+      h += '<span class="klein">Rubriek in zijbalk en Infofrankrijk:</span><div class="chips" role="group" aria-label="Rubriek">' + VOLGORDE.map(function (k) {
+        return '<button class="chip" type="button" data-rubriek="' + k + '" data-id="' + esc(it.id) + '" aria-pressed="' + (r === k) + '">' + LABEL[k] + "</button>";
+      }).join("") + "</div>";
       if (it.soort === "concept") h += '<textarea data-tekst="' + esc(it.id) + '" aria-label="Tekst van de synthese">' + esc(it.tekst) + '</textarea><button class="knop klein" type="button" data-bewaar="' + esc(it.id) + '">Tekst opslaan</button>';
       if (it.soort === "kandidaat" && it.bronNaam) {
         if (open[it.id] === "blok") h += '<span>Weet je het zeker? Berichten van ' + esc(it.bronNaam) + ' komen dan niet meer binnen.</span><div class="rij"><button class="knop" type="button" data-blokkeer="' + esc(it.bronNaam) + '">Ja, blokkeren</button><button class="knop klein" type="button" data-meer="' + esc(it.id) + '">Nee</button></div>';
@@ -332,12 +325,12 @@
     var pubs = (rev.publicaties || []).filter(function (p) { return new Date(p.gepubliceerdOp).toDateString() === vandaag; });
     document.querySelector('[data-tab="kiezen"]').textContent = "Te kiezen (" + zicht.length + ")";
     document.querySelector('[data-tab="gekozen"]').textContent = "Gekozen vandaag (" + (gekozen.length + pubs.length) + ")";
-    document.getElementById("filter").innerHTML = toonAlles ? 'Alles · <button type="button" data-alles="0">alleen score ' + DREMPEL + "+</button>" : "Score " + DREMPEL + '+ · <button type="button" data-alles="1">toon alles (' + items.length + ")</button>";
+    document.getElementById("filter").innerHTML = toonAlles ? 'Alles · <button type="button" data-alles="0">alleen vandaag</button>' : 'Vandaag · <button type="button" data-alles="1">toon alles (' + items.length + ")</button>";
     var r = sel.ronde;
-    zetStatus(r ? "Laatste AI-ronde " + tijd(r.op) + " · " + r.gevonden + " berichten bekeken" + (r.modelFout ? " · AI-oordeel mislukt: " + r.modelFout : "") + (verborgen && tab === "kiezen" ? " · " + verborgen + " onder score " + DREMPEL + " verborgen" : "") : "Nog geen AI-ronde.", r && r.modelFout);
+    zetStatus(r && r.modelFout ? "AI-oordeel mislukt: " + r.modelFout : "", r && r.modelFout);
     var el = document.getElementById("lijst");
     if (tab === "gekozen") { el.innerHTML = tekenGekozen(gekozen, pubs); return; }
-    if (!zicht.length) { el.innerHTML = '<div class="leeg">Niets te kiezen. De AI kijkt elk uur opnieuw.</div>'; return; }
+    if (!zicht.length) { el.innerHTML = '<div class="leeg">Niets te kiezen. De AI kijkt elk uur opnieuw. Oudere berichten staan onder toon alles.</div>'; return; }
     var h = "", dag = "";
     zicht.forEach(function (it) {
       var d = dagLabel(it.tijd);
@@ -393,7 +386,7 @@
     if (k.infofrankrijk) zij.push("infofrankrijk");
     var act = { nieuwsbrief: !!k.nieuwsbrief, infopoche: !!k.infopoche };
     var weg = !k.nieuwspagina && !zij.length;
-    if (zij.length && !cat) { melding("Kies eerst een rubriek."); return; }
+    if (zij.length && !cat) { open[id] = true; teken(); melding("Kies eerst een rubriek (onder Meer)."); return; }
     bezig(id, true); delete waarschuwing[id];
     var c = cat || undefined, stap;
     if (it.soort === "kandidaat") {

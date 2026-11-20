@@ -37,6 +37,8 @@ import {
   bronSleutel,
   zoekGekoppeldAlle,
   redactieBesluit,
+  leesKanalen,
+  kanalenVan,
 } from "../lib/selectie/kern.js";
 import { KEY_CONCEPT, KEY_PUBLICATIE, KEY_OVERHEID } from "../lib/config.js";
 
@@ -87,12 +89,18 @@ export default async function handler(req, res) {
       // kandidaten waarop ze steunen (die horen niet nog eens op het scherm).
       redactie: besluiten
         .filter((b) => b.redactie && b.redactie.reviewId && Date.parse(b.besluitOp || "") > Date.now() - 7 * 86400 * 1000)
-        .map((b) => ({ id: b.id, reviewId: b.redactie.reviewId, herkomst: b.redactie.herkomst, besluit: b.besluit, categorie: b.categorie, titel: b.titel, besluitOp: b.besluitOp })),
+        .map((b) => ({ id: b.id, reviewId: b.redactie.reviewId, herkomst: b.redactie.herkomst, besluit: b.besluit, kanalen: kanalenVan(b), categorie: b.categorie, titel: b.titel, besluitOp: b.besluitOp })),
     });
   }
 
   if (req.method !== "POST") return res.status(405).json({ ok: false, fout: "Alleen GET en POST." });
-  const { actie, id, categorie, bron, herkomst, zijbalk } = leesBody(req);
+  const body = leesBody(req);
+  const { id, categorie, bron, herkomst, zijbalk } = body;
+  // kanalen: ["zijbalk", "infofrankrijk"] of een deel daarvan. Leeg = nergens,
+  // dus een go zonder kanaal is een no-go. Ontbreekt het veld: alleen zijbalk.
+  const kanalen = leesKanalen(body.kanalen);
+  let actie = body.actie;
+  if (actie === "go" && kanalen && !kanalen.length) actie = "nogo";
 
   if (actie === "blokkeer" || actie === "deblokkeer") {
     const naam = String(bron || "").trim().slice(0, 100);
@@ -114,7 +122,7 @@ export default async function handler(req, res) {
     const [doc, kandidaten] = await Promise.all([getJSON(sleutel(id)), listJSON(SCAN_SEL_KANDIDAAT)]);
     if (!doc) return res.status(404).json({ ok: false, fout: "Bericht niet (meer) gevonden." });
     const [gekoppeld = null, ...ook] = zoekGekoppeldAlle(doc, kandidaten);
-    const uit = redactieBesluit({ herkomst, doc, gekoppeld, categorie, zijbalk: zijbalk !== false, door: deur.adres || null });
+    const uit = redactieBesluit({ herkomst, doc, gekoppeld, categorie, zijbalk: zijbalk !== false, kanalen, door: deur.adres || null });
     if (uit.fout) return res.status(400).json({ ok: false, fout: uit.fout });
     uit.besluit.redactie.ook = ook.map((k) => k.id);
     await setJSON(KEY_SEL_BESLUIT(uit.besluit.id), uit.besluit); // geen TTL
@@ -122,7 +130,7 @@ export default async function handler(req, res) {
     // De andere bronartikelen blijven bewaard (de ronde ziet ze als bekend),
     // maar komen niet los op het scherm.
     for (const k of ook) await setJSON(KEY_SEL_KANDIDAAT(k.id), { ...k, opgenomen: uit.besluit.id }, SEL_KANDIDAAT_TTL_S);
-    return res.status(200).json({ ok: true, besluit: { id: uit.besluit.id, besluit: uit.besluit.besluit, categorie: uit.besluit.categorie } });
+    return res.status(200).json({ ok: true, besluit: { id: uit.besluit.id, besluit: uit.besluit.besluit, categorie: uit.besluit.categorie, kanalen: uit.besluit.kanalen } });
   }
 
   if (actie === "go" || actie === "nogo") {
@@ -136,6 +144,7 @@ export default async function handler(req, res) {
     const besluit = {
       ...k,
       besluit: actie,
+      kanalen: actie === "go" ? kanalen || ["zijbalk"] : [],
       categorie: gekozen,
       categorieDoorRedactie: Boolean(categorie && categorie !== voorstel),
       besluitOp: new Date().toISOString(),
@@ -143,13 +152,13 @@ export default async function handler(req, res) {
     };
     await setJSON(KEY_SEL_BESLUIT(id), besluit); // GEEN TTL: dit is het lesmateriaal
     await del(KEY_SEL_KANDIDAAT(id));
-    return res.status(200).json({ ok: true, besluit: { id, besluit: actie, categorie: gekozen } });
+    return res.status(200).json({ ok: true, besluit: { id, besluit: actie, categorie: gekozen, kanalen: besluit.kanalen } });
   }
 
   if (actie === "herstel") {
     const b = await getJSON(KEY_SEL_BESLUIT(id));
     if (!b) return res.status(404).json({ ok: false, fout: "Beslissing niet gevonden." });
-    const { besluit, besluitOp, door, categorieDoorRedactie, ...kandidaat } = b;
+    const { besluit, besluitOp, door, categorieDoorRedactie, kanalen: _k, ...kandidaat } = b;
     // Het teruggedraaide besluit blijft bewaard (geen TTL): ook een correctie is
     // lesmateriaal, en wie later wil weten wat er gebeurde kan het nalezen.
     const nu = new Date().toISOString();

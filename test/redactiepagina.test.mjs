@@ -14,7 +14,10 @@ import {
   redactieBesluit,
   urlSleutel,
   FRANKRIJKNIEUWS_URL,
+  leesKanalen,
+  kanalenVan,
 } from "../lib/selectie/kern.js";
+import { normActueelKanalen, assembleerTegels } from "../lib/tegels.js";
 
 const DOC = {
   modules: [{ id: "cafeclaude", url: "https://cafeclaude.fr/app" }],
@@ -132,4 +135,51 @@ test("/redactie staat achter de login en roept beide backends aan", () => {
   assert.match(html, /noindex/);
   const mw = fs.readFileSync(new URL("../middleware.js", import.meta.url), "utf8");
   assert.match(mw, /"\/redactie"/);
+});
+
+// ---- Vijf plekken (20-11-2026) -----------------------------------------------
+test("kanalen: alleen zijbalk en infofrankrijk; oud besluit zonder veld = zijbalk", () => {
+  assert.deepEqual(leesKanalen(["infofrankrijk", "x", "zijbalk"]), ["zijbalk", "infofrankrijk"]);
+  assert.equal(leesKanalen(undefined), null);
+  assert.deepEqual(kanalenVan({ besluit: "go" }), ["zijbalk"]);
+  assert.deepEqual(kanalenVan({ besluit: "nogo", kanalen: ["zijbalk"] }), []);
+});
+
+test("feed per kanaal: zijbalk en Infofrankrijk los te kiezen", () => {
+  const b = (id, kanalen) => ({ id, besluit: "go", categorie: "algemeen", titel: "t", url: "https://x.fr/" + id, datum: new Date().toISOString(), ...(kanalen ? { kanalen } : {}) });
+  const lijst = [b("oud"), b("zij", ["zijbalk"]), b("if", ["infofrankrijk"]), b("beide", ["zijbalk", "infofrankrijk"])];
+  const ids = (f) => f.categorieen.flatMap((c) => c.items.map((i) => i.id)).sort();
+  assert.deepEqual(ids(bouwFeed(lijst)), ["beide", "oud", "zij"]);
+  assert.deepEqual(ids(bouwFeed(lijst, Date.now(), undefined, "infofrankrijk")), ["beide", "if"]);
+});
+
+test("redactiebesluit met kanalen: leeg is no-go, anders go met die kanalen", () => {
+  const leeg = redactieBesluit({ herkomst: "concept", doc: CONCEPT, kanalen: [] }).besluit;
+  assert.equal(leeg.besluit, "nogo");
+  assert.deepEqual(leeg.kanalen, []);
+  const ifAlleen = redactieBesluit({ herkomst: "concept", doc: CONCEPT, categorie: "algemeen", kanalen: ["infofrankrijk"] }).besluit;
+  assert.equal(ifAlleen.besluit, "go");
+  assert.deepEqual(ifAlleen.kanalen, ["infofrankrijk"]);
+});
+
+test("nieuwsbrief en Infopoche: alleen booleans voor die twee sleutels gaan mee naar /api/actueel", () => {
+  assert.deepEqual(normActueelKanalen({ nieuwsbrief: false, infopoche: true, zijbalk: false, x: 1 }), { nieuwsbrief: false, infopoche: true });
+  assert.equal(normActueelKanalen({ nieuwsbrief: "nee" }), null);
+  assert.equal(normActueelKanalen(null), null);
+});
+
+test("/redactie heeft vijf plekken, OK plaatsen en Weg, en voorbeeldknoppen voor alle vijf", () => {
+  const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
+  for (const p of ["nieuwspagina", "zijbalk", "nieuwsbrief", "infopoche", "infofrankrijk"]) assert.ok(html.includes(`["${p}", "`), p);
+  assert.ok(html.includes("OK, plaatsen") && html.includes("data-weg="));
+  for (const u of ["/sidebar-nieuws", "nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", "https://infopoche.fr", "https://infofrankrijk.com/#open"]) assert.ok(html.includes(u), u);
+});
+
+test("/api/actueel: een publicatie met kanalen geeft ze mee per artikel, zonder kanalen geen veld", () => {
+  const nu = Date.now();
+  const pub = (id, extra) => ({ id, gepubliceerd: true, kop: "Kop " + id, tekst: "Tekst over iets in Frankrijk " + id + ". Meer tekst.", gepubliceerdOp: new Date(nu - 3600e3).toISOString(), bronnen: [{ naam: "Le Monde", url: "https://www.lemonde.fr/" + id }, { naam: "NOS", url: "https://nos.nl/" + id }], ...extra });
+  const tegels = assembleerTegels({ publicaties: [pub("p1", { kanalen: { nieuwsbrief: false } }), pub("p2", { kop: "Iets heel anders", tekst: "Volkomen ander onderwerp over treinen. Nog meer." })], nu });
+  const alle = tegels.flatMap((t) => t.artikelen || []);
+  assert.deepEqual(alle.find((a) => a.id === "p1").kanalen, { nieuwsbrief: false });
+  assert.equal("kanalen" in alle.find((a) => a.id === "p2"), false);
 });

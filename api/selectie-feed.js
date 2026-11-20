@@ -2,12 +2,14 @@
 // berichten, per categorie, met de PEIL-route naar de tools. Vervangt de
 // Feedspot-pinboard die via FeedWind in de NLFR-sidebar stond.
 //   ?format=rss  -> RSS 2.0
+//   ?kanaal=infofrankrijk -> alleen wat de redactie voor Infofrankrijk koos
+//                   (standaard: zijbalk)
 //   ?status=1    -> alleen tellingen en de laatste ronde (geen inhoud), voor
 //                   controle van buitenaf
 // Geen persoonsgegevens: wie besliste, gaat er niet in mee.
 
 import { getJSON, listJSON, kvBeschikbaar } from "../lib/store.js";
-import { bouwFeed, bouwRss, KEY_SEL_RONDE, SCAN_SEL_BESLUIT, SCAN_SEL_KANDIDAAT } from "../lib/selectie/kern.js";
+import { bouwFeed, bouwRss, SEL_KANALEN, KEY_SEL_RONDE, SCAN_SEL_BESLUIT, SCAN_SEL_KANDIDAAT } from "../lib/selectie/kern.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -51,7 +53,10 @@ export default async function handler(req, res) {
     });
   }
 
-  const feed = bouwFeed(await listJSON(SCAN_SEL_BESLUIT));
+  // ?kanaal=infofrankrijk: het nieuwsblok op Infofrankrijk (#open); standaard
+  // de zijbalk van Nederlanders.fr.
+  const kanaal = SEL_KANALEN.includes(String(q.kanaal || "")) ? String(q.kanaal) : "zijbalk";
+  const feed = bouwFeed(await listJSON(SCAN_SEL_BESLUIT), Date.now(), undefined, kanaal);
   res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
   if (String(q.format || "") === "rss") {
     res.setHeader("Content-Type", "application/rss+xml; charset=utf-8");

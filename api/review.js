@@ -25,6 +25,9 @@
 //           "verwijs-weg" die verwijzing weer weghalen
 //           "thema"       thema van een publicatie/concept wijzigen (themaBron "redactie");
 //                         thema "" = terug naar de automatische indeling (regels)
+//           "kanalen"     { kanalen: { nieuwsbrief, infopoche } } bij een publicatie of
+//                         overheidsbericht: ook in de nieuwsbrief en Infopoche, ja of nee
+//                         (publiceer neemt hetzelfde veld mee)
 //           "nakijken"    IF-artikel op de auditlijst zetten (lezer ziet niets)
 //           "nakijken-klaar" van de auditlijst af
 //           "cafejeudi"   { ja: true|false } zonder id: Café Jeudi deze week ja of nee.
@@ -49,7 +52,7 @@ import {
 import { vindGelijkenis, gelijkenis, vindPrimaireBron } from "../lib/gelijkenis.js";
 import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
 import { keurBronnen, bronUrlOordeel, bronVoorNaam } from "../lib/bronurl.js";
-import { persTegelVanPublicatie, opgeslagenThema } from "../lib/tegels.js";
+import { persTegelVanPublicatie, opgeslagenThema, normActueelKanalen } from "../lib/tegels.js";
 import {
   kandidaten as ifKandidaten,
   bijnaVerlopen as ifBijnaVerlopen,
@@ -649,6 +652,8 @@ export default async function handler(req, res) {
         gepubliceerd: true,
         gepubliceerdOp: new Date().toISOString(),
       };
+      const kanalen = normActueelKanalen(body.kanalen);
+      if (kanalen) publicatie.kanalen = kanalen;
       await setJSON(KEY_PUBLICATIE(id), publicatie, PUBLICATIE_TTL_S); // verloopt na 7 dagen
       await del(KEY_CONCEPT(id));
       await vervalSnapshots();
@@ -909,6 +914,30 @@ export default async function handler(req, res) {
       if (!ifId) return res.status(400).json({ ok: false, fout: "ifId vereist." });
       await del(KEY_NAKIJKEN(ifId));
       return res.status(200).json({ ok: true });
+    }
+
+    if (actie === "kanalen") {
+      // Nieuwsbrief en Infopoche lezen /api/actueel; dit veld zegt per bericht
+      // of het daar ook hoort. TTL loopt door tot het oorspronkelijke eindpunt.
+      const kanalen = normActueelKanalen(body.kanalen);
+      if (!kanalen) return res.status(400).json({ ok: false, fout: "Geen kanalen opgegeven." });
+      const pub = await getJSON(KEY_PUBLICATIE(id));
+      if (pub) {
+        pub.kanalen = { ...(normActueelKanalen(pub.kanalen) || {}), ...kanalen };
+        const gepubT = Date.parse(pub.gepubliceerdOp) || Date.now();
+        await setJSON(KEY_PUBLICATIE(id), pub, Math.max(60, Math.round(PUBLICATIE_TTL_S - (Date.now() - gepubT) / 1000)));
+        await vervalSnapshots();
+        return res.status(200).json({ ok: true, kanalen: pub.kanalen, snapshotVervallen: true });
+      }
+      const doc = await getJSON(KEY_OVERHEID(id));
+      if (doc) {
+        doc.kanalen = { ...(normActueelKanalen(doc.kanalen) || {}), ...kanalen };
+        const t = Date.parse(doc.gepubliceerdOp || doc.datum || "") || Date.now();
+        await setJSON(KEY_OVERHEID(id), doc, Math.max(60, Math.round(OVERHEID_TTL_S - (Date.now() - t) / 1000)));
+        await vervalSnapshots();
+        return res.status(200).json({ ok: true, kanalen: doc.kanalen, snapshotVervallen: true });
+      }
+      return res.status(404).json({ ok: false, fout: "Bericht niet gevonden." });
     }
 
     if (actie === "verwijder-overheid") {

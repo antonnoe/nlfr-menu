@@ -249,3 +249,11 @@ test("redactie: vier berichten over overstromingen Pas-de-Calais worden één (d
     "Overstromingen in Pas-de-Calais: 35 gemeenten al onder water, één dorp geïsoleerd"]) assert.equal(ctx.zelfdeOnderwerp(syn, { kop: k }), true, k);
   assert.equal(ctx.zelfdeOnderwerp(syn, { kop: "Franse huurprijsregulering twee jaar verlengd" }), false);
 });
+
+test("redactie: PEIL-verwijzing staat in de regel en in het detail", () => {
+  assert.match(html, /peilKort\(it\.ai\)/);
+  assert.match(html, /extraBlok\(it\.ai\)/);
+  assert.match(html, /<b>PEIL:<\/b>/);
+  assert.match(html, /Tool in de zijbalk/);
+  assert.match(html, /Café Claude:/);
+});

@@ -151,6 +151,10 @@
     .knoppen { grid-template-columns:2fr 1fr 1fr; }
     .knop.ja { grid-column:auto; }
   }
+  .extra { font-size:14px; line-height:1.45; color:#2f6b3d; background:#eef4ee; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+  .extra a { color:#2f6b3d; font-weight:700; }
+  .extra .gewijzigd, .rij .s .gewijzigd { color:#8a4b00; font-weight:700; }
+  .rij .s .peil { color:#2f6b3d; font-weight:700; }
 </style>
 </head>
 <body>
@@ -304,6 +308,27 @@
     namen = namen.map(function (x) { return String(x || "").trim(); }).filter(function (x) { var k = x.toLowerCase(); if (!x || gezien[k]) return false; gezien[k] = true; return true; });
     if (namen.length) return namen.join(", ");
     return urls.length + (urls.length === 1 ? " bron" : " bronnen");
+  }
+  // PEIL, tool en Café Claude uit het AI-oordeel (teruggezet 21-11-2026; was weg sinds PR 78).
+  function extraBlok(ai) {
+    if (!ai) return "";
+    var r = [];
+    (ai.peil || []).forEach(function (p) {
+      var tools = (p.tools || []).map(function (t) { return veilig(t.url) ? '<a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.naam) + "</a>" : esc(t.naam); }).join(", ");
+      r.push("<span><b>PEIL:</b> " + esc(p.naam) + (p.verificatiedatum ? " · gecontroleerd " + esc(p.verificatiedatum) : "") +
+        (p.soort === "mogelijk-gewijzigd" ? ' · <span class="gewijzigd">mogelijk gewijzigd, verifiëren</span>' : "") +
+        (p.toelichting ? "<br>" + esc(p.toelichting) : "") +
+        (tools ? "<br>Tools: " + tools : "<br><i>Nog geen tool gekoppeld in PEIL</i>") + "</span>");
+    });
+    if (ai.tool && veilig(ai.tool.url)) r.push('<span><b>Tool in de zijbalk:</b> <a href="' + esc(ai.tool.url) + '" target="_blank" rel="noopener">' + esc(ai.tool.naam) + " →</a></span>");
+    if (ai.cafe && veilig(ai.cafe.url)) r.push('<span><b>Café Claude:</b> <a href="' + esc(ai.cafe.url) + '" target="_blank" rel="noopener">' + esc(ai.cafe.tekst || "Vraag het Café Claude") + " →</a></span>");
+    if (ai.gat) r.push('<span class="gewijzigd">Gat in PEIL: ' + esc(ai.gat) + "</span>");
+    return r.length ? '<div class="extra">' + r.join("") + "</div>" : "";
+  }
+  function peilKort(ai) {
+    var p = ai && ai.peil && ai.peil[0];
+    if (!p) return ai && ai.tool && ai.tool.naam ? ' · <span class="peil">Tool: ' + esc(ai.tool.naam) + "</span>" : "";
+    return ' · <span class="' + (p.soort === "mogelijk-gewijzigd" ? "gewijzigd" : "peil") + '">PEIL: ' + esc(p.naam) + (p.soort === "mogelijk-gewijzigd" ? ", mogelijk gewijzigd" : "") + "</span>";
   }
   function score(it) { return it.ai && typeof it.ai.score === "number" ? it.ai.score : null; }
   function losKrantenbericht(it) { return it.soort === "kandidaat" && (!it.kSoort || it.kSoort === "pers"); }
@@ -606,7 +631,7 @@
       '<button type="button" class="mid" data-uit="' + id + '" aria-expanded="' + open + '">' +
       '<span class="t">' + (vr === "merkwaardig" ? '<span class="mw">Merkwaardig</span>' : "") + esc(it.kop) + "</span>" +
       '<span class="s">' + esc(soortT) + (LABEL[vr] ? " · " + esc(LABEL[vr]) : "") + (it.bron ? " · " + esc(it.bron) : "") + (tijd(it.tijd) ? " · " + tijd(it.tijd) : "") +
-      (!it.ai ? ' · <span class="let">geen AI-oordeel</span>' : "") + "</span></button>" +
+      (!it.ai ? ' · <span class="let">geen AI-oordeel</span>' : "") + peilKort(it.ai) + "</span></button>" +
       '<span class="kn"><button type="button" class="rk ja" data-ja="' + id + '" aria-label="Ja, zoals voorgesteld" title="Ja, zoals voorgesteld">✓</button>' +
       '<button type="button" class="rk" data-nee="' + id + '" aria-label="Nee" title="Nee">✕</button></span>' +
       '<span class="advies">Advies: <b>' + esc(advies) + '</b></span>';
@@ -615,7 +640,7 @@
       h += '<div class="meer">' +
         (it.origineel ? '<p class="fr">' + esc(it.origineel) + "</p>" : "") +
         (it.tekst ? '<p class="samenvatting">' + esc(it.tekst) + "</p>" : "") +
-        '<p class="waarom">Rubriek ' + esc(LABEL[vr]) + ". " + esc(waarom(it)) + "</p>" +
+        '<p class="waarom">Rubriek ' + esc(LABEL[vr]) + ". " + esc(waarom(it)) + "</p>" + extraBlok(it.ai) +
         (it.url ? '<span class="bron"><a href="' + esc(veilig(it.url)) + '" target="_blank" rel="noopener">Bron: ' + esc(it.bron || "openen") + " ↗</a></span>" : "") +
         '<div class="klein-knoppen">' + (zbAlleen ? "" : '<button type="button" class="knop" data-zb="' + id + '">Alleen zijbalk</button>') +
         '<button type="button" class="knop" data-anders="' + id + '">Anders: plekken, rubriek of tekst</button></div></div>';

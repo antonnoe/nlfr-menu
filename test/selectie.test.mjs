@@ -153,8 +153,8 @@ test("feed: alleen go, binnen het venster, meteo tot de vervaldatum, per categor
   assert.match(rss, /a=1&amp;b=2/);
 });
 
-test("de vijf categorieën van de redactie", () => {
-  assert.deepEqual(CATEGORIEEN, ["algemeen", "ondernemers", "reizen", "meteo", "regelgeving"]);
+test("de zes categorieën van de redactie", () => {
+  assert.deepEqual(CATEGORIEEN, ["algemeen", "ondernemers", "reizen", "meteo", "regelgeving", "merkwaardig"]);
 });
 
 test("ronde in diagnose: geen modelaanroep, niets weggeschreven, PEIL en bronnen gemeld", async () => {

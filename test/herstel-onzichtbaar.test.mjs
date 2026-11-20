@@ -349,3 +349,34 @@ test("A2. Nee op een publicatie of overheid depubliceert in hetzelfde verzoek (n
     assert.ok((await getJSON(KEY_AFGEWEZEN("o9"))).doc, "bewaard voor Terugzetten");
   } finally { globalThis.fetch = echt; }
 });
+
+test("Nieuwspagina uit voor overheid: poort meteen wacht en keuze vervalt, ook na een eigen plaatsing (nep-KV)", async () => {
+  const { maakNepKV } = await import("./fixtures/nepkv.mjs");
+  process.env.KV_REST_API_URL = "http://nep"; process.env.KV_REST_API_TOKEN = "x";
+  const kv = maakNepKV(); const echt = globalThis.fetch; globalThis.fetch = kv.fetchNep;
+  try {
+    const { slaRedactieBesluitOp } = await import("../lib/selectie/redactie-opslag.js");
+    const { getJSON, setJSON } = await import("../lib/store.js");
+    const { KEY_OVERHEID } = await import("../lib/config.js");
+    const nieuw = (id, poort) => setJSON(KEY_OVERHEID(id), { id, kop: "K", url: `https://x.nl/${id}`, gepubliceerdOp: new Date().toISOString(), poort });
+    // eerder zelf geplaatst (keuze:true): alleen zijbalk = meteen wacht, zonder keuze
+    await nieuw("u1", { status: "ok", score: 61, door: "redactie", keuze: true });
+    assert.equal((await slaRedactieBesluitOp({ herkomst: "overheid", id: "u1", kanalen: ["zijbalk"], opPagina: false })).ok, true);
+    const a = await getJSON(KEY_OVERHEID("u1"));
+    assert.equal(a.poort.status, "wacht"); assert.equal(a.poort.keuze, undefined); assert.equal(a.poort.score, 61);
+    assert.equal(overheidIsLive(a), false);
+    // automatisch live (model): Anders zonder nieuwspagina haalt het ook meteen eraf
+    await nieuw("u2", { status: "ok", score: 70, door: "model" });
+    await slaRedactieBesluitOp({ herkomst: "overheid", id: "u2", kanalen: ["zijbalk"], opPagina: false, act: undefined });
+    assert.equal((await getJSON(KEY_OVERHEID("u2"))).poort.status, "wacht");
+    // en de volgende cron-toets zet het niet terug (geen keuze, besluit zegt nieuwspagina false)
+    assert.equal(poortUitslag(a, { besluiten: [{ besluit: "go", redactie: { reviewId: "u1", nieuwspagina: false } }] }).status, "wacht");
+    // opPagina true met live blijft ok met keuze
+    await slaRedactieBesluitOp({ herkomst: "overheid", id: "u1", kanalen: ["zijbalk"], opPagina: true, live: true });
+    const b = await getJSON(KEY_OVERHEID("u1"));
+    assert.equal(b.poort.status, "ok"); assert.equal(b.poort.keuze, true);
+    // Weg blijft zoals het was
+    assert.equal((await slaRedactieBesluitOp({ herkomst: "overheid", id: "u1", kanalen: [], weg: true })).ok, true);
+    assert.equal(await getJSON(KEY_OVERHEID("u1")), null);
+  } finally { globalThis.fetch = echt; }
+});

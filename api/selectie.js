@@ -127,7 +127,7 @@ export default async function handler(req, res) {
   }
 
   if (actie === "redactie") {
-    const uit = await slaRedactieBesluitOp({ herkomst, id, categorie, zijbalk, kanalen, elders, opPagina: body.opPagina, reden: body.reden, weg: body.weg === true, kop: body.kop, tekst: body.tekst, door: deur.adres || null });
+    const uit = await slaRedactieBesluitOp({ herkomst, id, categorie, zijbalk, kanalen, elders, opPagina: body.opPagina, reden: body.reden, weg: body.weg === true, act: body.act, live: body.live === true, kop: body.kop, tekst: body.tekst, door: deur.adres || null });
     if (!uit.ok) return res.status(uit.status).json({ ok: false, fout: uit.fout });
     return res.status(200).json({ ok: true, besluit: uit.besluit });
   }

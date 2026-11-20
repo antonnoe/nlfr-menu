@@ -482,13 +482,13 @@
   // dan waarschuwt de browser; verdwijnt het tabblad naar de achtergrond, dan
   // wordt het meteen opgeslagen.
   var blokTot = 0;
-  // Na een tik krimpt de kaart en schuift de lijst op: 400 ms geen tikken op de lijst,
+  // Na een tik krimpt de kaart en schuift de lijst op: 700 ms geen tikken op de lijst,
   // zodat een tweede tik niet op de volgende kaart, de bronlink of Ongedaan maken valt.
   document.addEventListener("click", function (e) {
     if (Date.now() < blokTot && e.target.closest && e.target.closest("#lijst")) { e.preventDefault(); e.stopPropagation(); }
   }, true);
   function besluit(it, b) {
-    blokTot = Date.now() + 400;
+    blokTot = Date.now() + 700;
     st.bewaard[it.id] = it;
     b.tot = Date.now() + ONGEDAAN_MS; b.status = "wacht";
     delete st.fout[it.id]; delete st.open[it.id];
@@ -554,12 +554,8 @@
       var c = weg ? undefined : b.rubriek, reden = weg && b.reden ? b.reden : undefined;
       if (it.soort === "kandidaat") return post("/api/selectie", { actie: zij.length ? "go" : "nogo", id: id, categorie: c, kanalen: zij, reden: reden });
       if (it.soort === "overheid" || it.soort === "publicatie") {
-        return post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c, elders: elders, opPagina: it.wacht ? !!k.nieuwspagina : true, reden: reden, weg: weg || undefined }).then(function (d) {
-          if (!d.ok) return d;
-          if (weg) return terugBijFout(d, post("/api/review", it.soort === "overheid" ? { actie: "verwijder-overheid", id: id } : { actie: "depubliceer", id: id })).then(function (r) { return r.ok ? d : r; });
-          if (it.wacht && !k.nieuwspagina) return d;
-          return terugBijFout(d, post("/api/review", { actie: "kanalen", id: id, kanalen: act, live: it.wacht ? true : undefined })).then(function (r) { return r.ok ? d : r; });
-        });
+        // Eén verzoek: besluit en (de)publiceren, verwijderen of kanalen gaan samen.
+        return post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c, elders: elders, opPagina: it.wacht ? !!k.nieuwspagina : true, reden: reden, weg: weg || undefined, act: weg || (it.wacht && !k.nieuwspagina) ? undefined : act, live: !weg && it.wacht && k.nieuwspagina ? true : undefined });
       }
       // concept: één verzoek volstaat (kop en tekst, publiceren en het redactiebesluit gaan mee),
       // zodat een sluitende pagina niets half achterlaat. Is een eerdere poging voor de helft

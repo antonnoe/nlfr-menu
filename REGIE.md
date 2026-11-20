@@ -49,3 +49,7 @@ Besluit opdrachtgever: eerst de onzichtbare fouten, geen nieuwe knoppen of indel
 - C: publiceer is idempotent (staat hij al als publicatie, dan alleen kanalen en besluit; antwoord `hervat`); bij een halve poging komt `gepubliceerd:true` terug en de pagina gaat verder als publicatie, Nee ook.
 - B: lijst = alles zonder besluit uit 36 uur. D: bericht zonder poortveld met een bestaand redactiebesluit = ok. E: 400 ms geen tikken op de lijst na een besluit. G: geen leeg reden-verzoek; Caribisch Nederland wordt `poort wacht, door uitgesloten` in plaats van gewist; besluiten en historie zonder TTL.
 - F: /review is hernoemd naar Beheer met link naar /redactie, maar de dagelijkse functies (Publiceer, Weg, wachtrij, overheidslijst) zijn NIET verwijderd: 13 testbestanden en de verwijzingen/ketenfuncties zitten er verweven in. Apart opruimen is aan te raden.
+
+## Herstelronde 2 (20-11-2026)
+
+- Nee op een publicatie of overheidsbericht, en Ja met kanalen of live zetten, gaat in één verzoek (`/api/selectie` redactie met `weg`, `act`, `live`; depubliceren/verwijderen met bewaard bericht voor Terugzetten). De tikbeveiliging na een besluit is 700 ms.

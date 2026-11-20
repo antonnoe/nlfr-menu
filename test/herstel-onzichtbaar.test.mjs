@@ -310,8 +310,8 @@ test("D. oud overheidsbericht (geen poortveld) met een nog bestaand besluit blij
   assert.equal(poortUitslag(DOC(), { kandidaten: [KAND(5)], besluiten: [{ besluit: "go", redactie: { reviewId: "o1" } }] }).status, "ok");
 });
 
-test("E. na een tik 400 ms geen tikken op de lijst", () => {
-  assert.match(html, /blokTot = Date\.now\(\) \+ 400/);
+test("E. na een tik 700 ms geen tikken op de lijst", () => {
+  assert.match(html, /blokTot = Date\.now\(\) \+ 700/);
   assert.match(html, /Date\.now\(\) < blokTot && e\.target\.closest[\s\S]{0,60}#lijst/);
 });
 
@@ -321,4 +321,25 @@ test("G. geen leeg reden-verzoek; Caribisch Nederland wordt niet gewist; besluit
   const i = cron.indexOf("nlOverheidUitgesloten(`");
   assert.ok(!/del\(KEY_OVERHEID/.test(cron.slice(i, i + 700)), "alleen niet live, niet wissen");
   assert.match(cron, /door: "uitgesloten"/);
+});
+
+test("A2. Nee op een publicatie of overheid depubliceert in hetzelfde verzoek (nep-KV)", async () => {
+  const { maakNepKV } = await import("./fixtures/nepkv.mjs");
+  process.env.KV_REST_API_URL = "http://nep"; process.env.KV_REST_API_TOKEN = "x";
+  const kv = maakNepKV(); const echt = globalThis.fetch; globalThis.fetch = kv.fetchNep;
+  try {
+    const { slaRedactieBesluitOp } = await import("../lib/selectie/redactie-opslag.js");
+    const { getJSON, setJSON } = await import("../lib/store.js");
+    const { KEY_PUBLICATIE, KEY_OVERHEID, KEY_AFGEWEZEN } = await import("../lib/config.js");
+    await setJSON(KEY_PUBLICATIE("p1"), { id: "p1", kop: "K", tekst: "T", bronnen: [], gepubliceerdOp: new Date().toISOString() });
+    assert.equal((await slaRedactieBesluitOp({ herkomst: "publicatie", id: "p1", kanalen: [], weg: true })).ok, true);
+    assert.equal(await getJSON(KEY_PUBLICATIE("p1")), null, "van de nieuwspagina in hetzelfde verzoek");
+    await setJSON(KEY_OVERHEID("o9"), { id: "o9", kop: "K", url: "https://x.nl/o9", gepubliceerdOp: new Date().toISOString(), poort: { status: "wacht" } });
+    assert.equal((await slaRedactieBesluitOp({ herkomst: "overheid", id: "o9", kanalen: ["zijbalk"], opPagina: true, live: true, act: { nieuwsbrief: false, infopoche: true } })).ok, true);
+    const o = await getJSON(KEY_OVERHEID("o9"));
+    assert.equal(o.poort.status, "ok"); assert.deepEqual(o.kanalen, { nieuwsbrief: false, infopoche: true });
+    assert.equal((await slaRedactieBesluitOp({ herkomst: "overheid", id: "o9", kanalen: [], weg: true })).ok, true);
+    assert.equal(await getJSON(KEY_OVERHEID("o9")), null);
+    assert.ok((await getJSON(KEY_AFGEWEZEN("o9"))).doc, "bewaard voor Terugzetten");
+  } finally { globalThis.fetch = echt; }
 });

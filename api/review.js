@@ -964,7 +964,7 @@ export default async function handler(req, res) {
         doc.kanalen = { ...(normActueelKanalen(doc.kanalen) || {}), ...kanalen };
         // De redactie plaatst het bericht zelf op de nieuwspagina: dat is de
         // poort (lib/overheidpoort.js). Zonder live:true blijft de stand zoals hij was.
-        if (body.live === true) doc.poort = { status: "ok", score: (doc.poort && doc.poort.score) ?? null, door: "redactie", op: new Date().toISOString() };
+        if (body.live === true) doc.poort = { status: "ok", score: (doc.poort && doc.poort.score) ?? null, door: "redactie", keuze: true, op: new Date().toISOString() };
         const t = Date.parse(doc.gepubliceerdOp || doc.datum || "") || Date.now();
         await setJSON(KEY_OVERHEID(id), doc, Math.max(60, Math.round(OVERHEID_TTL_S - (Date.now() - t) / 1000)));
         await vervalSnapshots();

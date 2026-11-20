@@ -183,7 +183,7 @@ test("de cron en /api/actueel kennen geen 'zonder poortveld = live' meer", () =>
 
 test("R17: Rijksoverheid-berichten van 20-11 komen ook bij een hoge modelscore niet live, behalve wat Nederlanders in het buitenland raakt", () => {
   const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
-  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 7);
+  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 13);
   for (const o of set.overheid) {
     if (o.verwacht === "twijfel") continue;
     const d = { id: "x", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/x", thema: "nl-overheid", kop: o.kop, samenvatting: o.samenvatting };
@@ -213,12 +213,41 @@ test("R17 geldt ook voor wat al ok door model staat; plaatsing door de redactie 
     if (o.verwacht === "twijfel") continue;
     assert.equal(poortUitslag(OKDOC(o), {}).status, o.verwacht === "ok" ? "ok" : "wacht", o.kop);
   }
-  const door = { ...OKDOC(set.overheid[0]), poort: { status: "ok", door: "redactie" } };
+  const door = { ...OKDOC(set.overheid[0]), poort: { status: "ok", door: "redactie", keuze: true } };
   assert.equal(poortUitslag(door, {}).status, "ok");
 });
 
+const VIJF = ["Zr.Ms. Evertsen", "Kabinet zet werk en meedoen", "Benoeming directeur-generaal", "Openstelling burgemeestersvacature", "IBO-onderzoek"];
+
+test("de vijf Rijksoverheid-berichten van 20-11: niet live als ok door model, door redactie zonder keuze of via oud selectie-go", () => {
+  const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
+  const vijf = VIJF.map((k) => set.overheid.find((o) => o.kop.startsWith(k)));
+  assert.ok(vijf.every(Boolean));
+  for (const o of vijf) {
+    assert.equal(poortUitslag(OKDOC(o), {}).status, "wacht", `ok door model: ${o.kop}`);
+    assert.equal(poortUitslag({ ...OKDOC(o), poort: { status: "ok", score: 55, door: "model" } }, {}).status, "wacht", `score 55: ${o.kop}`);
+    assert.equal(poortUitslag({ ...OKDOC(o), poort: { status: "ok", score: 55, door: "redactie" } }, {}).status, "wacht", `redactie zonder keuze: ${o.kop}`);
+  }
+});
+
+test("R17 streng: losse buitenlandse namen en Buitenlandse Zaken tellen niet; AOW, pensioen en zorgverzekering alleen voor wie in het buitenland woont", () => {
+  assert.equal(R.raaktBuitenland("Zr.Ms. Evertsen in de Rode Zee, overleg met Buitenlandse Zaken, Franse schepen"), false);
+  assert.equal(R.raaktBuitenland("Een DG die eerder in het buitenland bij een ambassade werkte"), false);
+  assert.equal(R.raaktBuitenland("Militairen in het buitenland ingezet, bedrijven naar het buitenland"), false);
+  assert.equal(R.raaktBuitenland("Erfbelasting in het buitenland"), true);
+  assert.equal(R.raaktBuitenland("Nederlandse ambassade Parijs"), true);
+  assert.equal(R.raaktBuitenland("Consulaire dienstverlening in Parijs"), true);
+  assert.equal(R.raaktBuitenland("Armoede bij ouderen, AOW en pensioen"), false);
+  assert.equal(R.raaktBuitenland("Nederlanders in de zorg"), false);
+  assert.equal(R.raaktBuitenland("AOW voor wie in het buitenland woont"), true);
+  assert.equal(R.raaktBuitenland("Zorgverzekering voor Nederlanders in Frankrijk"), true);
+  assert.equal(R.raaktBuitenland("Nieuwe grensregeling"), true);
+  assert.equal(R.raaktBuitenland("Remigratie neemt toe"), true);
+});
+
 test("R17-kenmerken: zorgverzekering telt; pensioen en verdrag alleen met buitenlandcontext", () => {
-  assert.equal(R.raaktBuitenland("Zorgverzekering: premie stijgt"), true);
+  assert.equal(R.raaktBuitenland("Zorgverzekering: premie stijgt"), false);
+  assert.equal(R.raaktBuitenland("Zorgverzekering in verdragsland: premie stijgt"), true);
   assert.equal(R.raaktBuitenland("Pensioenakkoord voor ambtenaren"), false);
   assert.equal(R.raaktBuitenland("Verdrag tussen Nederland en Italië over grondstoffen"), false);
   assert.equal(R.raaktBuitenland("Pensioen van Nederlanders in Frankrijk"), true);
@@ -246,4 +275,47 @@ test("een synthese leidt zijn voorstel los af en het besluit meet tegen het geto
   const p = redactieBesluit({ herkomst: "publicatie", doc: { id: "p3", kop: "K" }, kanalen: [], zijbalk: false, elders: false, voorstelLijst: ["nieuwspagina"] }).besluit;
   assert.ok(p.plekken.includes("nieuwspagina"));
   assert.deepEqual(p.voorstelPlekken, ["nieuwspagina"]);
+});
+
+// ---- Vervolg: /redactie bij een R17-bericht --------------------------------------
+test("R17 op /redactie: de poort legt de reden vast en het voorstel is Nee, met de reden uit de API", async () => {
+  const d = { id: "r17", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/r17", thema: "nl-overheid", kop: "Benoeming directeur-generaal", samenvatting: "Een benoeming.", gepubliceerdOp: "2026-11-20T08:00:00Z" };
+  const u = poortUitslag(d, { kandidaten: [{ url: d.url, ai: { score: 80 } }] });
+  assert.equal(u.status, "wacht");
+  assert.equal(u.reden, "r17");
+  // verwerkPoort schrijft de reden op, ook bij een doc dat al op wacht stond
+  const opslag = new Map([[d.id, { ...d, poort: { status: "wacht", score: null, door: null } }]]);
+  const tel = await verwerkPoort([opslag.get(d.id)], { kandidaten: [{ url: d.url, ai: { score: 80 } }], besluiten: [] }, {
+    lees: async (x) => structuredClone(opslag.get(x.id)), schrijf: async (x) => { opslag.set(x.id, structuredClone(x)); }, verwijder: async () => {}, afgewezen: async () => {},
+  }, NU);
+  assert.equal(tel.gewijzigd, 1);
+  assert.equal(opslag.get(d.id).poort.reden, "r17");
+  // de pagina: geen eigen lijst of tekst, het voorstel is Nee
+  const html = lees("../redactie.html");
+  assert.match(html, /function r17\(it\)[^\n]*poort\.reden === "r17"/);
+  assert.match(html, /if \(r17\(it\)\) return \{\}/);
+  assert.match(html, /R17_REDEN = rg\.r17Reden/);
+  assert.match(html, /\(r17\(it\) \? "Nee" : lijstTekst\(vk\)\)/);
+  assert.match(html, /if \(it && r17\(it\)\) \{ besluit\(it, \{ soort: "nee"/);
+  assert.ok(!html.includes(R.R17_REDEN), "de redentekst staat niet in de pagina zelf");
+  assert.match(lees("../api/selectie.js"), /r17Reden: R17_REDEN/);
+  assert.equal(R.R17_REDEN, "Nederlands binnenlands nieuws, raakt Nederlanders in het buitenland niet");
+});
+
+test("R17 blijft staan over twee rondes, ook als de gekoppelde kandidaat uit het venster is (Codex P2 PR 80)", async () => {
+  const d = { id: "r18", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/r18", thema: "nl-overheid", kop: "Benoeming directeur-generaal", samenvatting: "Een benoeming.", gepubliceerdOp: "2026-11-20T08:00:00Z", poort: { status: "ok", score: 80, door: "model" } };
+  const opslag = new Map([[d.id, structuredClone(d)]]);
+  const io = { lees: async (x) => structuredClone(opslag.get(x.id)), schrijf: async (x) => { opslag.set(x.id, structuredClone(x)); }, verwijder: async () => {}, afgewezen: async () => {} };
+  // ronde 1: kandidaat nog in het venster
+  await verwerkPoort([opslag.get(d.id)], { kandidaten: [{ url: d.url, ai: { score: 80 } }], besluiten: [] }, io, NU);
+  assert.equal(opslag.get(d.id).poort.reden, "r17");
+  // ronde 2: geen kandidaat meer, dus geen score
+  const tel = await verwerkPoort([opslag.get(d.id)], { kandidaten: [], besluiten: [] }, io, NU + 3600e3);
+  assert.equal(opslag.get(d.id).poort.status, "wacht");
+  assert.equal(opslag.get(d.id).poort.reden, "r17", "de markering blijft bij ontbrekende score");
+  assert.equal(opslag.get(d.id).poort.score, 80);
+  assert.equal(tel.gewijzigd, 0);
+  // maar een bericht dat inmiddels wel het buitenland raakt, verliest de markering
+  const nieuw = { ...opslag.get(d.id), kop: "Pensioen van Nederlanders in Frankrijk" };
+  assert.notEqual(poortUitslag(nieuw, {}).reden, "r17");
 });

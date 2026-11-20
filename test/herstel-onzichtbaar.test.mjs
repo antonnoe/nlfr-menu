@@ -231,7 +231,7 @@ test("F7. een go van het oude selectiescherm (zonder redactie) telt voor de poor
 
 test("F5. verwerkPoort leest het bericht opnieuw vlak voor het schrijven: een tussentijdse redactiekeuze blijft", async () => {
   const doc = DOC();
-  const vers = { ...doc, poort: { status: "ok", score: null, door: "redactie" }, kanalen: { nieuwsbrief: false } };
+  const vers = { ...doc, poort: { status: "ok", score: null, door: "redactie", keuze: true }, kanalen: { nieuwsbrief: false } };
   const geschreven = [];
   await verwerkPoort([doc], { kandidaten: [KAND(5)] }, { lees: async () => vers, schrijf: async (d) => geschreven.push(d), verwijder: async () => {}, afgewezen: async () => {} });
   assert.deepEqual(geschreven, [], "door de redactie geplaatst: niet overschreven");

@@ -37,7 +37,11 @@ In de sidebar staat onder een bericht dat PEIL raakt: "Raakt PEIL: <parameter> Â
 Vervang de FeedWind-iframe door:
 
 ```html
-<iframe src="https://nlfr-menu.vercel.app/sidebar-nieuws" height="900" width="100%" class="fw-iframe" scrolling="no" frameborder="0"></iframe>
+<iframe id="nlfr-nieuws" src="https://nlfr-menu.vercel.app/sidebar-nieuws" height="600" width="100%" scrolling="no" frameborder="0" title="Nieuws over Frankrijk"></iframe>
 ```
+
+De pagina meldt zijn hoogte met `postMessage({nlfrNieuwsHeight})`; het script van de zijbalk zet het iframe op die hoogte (alleen berichten van `https://nlfr-menu.vercel.app`). De volledige zijbalkcode staat in de projectmap van Nedergids (`nedergids-zijbalk/zijbalk-nlfr-met-nedergids.html`).
+
+Kiezen gebeurt op `/selectie`, bereikbaar via de knop "Zijbalknieuws kiezen" op `/review`.
 
 Zolang er nog niets is goedgekeurd, toont het blok "Op dit moment geen geselecteerd nieuws". `?voorbeeld=1` toont de opmaak met vaste voorbeeldberichten.

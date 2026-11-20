@@ -129,6 +129,7 @@
       '<a class="titel" href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.titel) + "</a>" +
       (ai ? '<p class="reden">' + esc(ai.reden) + "</p>" : '<p class="reden"><i>Nog geen AI-oordeel; volgt in de volgende ronde.</i></p>') +
       peilBlok(ai) +
+      (ai && ai.tool && /^https:\/\//.test(ai.tool.url || "") ? '<div class="peil"><b>Tool in de zijbalk</b><div class="p"><a href="' + esc(ai.tool.url) + '" target="_blank" rel="noopener">' + esc(ai.tool.naam) + " →</a></div></div>" : "") +
       (ai && ai.gat ? '<div class="gat"><b>Gat in PEIL:</b> ' + esc(ai.gat) + "</div>" : "") +
       '<div class="acties"><select aria-label="Categorie">' + opties + '</select><button class="go" data-a="go" data-id="' + esc(k.id) + '">Go</button><button class="nogo" data-a="nogo" data-id="' + esc(k.id) + '">No-go</button></div>' +
       "</div>";

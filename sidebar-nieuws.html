@@ -62,7 +62,12 @@
   // Infopoche. Staat dezelfde tool al in de PEIL-regel, dan niet nog eens.
   function tool(i) {
     if (!i.tool || !i.tool.url) return "";
-    var al = (i.peil || []).some(function (p) { return (p.tools || []).some(function (t) { return t.url === i.tool.url; }); });
+    // Alleen vergelijken met links die peil() echt toont: niet bij "mogelijk
+    // gewijzigd", en hooguit de eerste twee tools met adres.
+    var al = (i.peil || []).some(function (p) {
+      if (p.soort === "mogelijk-gewijzigd") return false;
+      return (p.tools || []).filter(function (t) { return t.url; }).slice(0, 2).some(function (t) { return t.url === i.tool.url; });
+    });
     if (al) return "";
     return '<div class="peil">Handig hierbij: <a href="' + esc(veiligUrl(i.tool.url)) + '" target="_blank" rel="noopener">' + esc(i.tool.naam) + " →</a></div>";
   }

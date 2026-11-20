@@ -189,3 +189,15 @@ test("zijbalknieuws met ?kanaal=infofrankrijk leest de Infofrankrijk-feed", () =
   assert.ok(html.includes('"/api/selectie-feed" + kanaal'));
   assert.ok(html.includes('get("kanaal") === "infofrankrijk"'));
 });
+
+test("Rijksoverheid-zeef: Caribisch Nederland en binnenlands nieuws eruit, buitenland en belasting erin", async () => {
+  const { nlOverheidRelevant } = await import("../lib/feeds.js");
+  assert.equal(nlOverheidRelevant("Verbetering leefomgeving Bonaire, Sint Eustatius en Saba"), false);
+  assert.equal(nlOverheidRelevant("Belasting in Caribisch Nederland omlaag"), false);
+  assert.equal(nlOverheidRelevant("Openstelling burgemeestersvacature Lingewaard"), false);
+  assert.equal(nlOverheidRelevant("Zr.Ms. Evertsen helpt schepen beschermen"), false);
+  assert.equal(nlOverheidRelevant("Kabinet zet werk en meedoen centraal"), false);
+  assert.equal(nlOverheidRelevant("AOW-leeftijd stijgt in 2032"), true);
+  assert.equal(nlOverheidRelevant("Nieuwe regels voor Nederlanders in het buitenland bij verkiezingen"), true);
+  assert.equal(nlOverheidRelevant("Paspoort aanvragen wordt duurder"), true);
+});

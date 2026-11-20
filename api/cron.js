@@ -45,7 +45,7 @@
 // reviewtool toont het onder een lege conceptlijst en scripts/sonde.mjs toetst
 // het (I14, I15). Een stap die niets logt, kan niet bewaakt worden.
 
-import { haalAlleItems, buitenlandDoorlaatNL, hashId } from "../lib/feeds.js";
+import { haalAlleItems, buitenlandDoorlaatNL, hashId, nlOverheidRelevant } from "../lib/feeds.js";
 import { outletNamen } from "../lib/cluster.js";
 import {
   nieuweMeting,
@@ -219,6 +219,15 @@ export default async function handler(req, res) {
   const { behouden: overheidBehouden, weg: overheidWeg } = dedupOverheid(overheidVoorraad);
   for (const d of overheidWeg) if (d && d.id) await del(KEY_OVERHEID(d.id));
   const overheidSamengevoegd = overheidWeg.length;
+  // Rijksoverheid-berichten die de lezer in Frankrijk niet raken (zie
+  // nlOverheidRelevant): ook wat al in de voorraad staat gaat eruit.
+  let overheidNietRelevant = 0;
+  for (const d of overheidBehouden) {
+    if (d && d.id && d.thema === "nl-overheid" && !nlOverheidRelevant(`${d.kop || ""} ${d.samenvatting || ""}`)) {
+      await del(KEY_OVERHEID(d.id));
+      overheidNietRelevant += 1;
+    }
+  }
 
   // Het register is de ketencontext: nieuwe berichten worden hiertegen getoetst.
   const registerVoorraad = await listJSON(SCAN_REGISTER);
@@ -235,6 +244,10 @@ export default async function handler(req, res) {
     // een Franse bron kost een modelaanroep. Ze mogen elkaars ruimte niet
     // opeten — zie MAX_OVERHEID_NL_PER_RONDE in lib/config.js.
     const alNederlands = item.taal === "nl";
+    if (alNederlands && !nlOverheidRelevant(`${item.titel || ""} ${item.samenvatting || ""}`)) {
+      overheidVerwerkt.push({ id: hashId(item.url), status: "niet-relevant", bron: item.bron });
+      continue;
+    }
     if (alNederlands ? nieuwOverheidNL >= MAX_OVERHEID_NL_PER_RONDE : nieuwOverheid >= MAX_OVERHEID_PER_RONDE) continue;
     const id = hashId(item.url);
     if (await getJSON(KEY_OVERHEID(id))) {
@@ -705,7 +718,7 @@ export default async function handler(req, res) {
     overheid: {
       kandidaten: overheidItems.length,
       nieuwLive: nieuwOverheid,
-      samengevoegd: overheidSamengevoegd, // dubbele records uit de voorraad gehaald
+      samengevoegd: overheidSamengevoegd, nietRelevant: overheidNietRelevant, // dubbele records uit de voorraad gehaald
       dubbelOvergeslagen: overheidDubbelOvergeslagen, // instroom die al bestond
       ketenVragen, // nieuwe berichten met een openstaande keten-vraag
       voorraad: overheidLive.length,

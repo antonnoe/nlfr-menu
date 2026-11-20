@@ -183,7 +183,7 @@ test("de cron en /api/actueel kennen geen 'zonder poortveld = live' meer", () =>
 
 test("R17: Rijksoverheid-berichten van 20-11 komen ook bij een hoge modelscore niet live, behalve wat Nederlanders in het buitenland raakt", () => {
   const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
-  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 8);
+  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 9);
   for (const o of set.overheid) {
     if (o.verwacht === "twijfel") continue;
     const d = { id: "x", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/x", thema: "nl-overheid", kop: o.kop, samenvatting: o.samenvatting };
@@ -232,7 +232,9 @@ test("de vijf Rijksoverheid-berichten van 20-11: niet live als ok door model, do
 
 test("R17 streng: losse buitenlandse namen en Buitenlandse Zaken tellen niet; AOW, pensioen en zorgverzekering alleen voor wie in het buitenland woont", () => {
   assert.equal(R.raaktBuitenland("Zr.Ms. Evertsen in de Rode Zee, overleg met Buitenlandse Zaken, Franse schepen"), false);
-  assert.equal(R.raaktBuitenland("Een DG die eerder bij een ambassade en in het buitenland werkte"), false);
+  assert.equal(R.raaktBuitenland("Een DG die eerder bij een ambassade en Buitenlandse Zaken werkte"), false);
+  assert.equal(R.raaktBuitenland("Nederlandse ambassade Parijs"), true);
+  assert.equal(R.raaktBuitenland("Consulaire dienstverlening in Parijs"), true);
   assert.equal(R.raaktBuitenland("Armoede bij ouderen, AOW en pensioen"), false);
   assert.equal(R.raaktBuitenland("Nederlanders in de zorg"), false);
   assert.equal(R.raaktBuitenland("AOW voor wie in het buitenland woont"), true);

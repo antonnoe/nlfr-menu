@@ -15,19 +15,19 @@
   html, body { margin:0; padding:0; background:#fff; }
   body { font-family:Mulish, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size:12px; line-height:1.4; color:#3a3230; }
   a { text-decoration:none; }
-  .blok { border:1.5px solid #800000; border-radius:6px; padding:8px 9px 6px; }
+  .blok { border:1.5px solid #800000; border-radius:6px; padding:8px 9px 6px; background:#fbf0ee; }
   .hoofd { display:flex; align-items:center; justify-content:space-between; font:700 10.5px/1.2 Poppins, sans-serif; letter-spacing:.01em; text-transform:uppercase; color:#800000; margin-bottom:2px; }
   .hoofdlink { color:#800000; display:inline-flex; gap:4px; align-items:center; }
   .hoofdlink:hover { text-decoration:underline; }
   .cat { font:700 10px/1.2 Poppins, sans-serif; text-transform:uppercase; letter-spacing:.02em; color:#1f6d30; margin:10px 0 3px; }
-  .item { padding:5px 0; border-bottom:1px solid #f1e9e7; }
+  .item { padding:5px 0; border-bottom:1px solid #ecd8d4; }
   .item:last-child { border-bottom:0; }
   .item a.t { display:block; color:#3a3230; font-weight:700; font-size:12px; line-height:1.35; }
   .item a.t:hover { color:#800000; }
   .meta { color:#5f5552; font-size:11.5px; margin-top:2px; }
   .stip { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:4px; vertical-align:1px; }
   .stip.orange { background:#f08a00; } .stip.red { background:#d0021b; }
-  .peil { margin-top:4px; font-size:11px; color:#2f6b3d; background:rgba(47,107,61,.07); border-radius:4px; padding:3px 5px; }
+  .peil { margin-top:4px; font-size:11px; color:#2f6b3d; background:#eef4ee; border-radius:4px; padding:3px 5px; }
   .peil a { color:#800000; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
   .voet { display:block; text-align:center; font:600 10.5px/1.3 Mulish, sans-serif; color:#800000; margin-top:7px; }
   .leeg { color:#5f5552; font-size:11.5px; padding:6px 0; }
@@ -45,6 +45,18 @@
   function dag(iso) { if (!iso) return ""; return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short" }); }
   function veiligUrl(u) { return /^https:\/\//.test(String(u || "")) ? u : "#"; }
 
+  // Op een telefoon opent een Infofrankrijk-artikel (ook het uitlegartikel van
+  // een tool) in Infopoche: https://infopoche.fr/#/artikel/<slug>. Daar staat de
+  // tool als kaart in het artikel. Andere adressen blijven zoals ze zijn.
+  var MOBIEL = false;
+  try { MOBIEL = window.matchMedia("(pointer: coarse)").matches || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent); } catch (e) {}
+  function toolUrl(u) {
+    u = veiligUrl(u);
+    if (!MOBIEL || u === "#") return u;
+    var m = /^https:\/\/(?:www\.)?infofrankrijk\.com\/([a-z0-9-]+)\/?(?:[?#].*)?$/i.exec(u);
+    return m ? "https://infopoche.fr/#/artikel/" + m[1].toLowerCase() : u;
+  }
+
   // "PEIL" linkt naar het register zelf, zodat een lezer die het woord niet
   // kent het kan opzoeken; de tool is een duidelijke link met pijl.
   var PEIL_URL = "https://communitiesabroad.com/peil/";
@@ -54,7 +66,7 @@
       var tools = (p.tools || []).filter(function (t) { return t.url; });
       var regel = 'Gecontroleerd in <a href="' + PEIL_URL + '" target="_blank" rel="noopener">PEIL</a>: ' + esc(p.naam);
       if (p.soort === "mogelijk-gewijzigd") return '<div class="peil">' + regel + ", wordt nagelopen naar aanleiding van dit bericht.</div>";
-      return '<div class="peil">' + regel + (tools.length ? ". Reken het na in " + tools.slice(0, 2).map(function (t) { return '<a href="' + esc(veiligUrl(t.url)) + '" target="_blank" rel="noopener">' + esc(t.naam) + " →</a>"; }).join(" of ") : "") + "</div>";
+      return '<div class="peil">' + regel + (tools.length ? ". Reken het na in " + tools.slice(0, 2).map(function (t) { return '<a href="' + esc(toolUrl(t.url)) + '" target="_blank" rel="noopener">' + esc(t.naam) + " →</a>"; }).join(" of ") : "") + "</div>";
     }).join("");
   }
 
@@ -69,7 +81,7 @@
       return (p.tools || []).filter(function (t) { return t.url; }).slice(0, 2).some(function (t) { return t.url === i.tool.url; });
     });
     if (al) return "";
-    return '<div class="peil">Handig hierbij: <a href="' + esc(veiligUrl(i.tool.url)) + '" target="_blank" rel="noopener">' + esc(i.tool.naam) + " →</a></div>";
+    return '<div class="peil">Handig hierbij: <a href="' + esc(toolUrl(i.tool.url)) + '" target="_blank" rel="noopener">' + esc(i.tool.naam) + " →</a></div>";
   }
 
   function toon(feed) {

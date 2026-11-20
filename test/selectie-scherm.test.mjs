@@ -69,3 +69,10 @@ test("feed geeft de tool door", () => {
   const feed = bouwFeed([{ id: "x", besluit: "go", categorie: "algemeen", titel: "T", datum: "2026-11-20T08:00:00Z", ai: { peil: [], tool: { id: "kompas", naam: "Financieel kompas", url: "https://k.app" } } }], nu);
   assert.deepEqual(feed.categorieen[0].items[0].tool, { naam: "Financieel kompas", url: "https://k.app" });
 });
+
+import { zonderGeblokkeerd } from "../lib/selectie/kern.js";
+test("geblokkeerde bron valt weg, ongeacht hoofdletters", () => {
+  const items = [{ id: "a", bron: "Vietnam.vn" }, { id: "b", bron: "NOS" }];
+  assert.deepEqual(zonderGeblokkeerd(items, { bronnen: [{ naam: " vietnam.VN " }] }).map((i) => i.id), ["b"]);
+  assert.equal(zonderGeblokkeerd(items, null).length, 2);
+});

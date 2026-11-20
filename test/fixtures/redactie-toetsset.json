@@ -1,13 +1,12 @@
 {
- "_uitleg": "Verzonnen koppen (geen echte berichten) met de verwachte uitkomst van de zeven (R11). verwacht: 'weg' = gezeefd, 'door' = door. Bij een nieuwe zeefregel: eerst hier toevoegen.",
+ "_uitleg": "Verzonnen koppen (geen echte berichten) met de verwachte uitkomst van de zeven (R11). verwacht: 'weg' = gezeefd, 'door' = door. Bij een nieuwe zeefregel: eerst hier toevoegen. 'overheid': Rijksoverheid-berichten met de verwachte uitkomst van de poort bij een HOGE modelscore (R17): 'wacht' = niet live, 'ok' = live, 'twijfel' = niet getoetst.",
  "items": [
   {
    "titel": "Un homme interpellé après un cambriolage à Bergerac",
    "land": "FR",
    "bron": "faits divers",
    "verwacht": "weg",
-   "reden": "",
-   "bekendGat": true
+   "reden": ""
   },
   {
    "titel": "Brandstichting in Nîmes: verdachte aangehouden",
@@ -35,8 +34,7 @@
    "land": "FR",
    "bron": "faits divers",
    "verwacht": "weg",
-   "reden": "",
-   "bekendGat": true
+   "reden": ""
   },
   {
    "titel": "Ligue 1 : Lyon bat Nice 2-1 en match avancé",
@@ -50,8 +48,7 @@
    "land": "NL",
    "bron": "sport",
    "verwacht": "weg",
-   "reden": "",
-   "bekendGat": true
+   "reden": ""
   },
   {
    "titel": "Rugby : le XV de France s'impose face aux Gallois",
@@ -220,6 +217,77 @@
    "bron": "doorlaten",
    "verwacht": "door",
    "reden": ""
+  },
+  {
+   "titel": "Inbraken in tweede woningen: zo beveilig je je huis in Frankrijk",
+   "land": "NL",
+   "bron": "Test",
+   "verwacht": "door",
+   "reden": "goede dienstverlening mag niet wegvallen door het gat te dichten"
+  },
+  {
+   "titel": "Cambriolages : conseils pour sécuriser sa résidence secondaire",
+   "land": "FR",
+   "bron": "Test",
+   "verwacht": "door",
+   "reden": "idem"
+  },
+  {
+   "titel": "Eredivisie-clubs en de verhuizing van de KNVB naar Parijs",
+   "land": "NL",
+   "bron": "Test",
+   "verwacht": "weg",
+   "reden": "sport"
+  }
+ ],
+ "overheid": [
+  {
+   "kop": "Openstelling burgemeestersvacature Lingewaard",
+   "samenvatting": "De minister van Binnenlandse Zaken en Koninkrijksrelaties nodigt belangstellenden uit te solliciteren naar het ambt van burgemeester in de gemeente Lingewaard.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "Zr.Ms. Evertsen helpt schepen beschermen in de Rode Zee",
+   "samenvatting": "Het marineschip Zr.Ms. Evertsen beschermt koopvaardijschepen.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "Kabinet zet werk en meedoen centraal in de Participatiewet",
+   "samenvatting": "Het kabinet wil dat werk en meedoen het centrale uitgangspunt wordt in de Participatiewet.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "Benoeming directeur-generaal Digitaliseringsbeleid Samenleving en Overheid",
+   "samenvatting": "Een nieuwe directeur-generaal bij het ministerie van Economische Zaken en Klimaat.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "Positieve beoordeling vijfde betaalverzoek Nederlands Herstel- en Veerkrachtplan",
+   "samenvatting": "De Europese Commissie heeft het vijfde en laatste betaalverzoek van het Nederlandse Herstel- en Veerkrachtplan (HVP) positief beoordeeld.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "Pilot voorraadvorming kritieke grondstoffen in havens Rotterdam en Porto Marghera",
+   "samenvatting": "Nederland en Italië zijn geselecteerd voor een Europese pilot voor voorraadvorming van kritieke grondstoffen.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "IBO-onderzoek: het lukt de overheid om ouderen een goed inkomen te geven",
+   "samenvatting": "Nederland slaagt er grotendeels in om armoede bij ouderen te voorkomen.",
+   "verwacht": "twijfel",
+   "reden": "opdrachtgever: twijfel mag blijven; niet getoetst"
+  },
+  {
+   "kop": "AOW-uitkering voor Nederlanders in Frankrijk: wat verandert in 2027",
+   "samenvatting": "Wie in Frankrijk woont krijgt te maken met nieuwe regels voor de AOW.",
+   "verwacht": "ok",
+   "reden": "raakt Nederlanders in het buitenland"
+  },
+  {
+   "kop": "Nieuw paspoort aanvragen vanuit het buitenland",
+   "samenvatting": "Nederlanders in het buitenland kunnen het paspoort bij het consulaat aanvragen.",
+   "verwacht": "ok",
+   "reden": "consulaire zaken"
   }
  ]
 }

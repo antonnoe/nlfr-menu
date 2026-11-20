@@ -211,7 +211,7 @@
       var gek = koppel(urls), ai = gek ? gek.ai : null;
       items.push({ soort: "concept", id: c.id, tijd: c.aangemaaktOp, kop: c.kop, tekst: c.tekst,
         bron: bronTekst(c, urls), ai: ai, url: "", nieuwsMag: !(c.poort && c.poort.publiceerbaar === false),
-        voorstel: ai && ai.plek ? ai.plek : "beide", altijd: true });
+        voorstel: ai && ai.plek ? ai.plek : "zijbalk", altijd: true });
     });
     (rev.overheid || []).forEach(function (o) {
       if (klaar[o.id]) return;

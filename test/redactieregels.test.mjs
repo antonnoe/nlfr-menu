@@ -73,8 +73,8 @@ test("toetsset: de zeven op de selectiestroom geven de verwachte uitkomst (30 to
   assert.ok(set.items.length >= 30 && set.items.length <= 50, `${set.items.length} items`);
   for (const i of set.items) {
     const door = zeefDoorlaat(i) ? "door" : "weg";
-    if (i.bekendGat) assert.notEqual(door, i.verwacht, `bekend gat is gedicht, haal bekendGat weg: ${i.titel}`);
-    else assert.equal(door, i.verwacht, `${i.verwacht} verwacht, ${door} gekregen: ${i.titel}`);
+    assert.ok(!i.bekendGat, "de bekende gaten zijn gedicht");
+    assert.equal(door, i.verwacht, `${i.verwacht} verwacht, ${door} gekregen: ${i.titel}`);
   }
   assert.ok(set.items.some((i) => i.verwacht === "weg") && set.items.some((i) => i.verwacht === "door"));
 });
@@ -166,7 +166,7 @@ test("live-scenario: zonder score, met score onder de drempel en zonder redactie
 });
 
 test("live-scenario: alleen score vanaf de drempel of een plaatsing door de redactie maakt een overheidsbericht live", () => {
-  const d = RIJK("r9", "Kabinet zet werk en meedoen centraal in de Participatiewet");
+  const d = RIJK("r9", "AOW voor Nederlanders in Frankrijk verandert");
   assert.equal(poortUitslag(d, { kandidaten: [{ url: d.url, ai: { score: SCORE_DREMPEL } }] }).status, "ok");
   assert.equal(poortUitslag(d, { kandidaten: [{ url: d.url, ai: { score: SCORE_DREMPEL - 1 } }] }).status, "wacht");
   assert.equal(poortUitslag(d, {}).status, "wacht");
@@ -179,4 +179,27 @@ test("de cron en /api/actueel kennen geen 'zonder poortveld = live' meer", () =>
   assert.ok(!/!d\.poort \|\| d\.poort\.status === "ok"/.test(lees("../api/cron.js")));
   assert.match(lees("../api/cron.js"), /\[cron\] overheidpoort: ok=/);
   assert.match(lees("../lib/antwoord.js"), /overheidDocs\.filter\(overheidIsLive\)/);
+});
+
+test("R17: Rijksoverheid-berichten van 20-11 komen ook bij een hoge modelscore niet live, behalve wat Nederlanders in het buitenland raakt", () => {
+  const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
+  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 6);
+  for (const o of set.overheid) {
+    if (o.verwacht === "twijfel") continue;
+    const d = { id: "x", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/x", thema: "nl-overheid", kop: o.kop, samenvatting: o.samenvatting };
+    const u = poortUitslag(d, { kandidaten: [{ url: d.url, ai: { score: 90 } }] });
+    assert.equal(u.status === "ok" ? "ok" : "wacht", o.verwacht, o.kop);
+  }
+  // een franse overheidsbron valt hier niet onder
+  assert.equal(poortUitslag({ id: "f", url: "https://www.service-public.gouv.fr/a", thema: "geld-belasting", kop: "Nieuwe regels", samenvatting: "x" }, { kandidaten: [{ url: "https://www.service-public.gouv.fr/a", ai: { score: 60 } }] }).status, "ok");
+  assert.ok(R.REGELS.some((r) => r.id === "R17"));
+  assert.match(SYSTEM_SELECTIE, /Nederlands binnenlands nieuws en bestuur/);
+  assert.match(SYSTEM_SELECTIE, /Caribisch Nederland altijd/);
+});
+
+test("synthese zonder AI-oordeel: standaard alleen zijbalk en Infofrankrijk", () => {
+  const html = lees("../redactie.html");
+  assert.match(html, /if \(!it\.ai && \(it\.soort === "concept"[^\n]*k\.zijbalk = true; k\.infofrankrijk = true; return schoon/);
+  assert.match(html, /voorstel: ai && ai\.plek \? ai\.plek : "zijbalk", altijd: true/);
+  assert.ok(!/ai\.plek : "beide"/.test(html));
 });

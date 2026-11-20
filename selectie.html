@@ -139,7 +139,7 @@
     var lijst = data.kandidaten.filter(function (k) { var c = k.ai ? k.ai.categorie : "geen"; return filter === "alles" || c === filter; });
     document.getElementById("lijst").innerHTML = lijst.length ? lijst.map(kaart).join("") : '<div class="leeg">Niets te beoordelen in deze categorie.</div>';
     document.getElementById("recent").innerHTML = data.recent.length ? data.recent.map(function (b) {
-      return '<div class="recent"><span class="b ' + b.besluit + '">' + (b.besluit === "go" ? "Go" : "No-go") + '</span><span class="t">' + (b.besluit === "go" && b.categorie ? "[" + esc(LABEL[b.categorie] || b.categorie) + "] " : "") + esc(b.titel) + ' <span style="color:var(--zacht)">· ' + datum(b.besluitOp) + "</span></span><button data-a="herstel" data-id="' + esc(b.id) + '">Terugdraaien</button></div>';
+      return '<div class="recent"><span class="b ' + b.besluit + '">' + (b.besluit === "go" ? "Go" : "No-go") + '</span><span class="t">' + (b.besluit === "go" && b.categorie ? "[" + esc(LABEL[b.categorie] || b.categorie) + "] " : "") + esc(b.titel) + ' <span style="color:var(--zacht)">· ' + datum(b.besluitOp) + '</span></span><button data-a="herstel" data-id="' + esc(b.id) + '">Terugdraaien</button></div>';
     }).join("") : '<div class="leeg">Nog niets beslist.</div>';
   }
 

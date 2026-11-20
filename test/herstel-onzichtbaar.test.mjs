@@ -311,8 +311,8 @@ test("A. pagehide spoelt met keepalive, een verborgen tabblad behoudt de vijf se
   assert.doesNotMatch(html, /visibilityState === "hidden"\) spoel\(\)/);
 });
 
-test("B. alles zonder besluit uit 36 uur staat in de lijst, niet alleen kalender-vandaag", () => {
-  assert.match(html, /Date\.now\(\) - 36 \* 3600e3/);
+test("B. alles zonder besluit uit 24 uur staat in de lijst, niet alleen kalender-vandaag", () => {
+  assert.match(html, /Date\.now\(\) - 24 \* 3600e3/);
   assert.match(html, /if \(!recent\(it\)\) return;/);
 });
 

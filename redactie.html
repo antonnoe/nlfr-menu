@@ -259,7 +259,7 @@
       if (klaar[c.id]) return;
       var urls = (c.bronnen || []).map(function (b) { return b.url; });
       var gek = koppel(urls), ai = gek ? gek.ai : null;
-      items.push({ soort: "concept", id: c.id, tijd: c.aangemaaktOp, kop: c.kop, tekst: c.tekst,
+      items.push({ soort: "concept", id: c.id, tijd: c.aangemaaktOp, kop: tekens(c.kop), tekst: tekens(c.tekst), urls: urls,
         bron: bronTekst(c, urls), ai: ai, url: "", nieuwsMag: !(c.poort && c.poort.publiceerbaar === false),
         voorstel: ai && ai.plek ? ai.plek : "zijbalk", altijd: true });
     });
@@ -270,19 +270,19 @@
       if (v === "zijbalk") v = "beide";
       var wacht = !!(o.poort && o.poort.status === "wacht");
       if (wacht && !(ai && ai.plek)) v = "zijbalk";
-      items.push({ soort: "overheid", poort: o.poort, id: o.id, tijd: o.gepubliceerdOp || o.datum, kop: o.kop || o.titelBron, tekst: o.samenvatting,
+      items.push({ soort: "overheid", poort: o.poort, id: o.id, tijd: o.gepubliceerdOp || o.datum, kop: tekens(o.kop || o.titelBron), tekst: tekens(o.samenvatting),
         bron: o.bron, url: veilig(o.url), ai: ai, voorstel: v, altijd: !wacht, wacht: wacht });
     });
     // Syntheses die al op de nieuwspagina staan maar nog geen keuze voor
     // zijbalk en Infofrankrijk hebben.
-    var grensPub = Date.now() - 36 * 3600e3;
+    var grensPub = Date.now() - 24 * 3600e3;
     (rev.publicaties || []).forEach(function (c) {
       if (klaar[c.id] || Date.parse(c.gepubliceerdOp || "") < grensPub) return;
       var urls = (c.bronnen || []).map(function (b) { return b.url; });
       var gek = koppel(urls), ai = gek ? gek.ai : null;
       var v = ai && ai.plek ? ai.plek : "nieuwspagina";
       if (v === "zijbalk") v = "beide";
-      items.push({ soort: "publicatie", id: c.id, tijd: c.gepubliceerdOp, kop: c.kop, tekst: c.tekst,
+      items.push({ soort: "publicatie", id: c.id, tijd: c.gepubliceerdOp, kop: tekens(c.kop), tekst: tekens(c.tekst), urls: urls,
         bron: bronTekst(c, urls), ai: ai, url: "", voorstel: v, altijd: true });
     });
     (sel.kandidaten || []).forEach(function (k) {
@@ -291,7 +291,7 @@
       if (v === "nieuwspagina" || v === "beide") v = "zijbalk";
       items.push({ soort: "kandidaat", id: k.id, tijd: k.datum || k.gevondenOp, kop: tekens((ai && ai.titelNl) || k.titel),
         origineel: ai && ai.titelNl && ai.titelNl !== k.titel ? tekens(k.titel) : "", tekst: "", bron: k.bron, bronNaam: k.bron,
-        url: veilig(k.url), ai: ai, voorstel: v, altijd: false, kSoort: k.soort });
+        url: veilig(k.url), urls: [k.url], ai: ai, voorstel: v, altijd: false, kSoort: k.soort });
     });
     items.sort(function (a, b) { return (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0); });
     return items;
@@ -309,8 +309,25 @@
   function losKrantenbericht(it) { return it.soort === "kandidaat" && (!it.kSoort || it.kSoort === "pers"); }
   function openLosseKranten() { return st.lijst.filter(function (it) { return losKrantenbericht(it) && !st.besluit[it.id]; }); }
   function vanVandaag(it) { var d = new Date(it.tijd); return !isNaN(d) && d.toDateString() === new Date().toDateString(); }
-  // Alles zonder besluit uit de afgelopen 36 uur: nachtnieuws is om 7 uur ook zichtbaar.
-  function recent(it) { var t = Date.parse(it.tijd); return !isNaN(t) && t > Date.now() - 36 * 3600e3; }
+  // Alles zonder besluit uit de afgelopen 24 uur.
+  function recent(it) { var t = Date.parse(it.tijd); return !isNaN(t) && t > Date.now() - 24 * 3600e3; }
+  // Onder de drempel: een synthese of overheidsbericht met een score onder 40,
+  // of een overheidsbericht dat volgens R17 niet hoort. Zonder score: blijft staan.
+  function onderDrempel(it) {
+    if (it.soort === "overheid") return r17(it) || (score(it) != null && score(it) < DREMPEL);
+    if (it.soort === "concept" || it.soort === "publicatie") return score(it) != null && score(it) < DREMPEL;
+    return false;
+  }
+  // Zelfde onderwerp: een gedeelde bron-URL, of koppen die grotendeels dezelfde woorden hebben.
+  function kopWoorden(k) { return String(k || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/).filter(function (w) { return w.length > 3; }); }
+  function zelfdeOnderwerp(a, b) {
+    var ua = (a.urls || []).map(urlSleutel), ub = (b.urls || []).map(urlSleutel);
+    if (ua.some(function (u) { return u && ub.indexOf(u) >= 0; })) return true;
+    var wa = kopWoorden(a.kop), wb = kopWoorden(b.kop);
+    if (!wa.length || !wb.length) return false;
+    var gedeeld = wa.filter(function (w) { return wb.indexOf(w) >= 0; }).length;
+    return gedeeld >= 2 && gedeeld / Math.min(wa.length, wb.length) >= 0.5;
+  }
   function groepVan(it) {
     if (it.toch) return GROEPEN[0];
     if (it.soort === "concept" || it.soort === "publicatie") return GROEPEN[1];
@@ -326,12 +343,25 @@
       if (it.soort === "overheid" && it.poort && it.poort.door === "uitgesloten") return;
       if (it.soort === "overheid" && !it.wacht) { if (vanVandaag(it)) auto.push(it); return; }
       if (!recent(it)) return;
+      if (onderDrempel(it) && st.toch.indexOf(it.id) < 0) { nietAi.push(it); return; }
       if (it.soort === "kandidaat" && !(score(it) != null && score(it) >= (losKrantenbericht(it) ? LOS_DREMPEL : DREMPEL))) {
         if (st.toch.indexOf(it.id) >= 0) { it.toch = true; lijst.push(it); } else nietAi.push(it);
         return;
       }
       lijst.push(it);
     });
+    // Zelfde onderwerp één keer: synthese gaat voor, dan de hoogste score, dan de nieuwste.
+    // Overheid blijft altijd apart; door jou teruggehaald blijft altijd staan.
+    var rangO = function (it) { return it.soort === "concept" || it.soort === "publicatie" ? 0 : 1; };
+    var gehouden = [];
+    lijst.slice().sort(function (a, b) {
+      return rangO(a) - rangO(b) || (score(b) || 0) - (score(a) || 0) || (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0);
+    }).forEach(function (it) {
+      if (it.soort !== "overheid" && !it.toch && st.toch.indexOf(it.id) < 0 &&
+          gehouden.some(function (x) { return x.soort !== "overheid" && zelfdeOnderwerp(x, it); })) { nietAi.push(it); return; }
+      gehouden.push(it);
+    });
+    lijst = lijst.filter(function (it) { return gehouden.indexOf(it) >= 0; });
     // Een bericht waarover al besloten is, blijft als regel staan (ook als de server het niet meer als open kent).
     var aanwezig = {}; lijst.forEach(function (it) { aanwezig[it.id] = true; });
     Object.keys(st.besluit).forEach(function (id) { if (!aanwezig[id] && st.bewaard[id]) lijst.push(st.bewaard[id]); });

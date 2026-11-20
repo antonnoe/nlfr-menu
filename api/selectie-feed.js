@@ -30,6 +30,7 @@ export default async function handler(req, res) {
       kandidaten: kandidaten.length,
       kandidatenMetOordeel: kandidaten.filter((k) => k.ai).length,
       kandidatenMetPeil: kandidaten.filter((k) => k.ai && k.ai.peil && k.ai.peil.length).length,
+      kandidatenMetTool: kandidaten.filter((k) => k.ai && k.ai.tool).length,
       besluiten: besluiten.length,
       go: besluiten.filter((b) => b.besluit === "go").length,
       ronde: ronde
@@ -37,6 +38,7 @@ export default async function handler(req, res) {
             op: ronde.op,
             model: ronde.model,
             peil: ronde.peil,
+            tools: ronde.tools || null,
             gevonden: ronde.gevonden,
             nieuw: ronde.nieuw,
             beoordeeld: ronde.beoordeeld,

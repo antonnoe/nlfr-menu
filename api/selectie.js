@@ -11,6 +11,8 @@
 //         gekozen categorie overschrijft het voorstel van het model.
 //         { actie: "herstel", id }: een beslissing ongedaan maken; het bericht
 //         wordt weer kandidaat.
+//         { actie: "blokkeer" | "deblokkeer", bron }: een nieuwsbron onder
+//         embargo zetten of weer vrijgeven.
 
 import { getJSON, setJSON, del, listJSON, kvBeschikbaar } from "../lib/store.js";
 import { toegangVanVerzoek } from "../lib/auth-node.js";
@@ -24,7 +26,10 @@ import {
   SCAN_SEL_KANDIDAAT,
   SCAN_SEL_BESLUIT,
   SEL_KANDIDAAT_TTL_S,
+  KEY_SEL_BLOKKADE,
   kandidatenVoorScherm,
+  zonderGeblokkeerd,
+  bronSleutel,
 } from "../lib/selectie/kern.js";
 
 function leesBody(req) {
@@ -49,12 +54,13 @@ export default async function handler(req, res) {
   if (!kvBeschikbaar()) return res.status(503).json({ ok: false, fout: "KV niet geconfigureerd." });
 
   if (req.method === "GET") {
-    const [kandidaten, besluiten, ronde] = await Promise.all([
+    const [kandidaten, besluiten, ronde, blokkade] = await Promise.all([
       listJSON(SCAN_SEL_KANDIDAAT),
       listJSON(SCAN_SEL_BESLUIT),
       getJSON(KEY_SEL_RONDE),
+      getJSON(KEY_SEL_BLOKKADE),
     ]);
-    const tonen = kandidatenVoorScherm(kandidaten, besluiten);
+    const tonen = kandidatenVoorScherm(zonderGeblokkeerd(kandidaten, blokkade), besluiten);
     const recent = besluiten.sort((a, b) => String(b.besluitOp || "").localeCompare(String(a.besluitOp || ""))).slice(0, 40);
     const go = besluiten.filter((b) => b.besluit === "go").length;
     return res.status(200).json({
@@ -65,11 +71,23 @@ export default async function handler(req, res) {
       recent,
       telling: { besluiten: besluiten.length, go, nogo: besluiten.length - go },
       ronde,
+      geblokkeerd: (blokkade && blokkade.bronnen) || [],
     });
   }
 
   if (req.method !== "POST") return res.status(405).json({ ok: false, fout: "Alleen GET en POST." });
-  const { actie, id, categorie } = leesBody(req);
+  const { actie, id, categorie, bron } = leesBody(req);
+
+  if (actie === "blokkeer" || actie === "deblokkeer") {
+    const naam = String(bron || "").trim().slice(0, 100);
+    if (!bronSleutel(naam)) return res.status(400).json({ ok: false, fout: "Geen bron opgegeven." });
+    const doc = (await getJSON(KEY_SEL_BLOKKADE)) || { bronnen: [] };
+    const rest = (doc.bronnen || []).filter((b) => bronSleutel(b.naam) !== bronSleutel(naam));
+    const bronnen = actie === "blokkeer" ? [...rest, { naam, op: new Date().toISOString(), door: deur.adres || null }] : rest;
+    await setJSON(KEY_SEL_BLOKKADE, { bronnen }); // geen TTL
+    return res.status(200).json({ ok: true, bronnen });
+  }
+
   if (!id || typeof id !== "string" || !/^[a-z0-9]{1,20}$/.test(id)) {
     return res.status(400).json({ ok: false, fout: "Ongeldig id." });
   }

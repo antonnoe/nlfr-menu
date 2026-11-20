@@ -45,3 +45,12 @@ De pagina meldt zijn hoogte met `postMessage({nlfrNieuwsHeight})`; het script va
 Kiezen gebeurt op `/selectie`, bereikbaar via de knop "Zijbalknieuws kiezen" op `/review`.
 
 Zolang er nog niets is goedgekeurd, toont het blok "Op dit moment geen geselecteerd nieuws". `?voorbeeld=1` toont de opmaak met vaste voorbeeldberichten.
+
+## Tool in het groene vak (20-11-2026)
+
+Per bericht kiest het model hooguit één tool uit de modulecatalogus van Infopoche (`https://infopoche.fr/modules.json`, repo antonnoe/if-mobiel; geen tweede lijst hier). Alleen modules die af zijn, zichtbaar en een https-adres hebben (`toolCatalogus` in `lib/selectie/kern.js`); de link gaat naar het uitlegartikel op Infofrankrijk als de module `artikel` heeft, anders naar de tool. Een id die niet in de lijst staat, wordt weggegooid. De catalogus staat 6 uur in KV (`selectie:tools-cache`); niet bereikbaar = geen tools, de ronde gaat door (zie `tools` in het rondejournaal). De zijbalk toont "Handig hierbij: <tool> →", behalve als dezelfde tool al in de PEIL-regel staat. Berichten die al een oordeel hadden vóór 20-11, krijgen geen tool.
+
+## Bronnen blokkeren en opmaak (20-11-2026)
+
+- Knop "Bron blokkeren" op elke kaart van /selectie (keuze Anton). Lijst in KV `selectie:bronblokkade` (geen TTL), onder "Geblokkeerde bronnen" met "Weer toelaten". Vergelijking op bronnaam zonder hoofdletters. Geblokkeerde bronnen verdwijnen van het kiesscherm en gaan niet meer naar het model.
+- Zijbalk: zacht roze achtergrond (#fbf0ee). Op een telefoon (pointer coarse of mobiele user-agent) opent een link naar een Infofrankrijk-artikel als `https://infopoche.fr/#/artikel/<slug>`; andere adressen blijven gelijk.

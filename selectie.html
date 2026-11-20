@@ -42,6 +42,7 @@
   .leeg { color:var(--zacht); font-size:14px; padding:20px 0; text-align:center; }
   .recent { font-size:13px; display:flex; gap:8px; align-items:baseline; padding:6px 0; border-bottom:1px dashed var(--lijn); }
   .recent .b { font-weight:700; width:52px; flex:none; } .recent .b.go { color:var(--groen); background:none; } .recent .b.nogo { color:var(--brand); background:none; }
+  .acties button.blok { background:#fff; color:var(--zacht); border:1px solid var(--lijn); font-weight:600; font-size:13px; padding:0 12px; margin-left:auto; }
   .recent .t { flex:1; } .recent button { flex:none; font-size:12px; border:1px solid var(--lijn); background:#fff; border-radius:8px; padding:4px 8px; cursor:pointer; color:var(--zacht); }
   .melding { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); background:var(--tekst); color:#fff; padding:8px 8px 8px 16px; border-radius:999px; font-size:13px; display:none; align-items:center; gap:10px; white-space:nowrap; }
   .melding button { font-family:'Poppins',sans-serif; font-weight:700; font-size:13px; border:0; border-radius:999px; background:#fff; color:var(--brand); padding:8px 12px; min-height:36px; cursor:pointer; }
@@ -56,6 +57,9 @@
 <div id="ronde" class="ronde">Laden…</div>
 <div class="tabs" id="tabs" role="toolbar" aria-label="Filter op categorie"></div>
 <div id="lijst"></div>
+<h2>Geblokkeerde bronnen</h2>
+<p class="uitleg">Berichten van deze bronnen komen niet meer op deze pagina.</p>
+<div id="blokkade"></div>
 <h2>Recent beslist</h2>
 <p class="uitleg">Elke keuze leert de AI jouw oordeel.</p>
 <div id="recent"></div>
@@ -129,8 +133,9 @@
       '<a class="titel" href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.titel) + "</a>" +
       (ai ? '<p class="reden">' + esc(ai.reden) + "</p>" : '<p class="reden"><i>Nog geen AI-oordeel; volgt in de volgende ronde.</i></p>') +
       peilBlok(ai) +
+      (ai && ai.tool && /^https:\/\//.test(ai.tool.url || "") ? '<div class="peil"><b>Tool in de zijbalk</b><div class="p"><a href="' + esc(ai.tool.url) + '" target="_blank" rel="noopener">' + esc(ai.tool.naam) + " →</a></div></div>" : "") +
       (ai && ai.gat ? '<div class="gat"><b>Gat in PEIL:</b> ' + esc(ai.gat) + "</div>" : "") +
-      '<div class="acties"><select aria-label="Categorie">' + opties + '</select><button class="go" data-a="go" data-id="' + esc(k.id) + '">Go</button><button class="nogo" data-a="nogo" data-id="' + esc(k.id) + '">No-go</button></div>' +
+      '<div class="acties"><select aria-label="Categorie">' + opties + '</select><button class="go" data-a="go" data-id="' + esc(k.id) + '">Go</button><button class="nogo" data-a="nogo" data-id="' + esc(k.id) + '">No-go</button>' + (k.bron ? '<button class="blok" data-a="blokkeer" data-bron="' + esc(k.bron) + '" title="Berichten van deze bron niet meer tonen">Bron blokkeren</button>' : "") + '</div>' +
       "</div>";
   }
 
@@ -138,6 +143,10 @@
     toonRonde(); toonTabs();
     var lijst = data.kandidaten.filter(function (k) { var c = k.ai ? k.ai.categorie : "geen"; return filter === "alles" || c === filter; });
     document.getElementById("lijst").innerHTML = lijst.length ? lijst.map(kaart).join("") : '<div class="leeg">Niets te beoordelen in deze categorie.</div>';
+    var gb = data.geblokkeerd || [];
+    document.getElementById("blokkade").innerHTML = gb.length ? gb.map(function (b) {
+      return '<div class="recent"><span class="t">' + esc(b.naam) + ' <span style="color:var(--zacht)">· sinds ' + datum(b.op) + '</span></span><button data-a="deblokkeer" data-bron="' + esc(b.naam) + '">Weer toelaten</button></div>';
+    }).join("") : '<div class="leeg">Geen.</div>';
     document.getElementById("recent").innerHTML = data.recent.length ? data.recent.map(function (b) {
       return '<div class="recent"><span class="b ' + b.besluit + '">' + (b.besluit === "go" ? "Go" : "No-go") + '</span><span class="t">' + (b.besluit === "go" && b.categorie ? "[" + esc(LABEL[b.categorie] || b.categorie) + "] " : "") + esc(b.titel) + ' <span style="color:var(--zacht)">· ' + datum(b.besluitOp) + '</span></span><button data-a="herstel" data-id="' + esc(b.id) + '">Terugdraaien</button></div>';
     }).join("") : '<div class="leeg">Nog niets beslist.</div>';
@@ -156,9 +165,21 @@
       .catch(function () { if (kaartEl) kaartEl.classList.remove("weg"); melding("Niet bereikbaar."); });
   }
 
+  function bronActie(actie, bron) {
+    fetch("/api/selectie", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actie: actie, bron: bron }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) { melding(d.fout || "Mislukt."); return; }
+        melding(actie === "blokkeer" ? bron + " geblokkeerd" : bron + " weer toegelaten");
+        laad();
+      })
+      .catch(function () { melding("Niet bereikbaar."); });
+  }
+
   document.addEventListener("click", function (e) {
     var t = e.target.closest("button"); if (!t) return;
     if (t.dataset.f) { filter = t.dataset.f; toon(); return; }
+    if (t.dataset.bron && (t.dataset.a === "blokkeer" || t.dataset.a === "deblokkeer")) { bronActie(t.dataset.a, t.dataset.bron); return; }
     var a = t.dataset.a, id = t.dataset.id; if (!a || !id) return;
     if (a === "herstel") { stuur("herstel", id); return; }
     var sel = t.parentNode.querySelector("select");

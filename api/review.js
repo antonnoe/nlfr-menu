@@ -52,6 +52,7 @@ import {
 import { vindGelijkenis, gelijkenis, vindPrimaireBron } from "../lib/gelijkenis.js";
 import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
 import { keurBronnen, bronUrlOordeel, bronVoorNaam } from "../lib/bronurl.js";
+import { slaRedactieBesluitOp } from "../lib/selectie/redactie-opslag.js";
 import { overheidIsLive } from "../lib/overheidpoort.js";
 import { persTegelVanPublicatie, opgeslagenThema, normActueelKanalen } from "../lib/tegels.js";
 import {
@@ -276,6 +277,14 @@ async function vervalSnapshots() {
       console.warn(`[review] momentopname ${sleutel} niet kunnen wissen: ${e && e.message}`);
     }
   }
+}
+
+// Na het publiceren (zelfde verzoek) het redactiebesluit vastleggen: body.selectie
+// = { kanalen, categorie, elders, reden }. Zonder dat veld: niets te doen.
+async function redactieNaPubliceren(id, body, deur) {
+  const sel = body && body.selectie;
+  if (!sel || typeof sel !== "object") return { ok: true, besluit: null };
+  return slaRedactieBesluitOp({ herkomst: "publicatie", id, kanalen: sel.kanalen, categorie: sel.categorie, elders: sel.elders === true, reden: sel.reden, door: (deur && deur.adres) || null });
 }
 
 export default async function handler(req, res) {
@@ -583,7 +592,19 @@ export default async function handler(req, res) {
     if (actie === "publiceer") {
       const concept = await getJSON(KEY_CONCEPT(id));
       if (!concept) {
-        return res.status(404).json({ ok: false, fout: "Concept niet gevonden." });
+        // Idempotent: is hij al gepubliceerd (een eerdere poging lukte voor de
+        // helft), doe dan alleen de rest: kanalen en het redactiebesluit.
+        const bestaand = await getJSON(KEY_PUBLICATIE(id));
+        if (!bestaand) return res.status(404).json({ ok: false, fout: "Concept niet gevonden." });
+        const k0 = normActueelKanalen(body.kanalen);
+        if (k0) {
+          bestaand.kanalen = { ...(normActueelKanalen(bestaand.kanalen) || {}), ...k0 };
+          await setJSON(KEY_PUBLICATIE(id), bestaand, PUBLICATIE_TTL_S);
+          await vervalSnapshots();
+        }
+        const rest = await redactieNaPubliceren(id, body, deur);
+        if (!rest.ok) return res.status(rest.status).json({ ok: false, gepubliceerd: true, fout: rest.fout });
+        return res.status(200).json({ ok: true, publicatie: bestaand, hervat: true, besluit: rest.besluit });
       }
       const tekst =
         typeof body.tekst === "string" && body.tekst.trim()
@@ -649,6 +670,7 @@ export default async function handler(req, res) {
       }
       const publicatie = {
         ...concept,
+        ...(typeof body.kop === "string" && body.kop.trim() ? { kop: body.kop.trim().slice(0, 300) } : {}),
         tekst,
         gepubliceerd: true,
         gepubliceerdOp: new Date().toISOString(),
@@ -658,7 +680,9 @@ export default async function handler(req, res) {
       await setJSON(KEY_PUBLICATIE(id), publicatie, PUBLICATIE_TTL_S); // verloopt na 7 dagen
       await del(KEY_CONCEPT(id));
       await vervalSnapshots();
-      return res.status(200).json({ ok: true, publicatie, snapshotVervallen: true });
+      const rest = await redactieNaPubliceren(id, body, deur);
+      if (!rest.ok) return res.status(rest.status).json({ ok: false, gepubliceerd: true, fout: rest.fout });
+      return res.status(200).json({ ok: true, publicatie, snapshotVervallen: true, besluit: rest.besluit });
     }
 
     if (actie === "bewerk") {

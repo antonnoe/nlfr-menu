@@ -118,7 +118,7 @@ test("overheidsbericht krijgt standaard de rubriek Wet- en regelgeving", () => {
 test("selectie-API: opgenomen bronartikelen niet los op het scherm, terugdraaien geeft ze vrij", () => {
   const api = fs.readFileSync(new URL("../api/selectie.js", import.meta.url), "utf8");
   assert.match(api, /kandidaten\.filter\(\(k\) => !k\.opgenomen\)/);
-  assert.match(api, /opgenomen: uit\.besluit\.id/);
+  assert.match(fs.readFileSync(new URL("../lib/selectie/redactie-opslag.js", import.meta.url), "utf8"), /opgenomen: uit\.besluit\.id/);
   assert.match(api, /b\.redactie\.ook/);
 });
 

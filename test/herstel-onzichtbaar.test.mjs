@@ -22,8 +22,8 @@ test("1. /redactie: getypte tekst staat in st.cn en wordt niet door tekenen of l
 });
 
 test("1. Plaats zo publiceert de tekst uit het vak, niet de servertekst", () => {
-  assert.match(html, /actie: "publiceer", id: id, tekst: b\.tekst/);
-  assert.ok(!/actie: "publiceer", id: id, tekst: it\.tekst/.test(html));
+  assert.match(html, /actie: "publiceer", id: id, kop: b\.kop, tekst: b\.tekst/);
+  assert.ok(!/actie: "publiceer", id: id, kop: it\.kop, tekst: it\.tekst/.test(html));
   assert.match(html, /tekst: c3\.tekst/, "Plaats zo neemt de inhoud van de vakken");
 });
 
@@ -200,10 +200,10 @@ test("5. index per soort: lezen scant niet meer de hele opslag; oude sleutels wo
   }
 });
 
-test("5. besluiten en historie krijgen een vervaltermijn; Gekozen-lijst herlaadt niet na elke klik", () => {
+test("5. besluiten en historie hebben GEEN vervaltermijn (lesmateriaal); geen herlaadbeurt na een klik", () => {
   const api = lees("../api/selectie.js");
-  assert.ok(!/setJSON\(KEY_SEL_BESLUIT\([^)]*\)\)?, [a-z.]+\);/.test(api.replace(/SEL_BESLUIT_TTL_S/g, "")) || api.includes("SEL_BESLUIT_TTL_S"));
-  assert.equal((api.match(/SEL_BESLUIT_TTL_S\)/g) || []).length >= 3, true, "besluit, besluit van de redactie en historie hebben een TTL");
+  assert.ok(!/SEL_BESLUIT_TTL_S/.test(api));
+  assert.ok(!/KEY_SEL_(BESLUIT|HISTORIE)\([^;]*, [A-Z_]+_TTL_S\)/.test(api));
   assert.ok(!/function besluit\([^)]*\) \{[^}]*laad\(\)/.test(html), "geen volledige herlaadbeurt na een klik");
 });
 
@@ -264,4 +264,61 @@ test("Ongedaan maken: besluit gaat pas na vijf seconden naar de server; reden bi
   const b = redactieBesluit({ herkomst: "concept", doc: { id: "a1", kop: "k" }, kanalen: [], reden: "Dubbel" }).besluit;
   assert.equal(b.reden, "Dubbel");
   assert.equal(redactieBesluit({ herkomst: "concept", doc: { id: "a1", kop: "k" }, reden: "onzin" }).besluit.reden, undefined);
+});
+
+// ---- Herstelronde 1 na keuring ----------------------------------------------------
+test("A. één verzoek volstaat: weg van een synthese en publiceren met besluit (nep-KV)", async () => {
+  const { maakNepKV } = await import("./fixtures/nepkv.mjs");
+  process.env.KV_REST_API_URL = "http://nep"; process.env.KV_REST_API_TOKEN = "x";
+  const kv = maakNepKV(); const echt = globalThis.fetch; globalThis.fetch = kv.fetchNep;
+  try {
+    const { slaRedactieBesluitOp } = await import("../lib/selectie/redactie-opslag.js");
+    const { getJSON, setJSON } = await import("../lib/store.js");
+    const { KEY_CONCEPT, KEY_PUBLICATIE, KEY_AFGEWEZEN } = await import("../lib/config.js");
+    await setJSON(KEY_CONCEPT("c1"), { id: "c1", kop: "Kop", tekst: "T", bronnen: [] });
+    const w = await slaRedactieBesluitOp({ herkomst: "concept", id: "c1", kanalen: [], weg: true, reden: "Dubbel" });
+    assert.equal(w.ok, true);
+    assert.equal(await getJSON(KEY_CONCEPT("c1")), null, "concept weg in hetzelfde verzoek");
+    assert.ok(await getJSON(KEY_AFGEWEZEN("c1")));
+    // C: eerdere poging publiceerde al; het concept bestaat niet meer, de publicatie wel
+    await setJSON(KEY_PUBLICATIE("c2"), { id: "c2", kop: "K2", tekst: "T", bronnen: [] });
+    const h = await slaRedactieBesluitOp({ herkomst: "concept", id: "c2", kanalen: ["zijbalk"], categorie: "algemeen" });
+    assert.equal(h.ok, true, "hervat als publicatie in plaats van falen");
+    // C: Nee werkt dan ook
+    const nee = await slaRedactieBesluitOp({ herkomst: "concept", id: "c2", kanalen: [], weg: true });
+    assert.equal(nee.ok, true);
+  } finally { globalThis.fetch = echt; }
+  const rv = lees("../api/review.js");
+  assert.match(rv, /selectie: \{ kanalen: zij|redactieNaPubliceren\(id, body, deur\)/);
+  assert.match(rv, /hervat: true/);
+});
+
+test("A. de pagina stuurt wat wacht direct met keepalive bij pagehide en verborgen tabblad", () => {
+  assert.match(html, /keepalive: wegGaand/);
+  assert.match(html, /addEventListener\("pagehide", spoel\)/);
+  assert.match(html, /visibilityState === "hidden"\) spoel\(\)/);
+});
+
+test("B. alles zonder besluit uit 36 uur staat in de lijst, niet alleen kalender-vandaag", () => {
+  assert.match(html, /Date\.now\(\) - 36 \* 3600e3/);
+  assert.match(html, /if \(!recent\(it\)\) return;/);
+});
+
+test("D. oud overheidsbericht (geen poortveld) met een nog bestaand besluit blijft live", () => {
+  const nogo = { besluit: "nogo", redactie: { reviewId: "o1" } };
+  assert.equal(poortUitslag(DOC(), { kandidaten: [KAND(5)], besluiten: [nogo] }).status, "ok");
+  assert.equal(poortUitslag(DOC(), { kandidaten: [KAND(5)], besluiten: [{ besluit: "go", redactie: { reviewId: "o1" } }] }).status, "ok");
+});
+
+test("E. na een tik 400 ms geen tikken op de lijst", () => {
+  assert.match(html, /blokTot = Date\.now\(\) \+ 400/);
+  assert.match(html, /Date\.now\(\) < blokTot && e\.target\.closest[\s\S]{0,60}#lijst/);
+});
+
+test("G. geen leeg reden-verzoek; Caribisch Nederland wordt niet gewist; besluiten zonder TTL", () => {
+  assert.match(html, /\(b\.redenGestuurd \|\| ""\) === r\) return/);
+  const cron = lees("../api/cron.js");
+  const i = cron.indexOf("nlOverheidUitgesloten(`");
+  assert.ok(!/del\(KEY_OVERHEID/.test(cron.slice(i, i + 700)), "alleen niet live, niet wissen");
+  assert.match(cron, /door: "uitgesloten"/);
 });

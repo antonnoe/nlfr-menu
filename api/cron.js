@@ -46,7 +46,7 @@
 // het (I14, I15). Een stap die niets logt, kan niet bewaakt worden.
 
 import { haalAlleItems, buitenlandDoorlaatNL, hashId, nlOverheidUitgesloten } from "../lib/feeds.js";
-import { verwerkPoort } from "../lib/overheidpoort.js";
+import { verwerkPoort, restTtlS } from "../lib/overheidpoort.js";
 import { SEL_LEES_UREN, SCAN_SEL_KANDIDAAT, SCAN_SEL_BESLUIT } from "../lib/selectie/kern.js";
 import { outletNamen } from "../lib/cluster.js";
 import {
@@ -226,7 +226,12 @@ export default async function handler(req, res) {
   let overheidNietRelevant = 0;
   for (const d of [...overheidBehouden]) {
     if (d && d.id && d.thema === "nl-overheid" && nlOverheidUitgesloten(`${d.kop || ""} ${d.samenvatting || ""}`)) {
-      await del(KEY_OVERHEID(d.id));
+      // Niet wissen: alleen niet live (poort wacht, door "uitgesloten"); een eenmalige
+      // schrijfactie, daarna blijft de stand staan.
+      if (!(d.poort && d.poort.door === "uitgesloten")) {
+        d.poort = { status: "wacht", score: null, door: "uitgesloten", op: new Date(nu).toISOString() };
+        await setJSON(KEY_OVERHEID(d.id), d, restTtlS(d, nu));
+      }
       overheidBehouden.splice(overheidBehouden.indexOf(d), 1);
       overheidNietRelevant += 1;
     }

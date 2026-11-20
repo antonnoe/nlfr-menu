@@ -23,7 +23,11 @@
   .kop h1 { margin:0; font-family:Poppins,sans-serif; font-size:22px; line-height:1.2; }
   .kop .dag { font-size:16px; opacity:.9; }
   .kop .teller { margin-left:auto; font-size:16px; font-weight:700; background:rgba(255,255,255,.16); border-radius:999px; padding:6px 12px; white-space:nowrap; }
-  .kop .ververs { min-height:44px; min-width:44px; border:1px solid rgba(255,255,255,.5); border-radius:12px; background:transparent; color:#fff; font-size:16px; font-weight:700; padding:0 12px; }
+  .kop .ververs { min-height:44px; min-width:44px; border:1px solid rgba(255,255,255,.5); border-radius:12px; background:transparent; color:#fff; font-size:22px; line-height:1; padding:0; flex:0 0 44px; }
+  .kop .dag { white-space:nowrap; }
+  .kop > div:first-child { min-width:0; }
+  .kop .teller { padding:6px 10px; }
+  .bol { width:12px; height:12px; border-radius:50%; background:var(--ok); flex:0 0 12px; }
   .wrap { max-width:760px; margin:0 auto; }
   .romp { padding:12px 16px 32px; display:flex; flex-direction:column; gap:14px; }
   .zij { display:none; }
@@ -115,7 +119,7 @@
 <body>
 <header class="kop"><div><h1>Redactie</h1><div class="dag" id="dag"></div></div>
   <span class="teller" id="teller" aria-live="polite"></span>
-  <button type="button" class="ververs" id="ververs" aria-label="Vernieuwen">Vernieuw</button>
+  <button type="button" class="ververs" id="ververs" aria-label="Vernieuwen" title="Vernieuwen">&#8635;</button>
 </header>
 <div class="wrap">
   <aside class="zij" id="zij"></aside>
@@ -150,8 +154,10 @@
   function $(id) { return document.getElementById(id); }
 
   // ---------- netwerk ----------
+  // keepalive: een verzoek dat tijdens het sluiten van de pagina vertrekt, wordt toch afgemaakt.
+  var wegGaand = false;
   function post(pad, body) {
-    return fetch(pad, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    return fetch(pad, { method: "POST", credentials: "same-origin", keepalive: wegGaand, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (d) { d.status = r.status; return d; }, function () { return { ok: false, status: r.status, fout: "Onverwacht antwoord." }; }); })
       .catch(function () { return { ok: false, fout: "Niet bereikbaar. Controleer je verbinding." }; });
   }
@@ -206,12 +212,12 @@
       if (v === "zijbalk") v = "beide";
       var wacht = !!(o.poort && o.poort.status === "wacht");
       if (wacht && !(ai && ai.plek)) v = "zijbalk";
-      items.push({ soort: "overheid", id: o.id, tijd: o.gepubliceerdOp || o.datum, kop: o.kop || o.titelBron, tekst: o.samenvatting,
+      items.push({ soort: "overheid", poort: o.poort, id: o.id, tijd: o.gepubliceerdOp || o.datum, kop: o.kop || o.titelBron, tekst: o.samenvatting,
         bron: o.bron, url: veilig(o.url), ai: ai, voorstel: v, altijd: !wacht, wacht: wacht });
     });
     // Syntheses die al op de nieuwspagina staan maar nog geen keuze voor
     // zijbalk en Infofrankrijk hebben.
-    var grensPub = Date.now() - 24 * 3600e3;
+    var grensPub = Date.now() - 36 * 3600e3;
     (rev.publicaties || []).forEach(function (c) {
       if (klaar[c.id] || Date.parse(c.gepubliceerdOp || "") < grensPub) return;
       var urls = (c.bronnen || []).map(function (b) { return b.url; });
@@ -239,6 +245,8 @@
   }
   function score(it) { return it.ai && typeof it.ai.score === "number" ? it.ai.score : null; }
   function vanVandaag(it) { var d = new Date(it.tijd); return !isNaN(d) && d.toDateString() === new Date().toDateString(); }
+  // Alles zonder besluit uit de afgelopen 36 uur: nachtnieuws is om 7 uur ook zichtbaar.
+  function recent(it) { var t = Date.parse(it.tijd); return !isNaN(t) && t > Date.now() - 36 * 3600e3; }
   function groepVan(it) {
     if (it.toch) return GROEPEN[0];
     if (it.soort === "concept" || it.soort === "publicatie") return GROEPEN[1];
@@ -251,8 +259,9 @@
   function bouw() {
     var items = bouwItems(), lijst = [], auto = [], nietAi = [];
     items.forEach(function (it) {
-      if (!vanVandaag(it)) return;
-      if (it.soort === "overheid" && !it.wacht) { auto.push(it); return; }
+      if (it.soort === "overheid" && it.poort && it.poort.door === "uitgesloten") return;
+      if (it.soort === "overheid" && !it.wacht) { if (vanVandaag(it)) auto.push(it); return; }
+      if (!recent(it)) return;
       if (it.soort === "kandidaat" && !(score(it) != null && score(it) >= DREMPEL)) {
         if (st.toch.indexOf(it.id) >= 0) { it.toch = true; lijst.push(it); } else nietAi.push(it);
         return;
@@ -357,7 +366,7 @@
   }
   function autoHtml(open) {
     var n = st.auto.filter(function (it) { return !st.autoWeg[it.id]; }).length;
-    return '<details data-auto' + (open ? " open" : "") + '><summary><span>Al automatisch live vandaag (' + n + ')</span><span class="pijl">Bekijk</span></summary>' +
+    return '<details data-auto' + (open ? " open" : "") + '><summary><span class="bol"></span><span>Al automatisch live vandaag (' + n + ')</span><span class="pijl">Bekijk</span></summary>' +
       '<p class="uitleg" style="padding:0 14px 6px">Overheidsberichten staan vanzelf op de nieuwspagina, in de nieuwsbrief en in Infopoche. Je hoeft niets te doen. Iets weghalen kan hier.</p>' +
       '<ul class="klein-lijst">' + (st.auto.length ? st.auto.map(function (it) {
         var w = st.autoWeg[it.id];
@@ -407,7 +416,7 @@
     if (b) return klaarHtml(it, b);
     var c = st.open[it.id] ? conceptVan(it) : null;
     var vk = voorstelK(it), vr = rubriekVoorstel(it);
-    var zbAlleen = vk.zijbalk && PLEKKEN.every(function (p) { return p[0] === "zijbalk" || !vk[p[0]]; });
+    var zbAlleen = vk.zijbalk && PLEKKEN.every(function (p) { return p[0] === "zijbalk" || p[0] === "infofrankrijk" || !vk[p[0]]; });
     var kop = it.url ? '<a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.kop) + "</a>" : esc(it.kop);
     var f = st.fout[it.id];
     var h = '<article class="kaart">' +
@@ -415,8 +424,8 @@
       "<h2>" + kop + "</h2>" +
       (it.origineel ? '<p class="fr">' + esc(it.origineel) + "</p>" : "") +
       (it.tekst ? '<p class="samenvatting">' + esc(it.tekst) + "</p>" : "") +
-      '<div class="voorstel">Voorstel: <b>' + lijstTekst(vk) + "</b>, rubriek <b>" + esc(LABEL[vr]) + "</b>." +
-      '<span class="waarom">' + esc(waarom(it)) + "</span>" +
+      '<div class="voorstel">Voorstel: <b>' + lijstTekst(vk) + "</b>" +
+      '<span class="waarom">Rubriek ' + esc(LABEL[vr]) + ". " + esc(waarom(it)) + "</span>" +
       (!it.ai ? '<span class="let">Geen AI-oordeel: kijk even of het klopt.</span>' : "") + "</div>";
     if (f) h += '<div class="melding-kaart" role="alert"><span>' + esc(f.tekst) + "</span>" + (f.bevestig ? '<button type="button" class="knop" data-bevestig="' + esc(it.id) + '">Toch publiceren</button>' : "") + "</div>";
     if (!c) {
@@ -472,7 +481,14 @@
   // voor elk soort bericht echt werkt. Verlaat je de pagina in die vijf seconden,
   // dan waarschuwt de browser; verdwijnt het tabblad naar de achtergrond, dan
   // wordt het meteen opgeslagen.
+  var blokTot = 0;
+  // Na een tik krimpt de kaart en schuift de lijst op: 400 ms geen tikken op de lijst,
+  // zodat een tweede tik niet op de volgende kaart, de bronlink of Ongedaan maken valt.
+  document.addEventListener("click", function (e) {
+    if (Date.now() < blokTot && e.target.closest && e.target.closest("#lijst")) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
   function besluit(it, b) {
+    blokTot = Date.now() + 400;
     st.bewaard[it.id] = it;
     b.tot = Date.now() + ONGEDAAN_MS; b.status = "wacht";
     delete st.fout[it.id]; delete st.open[it.id];
@@ -487,6 +503,7 @@
     uitvoer(it, b).then(function (d) {
       if (!d.ok) {
         delete st.besluit[id];
+        if (d.gepubliceerd && it.soort === "concept") { it.soort = "publicatie"; it.kop = b.kop; it.tekst = b.tekst; }
         st.fout[id] = { tekst: d.fout || "Opslaan is mislukt.", bevestig: !!d.bevestigingNodig, b: b };
         if (d.bevestigingNodig) st.cn[id] = st.cn[id] || { k: b.k, rubriek: b.rubriek, kop: b.kop, tekst: b.tekst };
         tekenItem(id); return;
@@ -502,9 +519,9 @@
     });
   }
   function stuurReden(id) {
-    var b = st.besluit[id];
-    if (!b || b.soort !== "nee" || b.status !== "klaar" || !b.besluitId || b.redenGestuurd === (b.reden || "")) return;
+    var b = st.besluit[id]; if (!b) return;
     var r = b.reden || "";
+    if ( b.soort !== "nee" || b.status !== "klaar" || !b.besluitId || (b.redenGestuurd || "") === r) return;
     post("/api/selectie", { actie: "reden", id: b.besluitId, reden: r }).then(function (d) {
       if (d.ok) b.redenGestuurd = r; else toon("De reden is niet opgeslagen: " + (d.fout || "mislukt."), null);
     });
@@ -544,22 +561,14 @@
           return terugBijFout(d, post("/api/review", { actie: "kanalen", id: id, kanalen: act, live: it.wacht ? true : undefined })).then(function (r) { return r.ok ? d : r; });
         });
       }
-      // concept
+      // concept: één verzoek volstaat (kop en tekst, publiceren en het redactiebesluit gaan mee),
+      // zodat een sluitende pagina niets half achterlaat. Is een eerdere poging voor de helft
+      // gelukt, dan is het bericht nu een publicatie (it.soort) en slaat de server publiceren over.
       var bewerkt = !weg && (b.kop !== it.kop || b.tekst !== it.tekst);
-      var voor = bewerkt ? post("/api/review", { actie: "bewerk", id: id, kop: b.kop, tekst: b.tekst }) : Promise.resolve({ ok: true });
-      return voor.then(function (r0) {
-        if (!r0.ok) return r0;
-        if (!weg && k.nieuwspagina) {
-          return post("/api/review", { actie: "publiceer", id: id, tekst: b.tekst, bevestigd: b.bevestigd === true, kanalen: act }).then(function (d) {
-            if (!d.ok) return d;
-            return post("/api/selectie", { actie: "redactie", herkomst: "publicatie", id: id, kanalen: zij, categorie: c, elders: elders });
-          });
-        }
-        return post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, kanalen: zij, categorie: c, reden: reden }).then(function (d) {
-          if (!d.ok || !weg) return d;
-          return terugBijFout(d, post("/api/review", { actie: "weg", id: id })).then(function (r) { return r.ok ? d : r; });
-        });
-      });
+      if (!weg && k.nieuwspagina) {
+        return post("/api/review", { actie: "publiceer", id: id, kop: b.kop, tekst: b.tekst, bevestigd: b.bevestigd === true, kanalen: act, selectie: { kanalen: zij, categorie: c, elders: elders } });
+      }
+      return post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, kanalen: zij, categorie: c, reden: reden, kop: bewerkt ? b.kop : undefined, tekst: bewerkt ? b.tekst : undefined, weg: weg || undefined });
     });
   }
 
@@ -676,10 +685,15 @@
     var wacht = Object.keys(st.besluit).some(function (id) { return st.besluit[id].status !== "klaar"; });
     if (wacht) { e.preventDefault(); e.returnValue = ""; }
   });
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState !== "hidden") return;
+  // Pagina sluit of verdwijnt naar de achtergrond: wat nog wacht gaat nu meteen weg (keepalive).
+  function spoel() {
+    wegGaand = true;
     Object.keys(st.besluit).forEach(function (id) { if (st.besluit[id].status === "wacht") opslaan(id); });
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") spoel(); else wegGaand = false;
   });
+  window.addEventListener("pagehide", spoel);
 
   window.__redactie = { st: st };
   laad();

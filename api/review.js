@@ -53,6 +53,7 @@ import { vindGelijkenis, gelijkenis, vindPrimaireBron } from "../lib/gelijkenis.
 import { maakRegisterRecord, pasVervangingToe, pasAanvullingToe } from "../lib/register.js";
 import { keurBronnen, bronUrlOordeel, bronVoorNaam } from "../lib/bronurl.js";
 import { slaRedactieBesluitOp } from "../lib/selectie/redactie-opslag.js";
+import { leesVoorstel } from "../lib/selectie/kern.js";
 import { overheidIsLive } from "../lib/overheidpoort.js";
 import { persTegelVanPublicatie, opgeslagenThema, normActueelKanalen } from "../lib/tegels.js";
 import {
@@ -284,7 +285,7 @@ async function vervalSnapshots() {
 async function redactieNaPubliceren(id, body, deur) {
   const sel = body && body.selectie;
   if (!sel || typeof sel !== "object") return { ok: true, besluit: null };
-  return slaRedactieBesluitOp({ herkomst: "publicatie", id, kanalen: sel.kanalen, categorie: sel.categorie, elders: sel.elders === true, reden: sel.reden, door: (deur && deur.adres) || null });
+  return slaRedactieBesluitOp({ herkomst: "publicatie", id, kanalen: sel.kanalen, categorie: sel.categorie, elders: sel.elders === true, reden: sel.reden, voorstel: leesVoorstel(sel.voorstel), door: (deur && deur.adres) || null });
 }
 
 export default async function handler(req, res) {

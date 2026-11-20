@@ -238,6 +238,48 @@
    "bron": "Test",
    "verwacht": "weg",
    "reden": "sport"
+  },
+  {
+   "titel": "Mutuelles : les tarifs vont augmenter",
+   "land": "FR",
+   "bron": "Test",
+   "verwacht": "door",
+   "reden": "keuringsvoorbeeld herstelronde 1 (deelwoord of grensgemeente)"
+  },
+  {
+   "titel": "Prix du gazole actuellement",
+   "land": "FR",
+   "bron": "Test",
+   "verwacht": "door",
+   "reden": "keuringsvoorbeeld herstelronde 1 (deelwoord of grensgemeente)"
+  },
+  {
+   "titel": "Frontière fermée au Perthus",
+   "land": "FR",
+   "bron": "Test",
+   "verwacht": "door",
+   "reden": "keuringsvoorbeeld herstelronde 1 (deelwoord of grensgemeente)"
+  },
+  {
+   "titel": "Spanje sluit grens bij Le Perthus",
+   "land": "NL",
+   "bron": "Test",
+   "verwacht": "door",
+   "reden": "keuringsvoorbeeld herstelronde 1 (deelwoord of grensgemeente)"
+  },
+  {
+   "titel": "Drogue : la France lance un plan national",
+   "land": "FR",
+   "bron": "Test",
+   "verwacht": "door",
+   "reden": "keuringsvoorbeeld herstelronde 1 (deelwoord of grensgemeente)"
+  },
+  {
+   "titel": "Cambriolages : conseils avant les vacances",
+   "land": "FR",
+   "bron": "Test",
+   "verwacht": "door",
+   "reden": "keuringsvoorbeeld herstelronde 1 (deelwoord of grensgemeente)"
   }
  ],
  "overheid": [
@@ -288,6 +330,11 @@
    "samenvatting": "Nederlanders in het buitenland kunnen het paspoort bij het consulaat aanvragen.",
    "verwacht": "ok",
    "reden": "consulaire zaken"
+  },
+  {
+   "kop": "Nederlandse pensioenhervorming: nieuwe regels voor ambtenaren",
+   "samenvatting": "De Wet toekomst pensioenen geldt ook voor ambtenaren.",
+   "verwacht": "wacht"
   }
  ]
 }

@@ -129,18 +129,18 @@
 <script>
 (function () {
   "use strict";
-  var DREMPEL = 40; // overschreven door /api/selectie (één waarde: SCORE_DREMPEL in lib/config.js)
+  var DREMPEL = 40; // alleen een beginwaarde, overschreven door /api/selectie (één waarde: SCORE_DREMPEL in lib/config.js)
   var ONGEDAAN_MS = 5000;
   var rev = null, sel = null, geladen = false;
   // Alle toestand van de pagina. De kaarten worden per bericht getekend, nooit
   // allemaal tegelijk: getypte tekst (st.cn) blijft staan, ook als elders een
   // bericht wordt geplaatst of de laadbeurt klaar is.
   var st = { besluit: {}, open: {}, cn: {}, fout: {}, gedaan: {}, bewaard: {}, autoWeg: {}, autoBezig: {}, toch: [], lijst: [], auto: [], nietAi: [] };
-  var PLEKKEN = [["nieuwspagina", "Nieuwspagina", "Frankrijknieuws op Nederlanders.fr"], ["nieuwsbrief", "Nieuwsbrief", "De dagelijkse brief van morgen"], ["infopoche", "Infopoche", "De app"], ["zijbalk", "Zijbalk", "Het nieuwsblok naast het forum"], ["infofrankrijk", "Infofrankrijk", "Het nieuwsblok op Infofrankrijk"]];
-  var NAAM = { nieuwspagina: "nieuwspagina", nieuwsbrief: "nieuwsbrief", infopoche: "Infopoche", zijbalk: "zijbalk", infofrankrijk: "Infofrankrijk" };
-  var LABEL = { algemeen: "Algemeen", regelgeving: "Wet- en regelgeving", ondernemers: "Ondernemers", reizen: "Reizen", meteo: "Meteo" };
+  var PLEKKEN = []; // [id, naam, uitleg] uit /api/selectie (lib/redactieregels.js)
+  var NAAM = {};
+  var LABEL = {};
   var VOLGORDE = ["algemeen", "regelgeving", "ondernemers", "reizen", "meteo"];
-  var REDENEN = ["Niet relevant", "Dubbel", "Te oud", "Buitenland"];
+  var REDENEN = [];
   var GROEPEN = ["Door jou teruggehaald", "Meerdere kranten", "Overheid, de AI twijfelt", "Eén krant"];
   var LOS = "Eén krant: volgens de huisregel niet op nieuwspagina, nieuwsbrief en Infopoche."; // overschreven door sel.regels.losTekst (lib/redactieregels.js)
   var VOLGT = "Volgt de nieuwspagina: zet eerst de nieuwspagina aan.";
@@ -179,7 +179,14 @@
     Promise.all([haal("/api/review"), haal("/api/selectie")]).then(function (uit) {
       rev = uit[0]; sel = uit[1];
       if (sel && typeof sel.drempel === "number") DREMPEL = sel.drempel;
-      if (sel && sel.regels && sel.regels.losTekst) LOS = sel.regels.losTekst;
+      if (sel && sel.regels) {
+        var rg = sel.regels;
+        if (rg.losTekst) LOS = rg.losTekst;
+        PLEKKEN = (rg.plekken || []).map(function (p) { return [p.id, p.naam, p.uitleg]; });
+        NAAM = {}; (rg.plekken || []).forEach(function (p) { NAAM[p.id] = p.kort; });
+        LABEL = {}; (rg.rubrieken || []).forEach(function (r) { LABEL[r.key] = r.label; });
+        REDENEN = rg.redenen || [];
+      }
       if (!rev.ok || !sel.ok) { laadFout(rev.fout || sel.fout || "Fout bij laden."); return; }
       geladen = true; bouw(); tekenRomp();
     }).catch(function (e) { if (!e || e.message !== "login") laadFout("Niet bereikbaar. Probeer het zo opnieuw."); });
@@ -301,18 +308,34 @@
     PLEKKEN.forEach(function (p) { var s = p[0]; if ((s === "nieuwsbrief" || s === "infopoche") && !u.nieuwspagina) u[s] = false; });
     return u;
   }
-  // Het voorstel van de AI, nooit verder dan de huisregels toelaten.
+  // Het voorstel van de AI, nooit verder dan de huisregels toelaten. Uitgangspunt is
+  // het modelvoorstel in vijf plekken (ai.plekken); een synthese uit meerdere kranten
+  // leidt zijn voorstel los af, want het oordeel is van één losse krant en mag de
+  // nieuwspagina niet afsluiten.
   function voorstelK(it) {
-    var v = it.voorstel, k = {};
-    if (it.soort === "kandidaat") { k.zijbalk = true; k.infofrankrijk = true; return schoon(it, k); }
+    var P = it.ai && Array.isArray(it.ai.plekken) && it.ai.plekken.length ? it.ai.plekken : null;
+    var k = {};
+    if (it.soort === "kandidaat") {
+      if (P) P.forEach(function (p) { k[p] = true; }); else { k.zijbalk = true; k.infofrankrijk = true; }
+      return schoon(it, k);
+    }
     if (!it.ai && (it.soort === "concept" || (it.soort === "overheid" && it.wacht))) { k.zijbalk = true; k.infofrankrijk = true; return schoon(it, k); }
-    if (it.soort === "concept") k.nieuwspagina = it.nieuwsMag !== false && v !== "zijbalk";
-    else if (it.wacht) k.nieuwspagina = v === "nieuwspagina" || v === "beide";
-    else k.nieuwspagina = true;
+    if (it.soort === "concept" || it.soort === "publicatie") {
+      var laag = it.ai && typeof it.ai.score === "number" && it.ai.score < DREMPEL;
+      k.nieuwspagina = it.soort === "publicatie" ? true : it.nieuwsMag !== false && !laag;
+      k.nieuwsbrief = k.infopoche = k.nieuwspagina;
+      k.zijbalk = k.infofrankrijk = P ? (P.indexOf("zijbalk") >= 0 || P.indexOf("infofrankrijk") >= 0) || !k.nieuwspagina : !k.nieuwspagina;
+      return schoon(it, k);
+    }
+    // overheid
+    if (P) { P.forEach(function (p) { k[p] = true; }); if (!it.wacht) k.nieuwspagina = true; return schoon(it, k); }
+    k.nieuwspagina = it.wacht ? false : true;
     k.nieuwsbrief = k.infopoche = k.nieuwspagina;
-    k.zijbalk = k.infofrankrijk = v === "zijbalk" || v === "beide" || !k.nieuwspagina;
+    k.zijbalk = k.infofrankrijk = !k.nieuwspagina || it.voorstel === "zijbalk" || it.voorstel === "beide";
     return schoon(it, k);
   }
+  // Het voorstel zoals getoond, als lijst plek-ids: gaat mee met het besluit (meten en leren).
+  function voorstelLijst(it) { var k = voorstelK(it); return PLEKKEN.filter(function (p) { return k[p[0]]; }).map(function (p) { return p[0]; }); }
   function rubriekVoorstel(it) {
     if (it.ai && LABEL[it.ai.categorie]) return it.ai.categorie;
     if (it.soort === "overheid") return "regelgeving";
@@ -561,19 +584,19 @@
       var act = { nieuwsbrief: !weg && !!k.nieuwsbrief, infopoche: !weg && !!k.infopoche };
       var elders = !weg && !!(k.nieuwspagina || k.nieuwsbrief || k.infopoche);
       var c = weg ? undefined : b.rubriek, reden = weg && b.reden ? b.reden : undefined;
-      if (it.soort === "kandidaat") return post("/api/selectie", { actie: zij.length ? "go" : "nogo", id: id, categorie: c, kanalen: zij, reden: reden });
+      if (it.soort === "kandidaat") return post("/api/selectie", { actie: zij.length ? "go" : "nogo", id: id, categorie: c, kanalen: zij, reden: reden, voorstel: voorstelLijst(it) });
       if (it.soort === "overheid" || it.soort === "publicatie") {
         // Eén verzoek: besluit en (de)publiceren, verwijderen of kanalen gaan samen.
-        return post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c, elders: elders, opPagina: it.wacht ? !!k.nieuwspagina : true, reden: reden, weg: weg || undefined, act: weg || (it.wacht && !k.nieuwspagina) ? undefined : act, live: !weg && it.wacht && k.nieuwspagina ? true : undefined });
+        return post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c, elders: elders, opPagina: it.wacht ? !!k.nieuwspagina : true, reden: reden, weg: weg || undefined, voorstel: voorstelLijst(it), act: weg || (it.wacht && !k.nieuwspagina) ? undefined : act, live: !weg && it.wacht && k.nieuwspagina ? true : undefined });
       }
       // concept: één verzoek volstaat (kop en tekst, publiceren en het redactiebesluit gaan mee),
       // zodat een sluitende pagina niets half achterlaat. Is een eerdere poging voor de helft
       // gelukt, dan is het bericht nu een publicatie (it.soort) en slaat de server publiceren over.
       var bewerkt = !weg && (b.kop !== it.kop || b.tekst !== it.tekst);
       if (!weg && k.nieuwspagina) {
-        return post("/api/review", { actie: "publiceer", id: id, kop: b.kop, tekst: b.tekst, bevestigd: b.bevestigd === true, kanalen: act, selectie: { kanalen: zij, categorie: c, elders: elders } });
+        return post("/api/review", { actie: "publiceer", id: id, kop: b.kop, tekst: b.tekst, bevestigd: b.bevestigd === true, kanalen: act, selectie: { kanalen: zij, categorie: c, elders: elders, voorstel: voorstelLijst(it) } });
       }
-      return post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, kanalen: zij, categorie: c, reden: reden, kop: bewerkt ? b.kop : undefined, tekst: bewerkt ? b.tekst : undefined, weg: weg || undefined });
+      return post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, kanalen: zij, categorie: c, reden: reden, voorstel: voorstelLijst(it), kop: bewerkt ? b.kop : undefined, tekst: bewerkt ? b.tekst : undefined, weg: weg || undefined });
     });
   }
 

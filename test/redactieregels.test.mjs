@@ -183,7 +183,7 @@ test("de cron en /api/actueel kennen geen 'zonder poortveld = live' meer", () =>
 
 test("R17: Rijksoverheid-berichten van 20-11 komen ook bij een hoge modelscore niet live, behalve wat Nederlanders in het buitenland raakt", () => {
   const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
-  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 6);
+  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 7);
   for (const o of set.overheid) {
     if (o.verwacht === "twijfel") continue;
     const d = { id: "x", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/x", thema: "nl-overheid", kop: o.kop, samenvatting: o.samenvatting };
@@ -202,4 +202,48 @@ test("synthese zonder AI-oordeel: standaard alleen zijbalk en Infofrankrijk", ()
   assert.match(html, /if \(!it\.ai && \(it\.soort === "concept"[^\n]*k\.zijbalk = true; k\.infofrankrijk = true; return schoon/);
   assert.match(html, /voorstel: ai && ai\.plek \? ai\.plek : "zijbalk", altijd: true/);
   assert.ok(!/ai\.plek : "beide"/.test(html));
+});
+
+// ---- Herstelronde 1 op PR 79 ------------------------------------------------------
+const OKDOC = (o) => ({ id: "x", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/x", thema: "nl-overheid", kop: o.kop, samenvatting: o.samenvatting, poort: { status: "ok", score: 80, door: "model" } });
+
+test("R17 geldt ook voor wat al ok door model staat; plaatsing door de redactie blijft staan", () => {
+  const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
+  for (const o of set.overheid) {
+    if (o.verwacht === "twijfel") continue;
+    assert.equal(poortUitslag(OKDOC(o), {}).status, o.verwacht === "ok" ? "ok" : "wacht", o.kop);
+  }
+  const door = { ...OKDOC(set.overheid[0]), poort: { status: "ok", door: "redactie" } };
+  assert.equal(poortUitslag(door, {}).status, "ok");
+});
+
+test("R17-kenmerken: zorgverzekering telt; pensioen en verdrag alleen met buitenlandcontext", () => {
+  assert.equal(R.raaktBuitenland("Zorgverzekering: premie stijgt"), true);
+  assert.equal(R.raaktBuitenland("Pensioenakkoord voor ambtenaren"), false);
+  assert.equal(R.raaktBuitenland("Verdrag tussen Nederland en Italië over grondstoffen"), false);
+  assert.equal(R.raaktBuitenland("Pensioen van Nederlanders in Frankrijk"), true);
+  assert.equal(R.raaktBuitenland("Pensioen en AOW over de grens"), true);
+});
+
+test("de zeven: woordgrenzen voor korte termen; deze koppen komen door", () => {
+  const door = [["Mutuelles : les tarifs vont augmenter", "FR"], ["Prix du gazole actuellement", "FR"], ["Frontière fermée au Perthus", "FR"], ["Spanje sluit grens bij Le Perthus", "NL"], ["Drogue : la France lance un plan national", "FR"], ["Cambriolages : conseils avant les vacances", "FR"]];
+  for (const [titel, land] of door) assert.equal(zeefDoorlaat({ titel, land }), true, titel);
+  const weg = [["Un homme tué à Marseille", "FR"], ["Femme violée à Lyon", "FR"], ["Rixe à Nîmes : trois blessés", "FR"]];
+  for (const [titel, land] of weg) assert.equal(zeefDoorlaat({ titel, land }), false, titel);
+  const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
+  for (const [titel] of door) assert.ok(set.items.some((i) => i.titel === titel && i.verwacht === "door"), `${titel} staat in de toetsset`);
+});
+
+test("een synthese leidt zijn voorstel los af en het besluit meet tegen het getoonde voorstel", () => {
+  const html = lees("../redactie.html");
+  assert.match(html, /it\.soort === "concept" \|\| it\.soort === "publicatie"\) \{\s*var laag/);
+  assert.match(html, /function voorstelLijst\(it\)/);
+  assert.ok((html.match(/voorstel: voorstelLijst\(it\)/g) || []).length >= 4);
+  // getoond voorstel gaat voor het modelvoorstel
+  const b = BESLUIT({ voorstelPlekken: ["nieuwspagina", "zijbalk"], plekken: ["nieuwspagina", "zijbalk"], ai: { score: 70, plek: "zijbalk" } });
+  assert.equal(meetVoorstel([b], Date.parse("2026-11-20T12:00:00Z")).klopt, 1);
+  // een gepubliceerde synthese heeft nieuwspagina in plekken
+  const p = redactieBesluit({ herkomst: "publicatie", doc: { id: "p3", kop: "K" }, kanalen: [], zijbalk: false, elders: false, voorstelLijst: ["nieuwspagina"] }).besluit;
+  assert.ok(p.plekken.includes("nieuwspagina"));
+  assert.deepEqual(p.voorstelPlekken, ["nieuwspagina"]);
 });

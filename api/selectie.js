@@ -45,9 +45,10 @@ import {
   leesReden,
   SEL_LEES_UREN,
   meetVoorstel,
+  leesVoorstel,
 } from "../lib/selectie/kern.js";
 import { slaRedactieBesluitOp } from "../lib/selectie/redactie-opslag.js";
-import { PLEKKEN_VIJF, LOS_PLEKKEN, LOS_TEKST } from "../lib/redactieregels.js";
+import { PLEKKEN_VIJF, LOS_PLEKKEN, LOS_TEKST, RUBRIEK_LABEL, REDENEN, PLEK_IDS } from "../lib/redactieregels.js";
 import { KEY_CONCEPT, KEY_PUBLICATIE, KEY_OVERHEID, SCORE_DREMPEL } from "../lib/config.js";
 
 function leesBody(req) {
@@ -87,7 +88,7 @@ export default async function handler(req, res) {
       ok: true,
       drempel: SCORE_DREMPEL,
       // Het regelbestand voor de pagina (één bron: lib/redactieregels.js).
-      regels: { plekken: PLEKKEN_VIJF, losPlekken: LOS_PLEKKEN, losTekst: LOS_TEKST },
+      regels: { plekken: PLEKKEN_VIJF, losPlekken: LOS_PLEKKEN, losTekst: LOS_TEKST, rubrieken: CATEGORIEEN.map((k) => ({ key: k, label: RUBRIEK_LABEL[k] })), redenen: REDENEN },
       // "Deze week klopte het voorstel bij x van de y berichten" (alleen tonen bij meting.tonen).
       meting: meetVoorstel(besluiten),
       categorieen: CATEGORIEEN.map((k) => ({ key: k, label: CATEGORIE_LABEL[k] })),
@@ -133,7 +134,7 @@ export default async function handler(req, res) {
   }
 
   if (actie === "redactie") {
-    const uit = await slaRedactieBesluitOp({ herkomst, id, categorie, zijbalk, kanalen, elders, opPagina: body.opPagina, reden: body.reden, weg: body.weg === true, act: body.act, live: body.live === true, kop: body.kop, tekst: body.tekst, door: deur.adres || null });
+    const uit = await slaRedactieBesluitOp({ herkomst, id, categorie, zijbalk, kanalen, elders, opPagina: body.opPagina, reden: body.reden, voorstel: leesVoorstel(body.voorstel), weg: body.weg === true, act: body.act, live: body.live === true, kop: body.kop, tekst: body.tekst, door: deur.adres || null });
     if (!uit.ok) return res.status(uit.status).json({ ok: false, fout: uit.fout });
     return res.status(200).json({ ok: true, besluit: uit.besluit });
   }
@@ -151,6 +152,7 @@ export default async function handler(req, res) {
       categorie: gekozen,
       categorieDoorRedactie: Boolean(categorie && categorie !== voorstel),
       ...(leesReden(body.reden) ? { reden: leesReden(body.reden) } : {}),
+      ...(leesVoorstel(body.voorstel) ? { voorstelPlekken: leesVoorstel(body.voorstel) } : {}),
       besluitOp: new Date().toISOString(),
       door: deur.adres || null,
     };

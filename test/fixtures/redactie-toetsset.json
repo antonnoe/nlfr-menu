@@ -300,7 +300,7 @@
   },
   {
    "kop": "Benoeming directeur-generaal Digitaliseringsbeleid Samenleving en Overheid",
-   "samenvatting": "Een nieuwe directeur-generaal bij het ministerie van Economische Zaken en Klimaat; zij werkte eerder bij een ambassade en bij Buitenlandse Zaken.",
+   "samenvatting": "Een nieuwe directeur-generaal bij het ministerie van Economische Zaken en Klimaat; zij werkte eerder in het buitenland bij een ambassade.",
    "verwacht": "wacht"
   },
   {
@@ -384,6 +384,26 @@
    "kop": "Nederlandse ambassade Parijs",
    "samenvatting": "De ambassade in Frankrijk verhuist.",
    "verwacht": "ok"
+  },
+  {
+   "kop": "Het schip is sinds juni in het buitenland ingezet",
+   "samenvatting": "Het schip is sinds juni in het buitenland ingezet.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "Defensie zet militairen in het buitenland in",
+   "samenvatting": "Defensie zet militairen in het buitenland in.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "Bedrijven verplaatsen productie naar het buitenland",
+   "samenvatting": "Bedrijven verplaatsen productie naar het buitenland.",
+   "verwacht": "wacht"
+  },
+  {
+   "kop": "Kennismigranten van buiten Nederland krijgen sneller een vergunning",
+   "samenvatting": "Kennismigranten van buiten Nederland krijgen sneller een vergunning.",
+   "verwacht": "wacht"
   }
  ]
 }

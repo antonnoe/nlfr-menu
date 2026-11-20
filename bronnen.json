@@ -61,16 +61,6 @@
       "verificatieDatum": "2026-08-05"
     },
     {
-      "naam": "DG Trésor",
-      "feed": "https://www.tresor.economie.gouv.fr/Flux/Atom/Articles/Home",
-      "thema": "economie",
-      "regime": "overheid",
-      "taal": "fr",
-      "prioriteit": 2,
-      "actief": true,
-      "verificatie": "geverifieerd"
-    },
-    {
       "naam": "BOSS — Bulletin Officiel de la Sécurité Sociale",
       "feed": "https://boss.gouv.fr/portail/fil-rss/pagecontent/flux-actualites.rss",
       "thema": "sociale-zekerheid",

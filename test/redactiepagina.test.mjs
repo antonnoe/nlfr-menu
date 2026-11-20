@@ -81,8 +81,8 @@ test("koppeling op bronlink: www, slash en querystring tellen niet", () => {
 
 const CONCEPT = { id: "abc12", kop: "Kop van de synthese", bronnen: [{ naam: "Le Monde", url: "https://www.lemonde.fr/a" }], aangemaaktOp: "2026-11-20T10:00:00Z" };
 
-test("synthese alleen in de zijbalk: link naar de eerste krant, rubriek verplicht", () => {
-  assert.match(redactieBesluit({ herkomst: "concept", doc: CONCEPT }).fout, /rubriek/);
+test("synthese alleen in de zijbalk: link naar de eerste krant, rubriek nooit verplicht", () => {
+  assert.equal(redactieBesluit({ herkomst: "concept", doc: CONCEPT }).besluit.categorie, "algemeen", "zonder rubriek een standaardrubriek, geen weigering");
   const { besluit } = redactieBesluit({ herkomst: "concept", doc: CONCEPT, categorie: "algemeen" });
   assert.equal(besluit.id, "rabc12");
   assert.equal(besluit.url, "https://www.lemonde.fr/a");
@@ -118,14 +118,14 @@ test("overheidsbericht krijgt standaard de rubriek Wet- en regelgeving", () => {
 test("selectie-API: opgenomen bronartikelen niet los op het scherm, terugdraaien geeft ze vrij", () => {
   const api = fs.readFileSync(new URL("../api/selectie.js", import.meta.url), "utf8");
   assert.match(api, /kandidaten\.filter\(\(k\) => !k\.opgenomen\)/);
-  assert.match(api, /opgenomen: uit\.besluit\.id/);
+  assert.match(fs.readFileSync(new URL("../lib/selectie/redactie-opslag.js", import.meta.url), "utf8"), /opgenomen: uit\.besluit\.id/);
   assert.match(api, /b\.redactie\.ook/);
 });
 
 test("/redactie toont gepubliceerde syntheses zonder zijbalkkeuze", () => {
   const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
   assert.match(html, /rev\.publicaties/);
-  assert.match(html, /actie: "depubliceer"/);
+  assert.match(html, /weg: weg \|\| undefined/);
 });
 
 test("/redactie staat achter de login en roept beide backends aan", () => {
@@ -168,11 +168,20 @@ test("nieuwsbrief en Infopoche: alleen booleans voor die twee sleutels gaan mee 
   assert.equal(normActueelKanalen(null), null);
 });
 
-test("/redactie heeft vijf plekken, OK plaatsen en Weg, en voorbeeldknoppen voor alle vijf", () => {
+test("/redactie heeft vijf plekken, Ja/Alleen zijbalk/Nee en Plaats zo, en beheer- en voorbeeldlinks", () => {
   const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
   for (const p of ["nieuwspagina", "zijbalk", "nieuwsbrief", "infopoche", "infofrankrijk"]) assert.ok(html.includes(`["${p}", "`), p);
-  assert.ok(html.includes("OK, plaatsen") && html.includes("data-weg="));
-  for (const u of ["/sidebar-nieuws", "nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", "https://infopoche.fr", "https://infofrankrijk.com/#open"]) assert.ok(html.includes(u), u);
+  for (const t of ["Ja, zoals voorgesteld", "Alleen zijbalk", "Rest van vandaag: nee", "Al automatisch live vandaag", "Door de AI niet voorgesteld", "Anders: plekken, rubriek of tekst", "Plaats zo", "Ongedaan maken", "Opnieuw proberen", "Bekijken en beheer"]) assert.ok(html.includes(t), t);
+  for (const u of ["/sidebar-nieuws", "nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", "https://infopoche.fr", "https://infofrankrijk.com/#open", 'href="/review"']) assert.ok(html.includes(u), u);
+});
+
+test("/redactie is de ene ingang: tandwiel, login en /selectie verwijzen ernaar; /review blijft", () => {
+  const rd = (p) => fs.readFileSync(new URL(p, import.meta.url), "utf8");
+  assert.match(rd("../index.html"), /\["Redactie","\/redactie"/);
+  assert.match(rd("../login.html"), /return "\/redactie"/);
+  assert.match(rd("../api/auth-callback.js"), /stuurDoor\(res, "\/redactie"\)/);
+  assert.match(rd("../selectie.html"), /url=\/redactie/);
+  assert.ok(fs.existsSync(new URL("../review.html", import.meta.url)));
 });
 
 test("/api/actueel: een publicatie met kanalen geeft ze mee per artikel, zonder kanalen geen veld", () => {
@@ -189,3 +198,14 @@ test("zijbalknieuws met ?kanaal=infofrankrijk leest de Infofrankrijk-feed", () =
   assert.ok(html.includes('"/api/selectie-feed" + kanaal'));
   assert.ok(html.includes('get("kanaal") === "infofrankrijk"'));
 });
+
+test("Rijksoverheid: alleen Caribisch Nederland is hard uitgesloten; de rest beslist de modelscore (poort)", async () => {
+  const { nlOverheidUitgesloten } = await import("../lib/feeds.js");
+  assert.equal(nlOverheidUitgesloten("Verbetering leefomgeving Bonaire, Sint Eustatius en Saba"), true);
+  assert.equal(nlOverheidUitgesloten("Belasting in Caribisch Nederland omlaag"), true);
+  assert.equal(nlOverheidUitgesloten("AOW-leeftijd stijgt in 2032"), false);
+  assert.equal(nlOverheidUitgesloten("Openstelling burgemeestersvacature Lingewaard"), false, "geen trefwoordenlijst meer: dit regelt de poort");
+  const feeds = fs.readFileSync(new URL("../lib/feeds.js", import.meta.url), "utf8");
+  assert.ok(!feeds.includes("NL_OVERHEID_DOEL"), "de te zwakke doellijst is vervallen");
+});
+

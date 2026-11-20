@@ -126,10 +126,10 @@
   // binnenkomt met een backslash erin is geen typefout maar een poging.
   function bestemming(){
     var ruw = new URLSearchParams(location.search).get("terug") || "";
-    if (!ruw || ruw.charAt(0) !== "/" || ruw.indexOf("\\") !== -1) return "/review";
+    if (!ruw || ruw.charAt(0) !== "/" || ruw.indexOf("\\") !== -1) return "/redactie";
     var opgelost;
-    try { opgelost = new URL(ruw, location.origin); } catch(e){ return "/review"; }
-    if (opgelost.origin !== location.origin) return "/review";
+    try { opgelost = new URL(ruw, location.origin); } catch(e){ return "/redactie"; }
+    if (opgelost.origin !== location.origin) return "/redactie";
     // Alleen het deel binnen deze site teruggeven, nooit de hele URL: dan kan
     // er ook via deze regel geen absolute bestemming ontsnappen.
     return opgelost.pathname + opgelost.search + opgelost.hash;

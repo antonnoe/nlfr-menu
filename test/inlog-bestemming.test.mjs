@@ -48,9 +48,9 @@ test("een gewoon pad op deze site wordt overgenomen", () => {
 test("een backslash wordt geweigerd", () => {
   // DIT IS DE REGRESSIE. Zonder de reparatie geeft dit "/\\evil.example" terug,
   // en dat is voor de browser hetzelfde als "//evil.example".
-  assert.equal(bestemmingVoor("/\\evil.example"), "/review");
-  assert.equal(bestemmingVoor("/\\\\evil.example"), "/review");
-  assert.equal(bestemmingVoor("/pad/met\\backslash"), "/review");
+  assert.equal(bestemmingVoor("/\\evil.example"), "/redactie");
+  assert.equal(bestemmingVoor("/\\\\evil.example"), "/redactie");
+  assert.equal(bestemmingVoor("/pad/met\\backslash"), "/redactie");
 });
 
 test("een volledige URL naar een ander domein wordt geweigerd", () => {
@@ -61,21 +61,21 @@ test("een volledige URL naar een ander domein wordt geweigerd", () => {
     "javascript:alert(1)",
     "https://nlfr-menu.vercel.app.evil.example/review",
   ]) {
-    assert.equal(bestemmingVoor(kwaad), "/review", `niet geweigerd: ${kwaad}`);
+    assert.equal(bestemmingVoor(kwaad), "/redactie", `niet geweigerd: ${kwaad}`);
   }
 });
 
 test("een lege of ontbrekende waarde valt terug op /review", () => {
-  assert.equal(bestemmingVoor(null), "/review");
-  assert.equal(bestemmingVoor(""), "/review");
-  assert.equal(bestemmingVoor("   "), "/review");
+  assert.equal(bestemmingVoor(null), "/redactie");
+  assert.equal(bestemmingVoor(""), "/redactie");
+  assert.equal(bestemmingVoor("   "), "/redactie");
 });
 
 test("een relatief pad zonder beginstreep wordt geweigerd", () => {
   // "review" zou tegen de huidige pagina worden opgelost, en dat is een andere
   // bestemming dan hij lijkt.
-  assert.equal(bestemmingVoor("review"), "/review");
-  assert.equal(bestemmingVoor("../elders"), "/review");
+  assert.equal(bestemmingVoor("review"), "/redactie");
+  assert.equal(bestemmingVoor("../elders"), "/redactie");
 });
 
 test("wat eruit komt is altijd een pad, nooit een volledige URL", () => {

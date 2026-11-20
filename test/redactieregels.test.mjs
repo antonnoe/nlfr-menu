@@ -183,7 +183,7 @@ test("de cron en /api/actueel kennen geen 'zonder poortveld = live' meer", () =>
 
 test("R17: Rijksoverheid-berichten van 20-11 komen ook bij een hoge modelscore niet live, behalve wat Nederlanders in het buitenland raakt", () => {
   const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
-  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 7);
+  assert.equal(set.overheid.filter((o) => o.verwacht === "wacht").length, 8);
   for (const o of set.overheid) {
     if (o.verwacht === "twijfel") continue;
     const d = { id: "x", url: "https://www.rijksoverheid.nl/actueel/nieuws/2026/11/20/x", thema: "nl-overheid", kop: o.kop, samenvatting: o.samenvatting };
@@ -213,12 +213,37 @@ test("R17 geldt ook voor wat al ok door model staat; plaatsing door de redactie 
     if (o.verwacht === "twijfel") continue;
     assert.equal(poortUitslag(OKDOC(o), {}).status, o.verwacht === "ok" ? "ok" : "wacht", o.kop);
   }
-  const door = { ...OKDOC(set.overheid[0]), poort: { status: "ok", door: "redactie" } };
+  const door = { ...OKDOC(set.overheid[0]), poort: { status: "ok", door: "redactie", keuze: true } };
   assert.equal(poortUitslag(door, {}).status, "ok");
 });
 
+const VIJF = ["Zr.Ms. Evertsen", "Kabinet zet werk en meedoen", "Benoeming directeur-generaal", "Openstelling burgemeestersvacature", "IBO-onderzoek"];
+
+test("de vijf Rijksoverheid-berichten van 20-11: niet live als ok door model, door redactie zonder keuze of via oud selectie-go", () => {
+  const set = JSON.parse(lees("./fixtures/redactie-toetsset.json"));
+  const vijf = VIJF.map((k) => set.overheid.find((o) => o.kop.startsWith(k)));
+  assert.ok(vijf.every(Boolean));
+  for (const o of vijf) {
+    assert.equal(poortUitslag(OKDOC(o), {}).status, "wacht", `ok door model: ${o.kop}`);
+    assert.equal(poortUitslag({ ...OKDOC(o), poort: { status: "ok", score: 55, door: "model" } }, {}).status, "wacht", `score 55: ${o.kop}`);
+    assert.equal(poortUitslag({ ...OKDOC(o), poort: { status: "ok", score: 55, door: "redactie" } }, {}).status, "wacht", `redactie zonder keuze: ${o.kop}`);
+  }
+});
+
+test("R17 streng: losse buitenlandse namen en Buitenlandse Zaken tellen niet; AOW, pensioen en zorgverzekering alleen voor wie in het buitenland woont", () => {
+  assert.equal(R.raaktBuitenland("Zr.Ms. Evertsen in de Rode Zee, overleg met Buitenlandse Zaken, Franse schepen"), false);
+  assert.equal(R.raaktBuitenland("Een DG die eerder bij een ambassade en in het buitenland werkte"), false);
+  assert.equal(R.raaktBuitenland("Armoede bij ouderen, AOW en pensioen"), false);
+  assert.equal(R.raaktBuitenland("Nederlanders in de zorg"), false);
+  assert.equal(R.raaktBuitenland("AOW voor wie in het buitenland woont"), true);
+  assert.equal(R.raaktBuitenland("Zorgverzekering voor Nederlanders in Frankrijk"), true);
+  assert.equal(R.raaktBuitenland("Nieuwe grensregeling"), true);
+  assert.equal(R.raaktBuitenland("Remigratie neemt toe"), true);
+});
+
 test("R17-kenmerken: zorgverzekering telt; pensioen en verdrag alleen met buitenlandcontext", () => {
-  assert.equal(R.raaktBuitenland("Zorgverzekering: premie stijgt"), true);
+  assert.equal(R.raaktBuitenland("Zorgverzekering: premie stijgt"), false);
+  assert.equal(R.raaktBuitenland("Zorgverzekering in verdragsland: premie stijgt"), true);
   assert.equal(R.raaktBuitenland("Pensioenakkoord voor ambtenaren"), false);
   assert.equal(R.raaktBuitenland("Verdrag tussen Nederland en Italië over grondstoffen"), false);
   assert.equal(R.raaktBuitenland("Pensioen van Nederlanders in Frankrijk"), true);

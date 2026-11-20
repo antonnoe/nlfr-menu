@@ -263,6 +263,10 @@ export default async function handler(req, res) {
     delete overheidPoort.weg;
     // Zichtbaar in de logs (de JSON van de cron staat niet in de logs): zo is te zien of de poort draaide.
     console.log(`[cron] overheidpoort: ok=${overheidPoort.ok} wacht=${overheidPoort.wacht} afgewezen=${overheidPoort.afgewezen} gewijzigd=${overheidPoort.gewijzigd} eraf=${overheidPoort.eraf} docs=${overheidBehouden.length}`);
+    // Per bericht dat live staat: kop, wie het doorliet en of het een bewuste keuze was (om een ruime doorlaat te vinden).
+    for (const d of overheidBehouden) {
+      if (d && d.poort && d.poort.status === "ok") console.log(`[cron] overheid ok: "${String(d.kop || "").slice(0, 80)}" door=${d.poort.door || "-"} keuze=${d.poort.keuze === true} score=${d.poort.score ?? "-"}`);
+    }
   } catch (e) {
     overheidPoort = { overgeslagen: e instanceof Error ? e.message : String(e) };
     console.warn(`[cron] overheidpoort overgeslagen: ${overheidPoort.overgeslagen}`);

@@ -38,3 +38,14 @@ test("/redactie heeft de tab PEIL-acties en leest de openbare kandidatenlijst", 
   assert.match(html, /\/api\/selectie-feed\?peil=1/);
   assert.match(html, /id="peilacties"/);
 });
+
+test("een bericht waarover de redactie al besliste, blijft een PEIL-kandidaat (zonder dubbel)", async () => {
+  const { peilInvoer } = await import("../lib/selectie/kern.js");
+  const los = k("los", "overheid", "2026-11-20T10:00:00Z", { peil: [gew("p.fr.a")] });
+  const goNogo = { ...k("besloten", "overheid", "2026-11-20T11:00:00Z", { peil: [gew("p.fr.b")] }), besluit: "nogo", door: "iemand@example.org" };
+  const redactie = { id: "r1", besluit: "go", redactie: { kandidaat: k("via-redactie", "pers", "2026-11-20T12:00:00Z", { peil: [gew("p.fr.c")] }) } };
+  const dubbel = { ...los, besluit: "go" };
+  const uit = bouwPeilKandidaten(peilInvoer([los], [goNogo, redactie, dubbel]), NU);
+  assert.deepEqual(uit.kandidaten.map((x) => x.id).sort(), ["besloten", "los", "via-redactie"]);
+  assert.ok(!JSON.stringify(uit).includes("example.org"), "geen persoonsgegevens");
+});

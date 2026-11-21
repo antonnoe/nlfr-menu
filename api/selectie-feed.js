@@ -11,7 +11,7 @@
 // Geen persoonsgegevens: wie besliste, gaat er niet in mee.
 
 import { getJSON, listJSON, kvBeschikbaar } from "../lib/store.js";
-import { bouwFeed, bouwRss, bouwPeilKandidaten, SEL_KANALEN, KEY_SEL_RONDE, SCAN_SEL_BESLUIT, SCAN_SEL_KANDIDAAT } from "../lib/selectie/kern.js";
+import { bouwFeed, bouwRss, bouwPeilKandidaten, peilInvoer, SEL_KANALEN, KEY_SEL_RONDE, SCAN_SEL_BESLUIT, SCAN_SEL_KANDIDAAT } from "../lib/selectie/kern.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
   if (String(q.peil || "") === "1") {
     res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
-    return res.status(200).json(bouwPeilKandidaten(await listJSON(SCAN_SEL_KANDIDAAT), Date.now()));
+    return res.status(200).json(bouwPeilKandidaten(peilInvoer(...(await Promise.all([listJSON(SCAN_SEL_KANDIDAAT), listJSON(SCAN_SEL_BESLUIT)]))), Date.now()));
   }
 
   // ?kanaal=infofrankrijk: het nieuwsblok op Infofrankrijk (#open); standaard

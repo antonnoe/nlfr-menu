@@ -303,3 +303,14 @@ test("syntheses van vóór de nieuwe syntheseregel (21-11-2026) staan niet live 
   assert.ok(ids.includes("nieuw"), "nieuwe synthese staat er");
   assert.ok(!ids.includes("oud-live") && !ids.includes("oud-archief"), "oude syntheses zijn weg");
 });
+
+test("een verborgen oude synthese met meer bronnen drukt een nieuwe synthese niet weg", () => {
+  const nu = Date.parse("2026-11-21T05:00:00Z");
+  const bron = (n) => ({ naam: "Le Monde — À la une", titel: "Kop", url: `https://lemonde.fr/gedeeld-${n}`, datum: "2026-11-20T06:00:00Z" });
+  const oud = { ...persPub("vers", 0), id: "oud-3", gepubliceerdOp: "2026-11-20T22:00:00Z", bronnen: [bron(1), bron(2), bron(3)] };
+  const nieuw = { ...persPub("vers", 0), id: "nieuw-2", kop: "Andere kop", gepubliceerdOp: "2026-11-21T02:00:00Z", bronnen: [bron(1), bron(2)] };
+  const tegels = assembleerTegels({ publicaties: [oud, nieuw], overheidDocs: [], items: [], nu });
+  const ids = tegels.flatMap((t) => (t.artikelen || []).map((a) => a.id));
+  assert.ok(ids.includes("nieuw-2"), "de nieuwe synthese staat er");
+  assert.ok(!ids.includes("oud-3"), "de oude synthese niet");
+});

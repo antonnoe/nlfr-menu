@@ -230,3 +230,11 @@ test("ronde: kandidaten worden opgeslagen vóór de modelaanroep, en lijsten lez
   assert.match(ronde, /strikteLijst\(SCAN_SEL_BESLUIT\)/);
   assert.match(ronde, /const meteoBelofte = haal\(SELECTIE_METEO_FEED/);
 });
+
+test("peilKort: aangekondigde wijziging gaat mee als verhoogde aandacht", () => {
+  const p = peilKort({ id: "p.fr.ir.abattement_pensioen", naam: "Abattement", waarde_weergave: "10 procent", aangekondigd: { datum: null, omschrijving: "Politieke discussie, nog geen besluit.", bron: null } });
+  assert.equal(p.aangekondigd, "Politieke discussie, nog geen besluit.");
+  assert.equal(peilKort({ id: "x", naam: "y", waarde_weergave: "z" }).aangekondigd, undefined);
+  const invoer = bouwInvoer([{ id: "a", soort: "pers", bron: "Public Sénat", land: "FR", titel: "Abattement", peilAangeboden: [p] }]);
+  assert.match(invoer, /VERHOOGDE AANDACHT: Politieke discussie/);
+});

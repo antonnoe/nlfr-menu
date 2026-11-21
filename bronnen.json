@@ -167,7 +167,7 @@
     {
       "naam": "Économie Matin",
       "feed": "https://www.economiematin.fr/rss",
-      "thema": "geld-belasting",
+      "thema": "landelijk-fr",
       "regime": "pers",
       "taal": "fr",
       "prioriteit": 2,
@@ -178,7 +178,7 @@
     {
       "naam": "Head Patrimoine",
       "feed": "https://www.headpatrimoine.fr/feed/",
-      "thema": "geld-belasting",
+      "thema": "landelijk-fr",
       "regime": "pers",
       "taal": "fr",
       "prioriteit": 2,

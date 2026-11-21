@@ -154,6 +154,7 @@
   .extra { font-size:14px; line-height:1.45; color:#2f6b3d; background:#eef4ee; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
   .extra a { color:#2f6b3d; font-weight:700; }
   .extra .gewijzigd, .rij .s .gewijzigd { color:#8a4b00; font-weight:700; }
+  .peil-acties .gewijzigd { color:#8a4b00; font-weight:700; } .peil-acties .peil { font-weight:700; color:var(--tekst); } .peil-acties a { color:var(--tekst); font-weight:700; }
   .rij .s .peil { color:#2f6b3d; font-weight:700; }
 .rij .s .geenpeil { color:#6b6b6b; font-weight:700; }
 </style>
@@ -236,8 +237,33 @@
         R17_REDEN = rg.r17Reden || "";
       }
       if (!rev.ok || !sel.ok) { laadFout(rev.fout || sel.fout || "Fout bij laden."); return; }
-      geladen = true; bouw(); tekenRomp();
+      geladen = true; bouw(); tekenRomp(); laadPeil();
     }).catch(function (e) { if (!e || e.message !== "login") laadFout("Niet bereikbaar. Probeer het zo opnieuw."); });
+  }
+  // PEIL-acties (bouwplan AI-bewaking, ronde 2): berichten die een PEIL-waarde
+  // mogelijk wijzigen of een gat tonen. Alleen lezen; de tik komt in ronde 4.
+  var peilK = null;
+  function laadPeil() {
+    fetch("/api/selectie-feed?peil=1", { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (d) { peilK = d && Array.isArray(d.kandidaten) ? d : { kandidaten: [], fout: true }; tekenPeil(); })
+      .catch(function () { peilK = { kandidaten: [], fout: true }; tekenPeil(); });
+  }
+  function peilActiesHtml() {
+    if (!peilK) return '<p class="status">Laden…</p>';
+    if (peilK.fout) return '<p class="status">PEIL-acties konden niet worden geladen.</p>';
+    if (!peilK.kandidaten.length) return '<p class="status">Geen berichten die PEIL mogelijk wijzigen (laatste ' + (peilK.dagen || 7) + ' dagen). Geen is ook goed.</p>';
+    return '<p class="uitleg">Fase a: wijziging verwacht. PEIL rekent nog met de huidige waarde tot een wijziging is vastgesteld en gecontroleerd.</p>' +
+      '<ul class="klein-lijst peil-acties">' + peilK.kandidaten.map(function (k) {
+        var regels = k.peil.map(function (p) {
+          return '<span class="b"><span class="gewijzigd">PEIL: ' + esc(p.naam) + '</span>' + (p.waarde ? ' · nu: ' + esc(p.waarde) : '') + (p.toelichting ? ' · bericht: ' + esc(p.toelichting) : '') + '</span>';
+        }).join("") + (k.gat ? '<span class="b"><span class="peil">Gat in PEIL:</span> ' + esc(k.gat) + '</span>' : '');
+        return '<li data-peil-kandidaat="' + esc(k.id) + '"><span class="t"><a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.titel) + '</a>' +
+          '<span class="b">' + (k.soort === "overheid" ? "Overheid" : "Pers") + (k.bron ? ' · ' + esc(k.bron) : '') + '</span>' + regels + '</span></li>';
+      }).join("") + '</ul>';
+  }
+  function tekenPeil() {
+    var n = $("peil-n"); if (n) n.textContent = peilK && !peilK.fout ? "(" + peilK.kandidaten.length + ")" : "";
+    var p = $("peilacties"); if (p) p.innerHTML = peilActiesHtml();
   }
   var laadFoutTekst = "";
   function laadFout(t) { laadFoutTekst = t; geladen = false; tekenRomp(); }
@@ -489,10 +515,12 @@
       '<div class="tabs" role="tablist">' +
       '<button type="button" class="tab" role="tab" data-tab="beslis" aria-selected="' + (tb === "beslis") + '">Beslissen <span id="tab-n"></span></button>' +
       '<button type="button" class="tab" role="tab" data-tab="live" aria-selected="' + (tb === "live") + '">Live (' + nLive + ")</button>" +
-      '<button type="button" class="tab" role="tab" data-tab="weg" aria-selected="' + (tb === "weg") + '">Door AI overgeslagen (' + st.nietAi.length + ")</button></div>" +
+      '<button type="button" class="tab" role="tab" data-tab="weg" aria-selected="' + (tb === "weg") + '">Door AI overgeslagen (' + st.nietAi.length + ")</button>" +
+      '<button type="button" class="tab" role="tab" data-tab="peil" aria-selected="' + (tb === "peil") + '">PEIL-acties <span id="peil-n">' + (peilK && !peilK.fout ? "(" + peilK.kandidaten.length + ")" : "") + "</span></button></div>" +
       (r && r.modelFout ? '<p class="status" style="color:var(--oranje)">AI-oordeel mislukt: ' + esc(r.modelFout) + "</p>" : "") +
       '<div id="auto"' + (tb === "live" ? "" : " hidden") + ">" + autoHtml(true) + "</div>" +
       '<div id="aiweg"' + (tb === "weg" ? "" : " hidden") + ">" + aiWegHtml(true) + "</div>" +
+      '<div id="peilacties"' + (tb === "peil" ? "" : " hidden") + ">" + peilActiesHtml() + "</div>" +
       '<div id="beslis"' + (tb === "beslis" ? "" : " hidden") + ">" +
       '<button type="button" class="rest" data-rest="1" id="rest" aria-describedby="rest-uitleg">Rest van vandaag: nee</button>' +
       '<p class="rest-uitleg" id="rest-uitleg">Alleen losse krantenberichten, vijf seconden ongedaan maken.</p>' +
@@ -870,8 +898,8 @@
   // getypte tekst blijven staan.
   function kiesTab(t) {
     st.tab = t;
-    ["beslis", "live", "weg"].forEach(function (k) {
-      var paneel = $(k === "beslis" ? "beslis" : k === "live" ? "auto" : "aiweg");
+    ["beslis", "live", "weg", "peil"].forEach(function (k) {
+      var paneel = $(k === "beslis" ? "beslis" : k === "live" ? "auto" : k === "peil" ? "peilacties" : "aiweg");
       if (paneel) paneel.hidden = k !== t;
       var knop = document.querySelector('[data-tab="' + k + '"]');
       if (knop) knop.setAttribute("aria-selected", String(k === t));

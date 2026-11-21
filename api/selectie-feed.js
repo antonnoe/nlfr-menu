@@ -4,12 +4,14 @@
 //   ?format=rss  -> RSS 2.0
 //   ?kanaal=infofrankrijk -> alleen wat de redactie voor Infofrankrijk koos
 //                   (standaard: zijbalk)
+//   ?peil=1      -> berichten die een PEIL-waarde mogelijk wijzigen of een gat
+//                   tonen (laatste 7 dagen), voor de PEIL-bewaking en /redactie
 //   ?status=1    -> alleen tellingen en de laatste ronde (geen inhoud), voor
 //                   controle van buitenaf
 // Geen persoonsgegevens: wie besliste, gaat er niet in mee.
 
 import { getJSON, listJSON, kvBeschikbaar } from "../lib/store.js";
-import { bouwFeed, bouwRss, SEL_KANALEN, KEY_SEL_RONDE, SCAN_SEL_BESLUIT, SCAN_SEL_KANDIDAAT } from "../lib/selectie/kern.js";
+import { bouwFeed, bouwRss, bouwPeilKandidaten, SEL_KANALEN, KEY_SEL_RONDE, SCAN_SEL_BESLUIT, SCAN_SEL_KANDIDAAT } from "../lib/selectie/kern.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -51,6 +53,11 @@ export default async function handler(req, res) {
           }
         : null,
     });
+  }
+
+  if (String(q.peil || "") === "1") {
+    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
+    return res.status(200).json(bouwPeilKandidaten(await listJSON(SCAN_SEL_KANDIDAAT), Date.now()));
   }
 
   // ?kanaal=infofrankrijk: het nieuwsblok op Infofrankrijk (#open); standaard

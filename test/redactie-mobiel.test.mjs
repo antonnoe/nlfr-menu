@@ -257,3 +257,14 @@ test("redactie: PEIL-verwijzing staat in de regel en in het detail", () => {
   assert.match(html, /Tool in de zijbalk/);
   assert.match(html, /Café Claude:/);
 });
+
+test("redactie: PEIL ja/nee staat bij elk bericht met een AI-oordeel", () => {
+  const fn = html.match(/function peilKort\(ai\) \{[\s\S]*?\n  \}/)[0];
+  const ctx = { esc: (x) => String(x) };
+  vm.createContext(ctx);
+  vm.runInContext(fn, ctx);
+  assert.match(ctx.peilKort({ score: 50 }), /PEIL: nee/);
+  assert.match(ctx.peilKort({ score: 50, peil: [{ naam: "Tolwegen", soort: "raakt" }] }), /PEIL: ja, Tolwegen/);
+  assert.match(ctx.peilKort({ score: 50, tool: { naam: "Pensioenwijzer" } }), /PEIL: nee.*Tool: Pensioenwijzer/);
+  assert.equal(ctx.peilKort(null), "");
+});

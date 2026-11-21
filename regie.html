@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>NLFR · Regiekamer</title>
+<link rel="icon" type="image/svg+xml" href="/assets/redactie-icoon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Regiekamer (21-11-2026, mock-up goedgekeurd door Anton): nieuws en PEIL als
+     één lopende band. Bovenaan wat op Anton wacht, daaronder per stap de stand.
+     Alleen gemeten getallen; ontbreekt een bron, dan staat er een streep.
+     Tekst minstens 15 px, tikvlakken minstens 44 px, bordeaux als enige accent. */
+  :root { --brand:#800000; --tekst:#1f1d1b; --zacht:#5c5650; --lijn:#ece6df; --vlak:#fff; --achter:#f5f0eb; --ok:#1f7a3a; --deels:#b45309; --fout:#8f1d1d; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { background:var(--achter); color:var(--tekst); font-family:Mulish,system-ui,sans-serif; font-size:16px; line-height:1.5; }
+  a { color:var(--brand); }
+  button { font:inherit; cursor:pointer; }
+  .wrap { max-width:1200px; margin:0 auto; padding:20px 16px 48px; display:flex; flex-direction:column; gap:18px; }
+  .kop { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px 16px; }
+  h1 { margin:0; font-family:Poppins,sans-serif; font-size:28px; }
+  h2 { margin:6px 0 0; font-family:Poppins,sans-serif; font-size:18px; }
+  .sub { margin:4px 0 0; font-size:15px; color:var(--zacht); }
+  .links { display:flex; flex-wrap:wrap; gap:8px; }
+  .links a { min-height:44px; display:inline-flex; align-items:center; padding:0 14px; border-radius:8px; background:var(--vlak); text-decoration:none; font-weight:600; font-size:15px; }
+  .paneel { background:var(--vlak); border-radius:12px; padding:16px 20px; display:flex; flex-direction:column; }
+  .paneel h2 { margin:0 0 4px; }
+  .rij { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--lijn); }
+  .rij:first-of-type { border-top:0; }
+  .pil { font-size:13px; font-weight:700; padding:4px 10px; border-radius:99px; white-space:nowrap; }
+  .pil.peil { background:#e8eefc; color:#1d3f8f; } .pil.nieuws { background:#fdeede; color:#8a4500; } .pil.storing { background:#fbe3e3; color:var(--fout); }
+  .wat { flex:999 1 380px; min-width:0; }
+  .wat .t { font-size:16px; font-weight:700; }
+  .wat .b { font-size:14px; color:var(--zacht); }
+  .wat .b a { overflow-wrap:anywhere; }
+  .knoppen { display:flex; flex-wrap:wrap; gap:8px; }
+  .knop { min-height:44px; padding:0 16px; border-radius:8px; border:1px solid #c9c1b8; background:#fff; color:var(--tekst); font-size:15px; text-decoration:none; display:inline-flex; align-items:center; }
+  .knop.hoofd { border:0; background:var(--brand); color:#fff; font-weight:700; }
+  .knop:disabled { opacity:.5; cursor:default; }
+  .gekozen { font-size:15px; color:var(--ok); font-weight:700; display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .gekozen button { min-height:44px; border:0; background:none; color:var(--brand); text-decoration:underline; padding:0 4px; }
+  .leeg { padding:8px 0; color:var(--zacht); font-size:15px; }
+  .band { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
+  .stap { background:var(--vlak); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:6px; }
+  .stap.jij { outline:2px solid var(--brand); }
+  .stap .n { font-size:13px; font-weight:700; color:var(--zacht); }
+  .stap.jij .n { color:var(--brand); }
+  .stap .groot { font-size:26px; font-weight:700; line-height:1.2; }
+  .stap .uit { font-size:14px; color:var(--zacht); }
+  .stap .lijst { font-size:15px; line-height:1.7; }
+  .stand { font-size:14px; font-weight:700; }
+  .stand.ok { color:var(--ok); } .stand.deels { color:var(--deels); } .stand.fout { color:var(--fout); }
+  .voet { margin:0; font-size:13px; color:var(--zacht); }
+  .melding { background:#fff7ed; color:#8a4b00; border-radius:12px; padding:12px 16px; font-size:15px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kop">
+    <div>
+      <h1>Regiekamer</h1>
+      <p class="sub" id="sub">Nieuws en PEIL als één lopende band. Laden…</p>
+    </div>
+    <nav class="links" aria-label="Verder">
+      <a href="/redactie">Redactie →</a>
+      <a href="https://antonnoe-antons-cockpit-private.vercel.app/" target="_blank" rel="noopener">Cockpit →</a>
+    </nav>
+  </div>
+
+  <div id="melding" class="melding" hidden></div>
+
+  <section class="paneel" aria-labelledby="wacht-kop">
+    <h2 id="wacht-kop">Wacht op jou</h2>
+    <div id="wacht"><div class="leeg">Laden…</div></div>
+  </section>
+
+  <h2>Nieuws: van bron naar lezer</h2>
+  <div class="band" id="nieuws"></div>
+
+  <h2>PEIL: van bericht naar bijgewerkte waarde</h2>
+  <div class="band" id="peil"></div>
+
+  <p class="voet">Alleen gemeten getallen uit de laatste ronde. Een streep betekent dat de bron nu niet te lezen is. PEIL-keuzes worden bewaard, maar er wordt nog niets naar PEIL geschreven.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var ACTUEEL = null, REV = null, SEL = null, REGIE = null, PEILK = null;
+  var FASE = { a: "Verwacht (a)", b: "Vastgesteld (b)", niets: "Niets" };
+  var MODEL = { "auditor-1": "Sonnet", "auditor-2": "Opus" };
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function veilig(u) { return /^https:\/\//.test(String(u || "")) ? String(u) : ""; }
+  function tijd(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }); }
+  function dagTijd(iso) { var d = new Date(iso); if (isNaN(d)) return ""; var v = d.toDateString() === new Date().toDateString(); return (v ? "" : d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" }) + " ") + tijd(iso); }
+  function getal(n) { return typeof n === "number" && isFinite(n) ? n.toLocaleString("nl-NL") : "–"; }
+  function host(u) { try { return new URL(u).hostname.replace(/^www\./, ""); } catch (e) { return ""; } }
+  function uren(iso) { var t = Date.parse(iso); if (isNaN(t)) return ""; var h = Math.round((Date.now() - t) / 3600e3); return h < 1 ? "minder dan een uur" : h === 1 ? "1 uur" : h + " uur"; }
+
+  function haal(pad, login) {
+    return fetch(pad, { credentials: "same-origin", cache: "no-store" }).then(function (r) {
+      if (r.status === 401 && login) { location.href = "/login?terug=/regie"; throw new Error("login"); }
+      return r.json();
+    }).catch(function (e) { if (e && e.message === "login") throw e; return null; });
+  }
+
+  function laad() {
+    Promise.all([haal("/api/actueel"), haal("/api/review", true), haal("/api/selectie", true), haal("/api/regie", true), haal("/api/selectie-feed?peil=1")])
+      .then(function (u) { ACTUEEL = u[0]; REV = u[1]; SEL = u[2]; REGIE = u[3]; PEILK = u[4]; teken(); })
+      .catch(function () {});
+  }
+
+  // ---------- afgeleide cijfers ----------
+  function wachtendeNieuws() {
+    if (!REV || !SEL) return null;
+    var klaar = {};
+    (SEL.redactie || []).forEach(function (b) { klaar[b.reviewId] = true; });
+    var c = (REV.concepten || []).filter(function (x) { return !klaar[x.id]; });
+    var o = (REV.overheid || []).filter(function (x) { return !klaar[x.id] && x.poort && x.poort.status === "wacht"; });
+    var oudste = c.map(function (x) { return x.aangemaaktOp; }).filter(Boolean).sort()[0] || null;
+    return { syntheses: c.length, overheid: o.length, oudste: oudste };
+  }
+  function peilOpen() {
+    var p = REGIE && REGIE.peil, b = (REGIE && REGIE.besluiten) || {};
+    if (!p) return null;
+    return p.besluiten.map(function (x) { return { punt: x, besluit: b[x.mutatie] || null }; });
+  }
+  function storingen() {
+    var uit = [];
+    var bs = (ACTUEEL && ACTUEEL.bronStatus) || [];
+    bs.filter(function (b) { return b && b.ok === false; }).forEach(function (b) {
+      uit.push({ t: esc(b.naam) + " niet bereikbaar" + (b.http ? " (HTTP " + esc(b.http) + ")" : ""), b: "Nieuwsbron. De volgende ronde probeert het opnieuw." });
+    });
+    var k = ACTUEEL && ACTUEEL.bewaking && ACTUEEL.bewaking.keten;
+    if (k && k.storing) uit.push({ t: "Nieuwsketen: " + esc(typeof k.storing === "string" ? k.storing : "storing"), b: "Laatste ronde " + esc(dagTijd(k.op)) + "." });
+    var p = REGIE && REGIE.peil;
+    if (p && p.niet_opgehaald.length) {
+      var per = {};
+      p.niet_opgehaald.forEach(function (x) { var h = host(x.bron_url) || "onbekende bron"; per[h] = per[h] || { n: 0, reden: x.reden }; per[h].n++; });
+      Object.keys(per).forEach(function (h) {
+        uit.push({ t: esc(h) + " weigert of is onbereikbaar", b: per[h].n + " PEIL-waakpunt" + (per[h].n === 1 ? "" : "en") + " niet gelezen" + (per[h].reden ? " (" + esc(String(per[h].reden).split(";")[0]) + ")" : "") + ". De dagelijkse bewaking probeert het opnieuw. Niets te doen." });
+      });
+    }
+    if (REGIE && REGIE.peilFout) uit.push({ t: esc(REGIE.peilFout), b: "De bewaking draait dagelijks en schrijft daarna een nieuwe samenvatting." });
+    return uit;
+  }
+
+  // ---------- tekenen ----------
+  function teken() {
+    var k = ACTUEEL && ACTUEEL.bewaking && ACTUEEL.bewaking.keten;
+    $("sub").textContent = "Nieuws en PEIL als één lopende band. Stand " + new Date().toLocaleString("nl-NL", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    var fouten = [];
+    if (!ACTUEEL) fouten.push("de nieuwsstand (/api/actueel)");
+    if (!REV || !SEL) fouten.push("de redactie");
+    if (!REGIE) fouten.push("de PEIL-gegevens");
+    $("melding").hidden = !fouten.length;
+    $("melding").textContent = fouten.length ? "Niet te lezen: " + fouten.join(", ") + ". De rest staat er wel." : "";
+    tekenWacht(); tekenNieuws(k); tekenPeil();
+  }
+
+  function tekenWacht() {
+    var rijen = [], aantal = 0;
+    (peilOpen() || []).forEach(function (x) {
+      var p = x.punt, oo = p.oordelen || [];
+      if (!x.besluit) aantal++;
+      var waarde = oo.map(function (o) { return o.nieuwe_waarde; }).filter(Boolean)[0] || "";
+      var fasen = oo.map(function (o) { return (MODEL[o.door] || o.door) + " " + (o.fase ? "fase " + o.fase : "geen fase") + (o.citaat_klopt ? "" : ", citaat klopt niet"); }).join(", ");
+      var bron = veilig(p.bron_url);
+      var knoppen = x.besluit
+        ? '<div class="gekozen">Gekozen: ' + esc(FASE[x.besluit.keuze] || x.besluit.keuze) + ' <button type="button" data-mutatie="' + esc(p.mutatie) + '" data-keuze="herstel">Ongedaan maken</button></div>'
+        : '<div class="knoppen">' + ["a", "b", "niets"].map(function (f) {
+            return '<button type="button" class="knop' + (f === "b" ? " hoofd" : "") + '" data-mutatie="' + esc(p.mutatie) + '" data-keuze="' + f + '">' + FASE[f] + "</button>";
+          }).join("") + "</div>";
+      rijen.push('<div class="rij"><span class="pil peil">PEIL</span><div class="wat"><div class="t">' + esc(p.naam || p.mutatie) + (waarde ? ": " + esc(waarde) : "") + "</div>" +
+        '<div class="b">' + esc(fasen) + "." + (p.reden ? " " + esc(p.reden.charAt(0).toUpperCase() + p.reden.slice(1)) + "." : "") +
+        (bron ? ' Bron: <a href="' + esc(bron) + '" target="_blank" rel="noopener">' + esc(host(bron)) + "</a>" : "") + "</div></div>" + knoppen + "</div>");
+    });
+    var n = wachtendeNieuws();
+    if (n && n.syntheses) {
+      aantal++;
+      rijen.push('<div class="rij"><span class="pil nieuws">Nieuws</span><div class="wat"><div class="t">' + n.syntheses + (n.syntheses === 1 ? " synthese wacht" : " syntheses wachten") + ' op plaatsing</div><div class="b">' +
+        (n.oudste ? "De oudste is " + esc(uren(n.oudste)) + " oud. " : "") + 'Zonder keuze verschijnen ze niet op de nieuwspagina.</div></div><a class="knop hoofd" href="/redactie">Naar redactie</a></div>');
+    }
+    if (n && n.overheid) {
+      aantal++;
+      rijen.push('<div class="rij"><span class="pil nieuws">Overheid</span><div class="wat"><div class="t">' + n.overheid + (n.overheid === 1 ? " overheidsbericht wacht" : " overheidsberichten wachten") + ' op de poort</div><div class="b">De poort twijfelde; jij beslist op de redactie.</div></div><a class="knop" href="/redactie">Naar redactie</a></div>');
+    }
+    storingen().forEach(function (s) {
+      rijen.push('<div class="rij"><span class="pil storing">Storing</span><div class="wat"><div class="t">' + s.t + '</div><div class="b">' + s.b + "</div></div></div>");
+    });
+    $("wacht-kop").textContent = "Wacht op jou (" + aantal + ")";
+    $("wacht").innerHTML = rijen.length ? rijen.join("") : '<div class="leeg">Niets. Alles loopt.</div>';
+  }
+
+  function stap(nr, titel, groot, uit, stand, jij, extra) {
+    return '<div class="stap' + (jij ? " jij" : "") + '"><div class="n">' + nr + ". " + esc(titel) + '</div><div class="groot">' + groot + '</div><div class="uit">' + uit + "</div>" + (extra || "") + (stand ? '<div class="stand ' + stand[0] + '">● ' + esc(stand[1]) + "</div>" : "") + "</div>";
+  }
+
+  function tekenNieuws(k) {
+    var bs = (ACTUEEL && ACTUEEL.bronStatus) || [];
+    var stuk = bs.filter(function (b) { return b && b.ok === false; }).length;
+    var s1 = k ? stap(1, "Binnen", getal(k.itemsTotaal) + " berichten", bs.length + " bronnen, " + (stuk ? stuk + " niet bereikbaar" : "alle bereikbaar"),
+      [k.storing ? "fout" : stuk ? "deels" : "ok", (k.storing ? "storing" : stuk ? "deels" : "in orde") + ", " + tijd(k.op)]) : stap(1, "Binnen", "–", "Nieuwsstand niet te lezen", null);
+    var gz = k && k.gezeefd ? Object.keys(k.gezeefd).reduce(function (s, x) { return s + (k.gezeefd[x] || 0); }, 0) : null;
+    var s2 = k ? stap(2, "AI zeeft en schrijft", getal(k.bovenDrempel) + " onderwerpen", getal(k.clusters) + " clusters, " + getal(gz) + " faits divers en sport eruit, " + getal(k.geschreven) + " synthese" + (k.geschreven === 1 ? "" : "s") + " geschreven",
+      [k.storing ? "fout" : "ok", k.storing ? "storing" : "in orde"]) : stap(2, "AI zeeft en schrijft", "–", "", null);
+    var n = wachtendeNieuws();
+    var s3 = stap(3, "Jij kiest", n ? n.syntheses + " wachten" : "–", "Overheid gaat vanzelf; Weg houdt tegen", null, true, '<a href="/redactie" style="font-size:14px;font-weight:700">Naar redactie →</a>');
+    var t = (ACTUEEL && ACTUEEL.bewaking && ACTUEEL.bewaking.tegels) || {};
+    function som(pref) { var s = 0, z = false; Object.keys(t).forEach(function (x) { if (x.indexOf(pref) === 0) { s += t[x].aantal || 0; z = true; } }); return z ? s : null; }
+    var arch = t.archief ? t.archief.aantal : null;
+    var s4 = stap(4, "Bij de lezer", "", '<div class="lijst">Nieuwspagina: ' + getal(som("pers-")) + " nieuws, " + getal(som("overheid-")) + " overheid, " + getal(arch) + ' archief<br>Infofrankrijk: ' + getal(t.infofrankrijk ? t.infofrankrijk.aantal : null) + ", verenigingen: " + getal(t.verenigingen ? t.verenigingen.aantal : null) +
+      '<br>Nieuwsbrief elke dag 06:00 · <a href="https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief" target="_blank" rel="noopener">laatste editie</a></div>',
+      ACTUEEL ? ["ok", "nieuwspagina " + tijd(ACTUEEL.gebakkenOp || ACTUEEL.bijgewerkt)] : null);
+    $("nieuws").innerHTML = s1 + s2 + s3 + s4;
+  }
+
+  function tekenPeil() {
+    var p = REGIE && REGIE.peil, s = (p && p.meta.samenvatting) || {};
+    var nk = PEILK && Array.isArray(PEILK.kandidaten) ? PEILK.kandidaten.length : null;
+    var s1 = p ? stap(1, "Signaal", getal(s.waakpunten) + " waakpunten", "plus " + getal(s.kandidaten) + " nieuwsbericht" + (s.kandidaten === 1 ? "" : "en") + " met PEIL-oordeel in de bewaking" + (nk != null ? "; nu " + nk + " op de redactie" : ""), null) : stap(1, "Signaal", "–", "", null);
+    var totaal = (s.waakpunten || 0) + (s.kandidaten || 0), niet = (s.niet_opgehaald || 0) + (s.niet_beoordeeld || 0);
+    var s2 = p ? stap(2, "Twee keurders", getal(totaal - niet) + " gelezen", "Sonnet en Opus apart." + (s.niet_opgehaald ? " " + s.niet_opgehaald + " niet gelezen (bron weigert)." : "") + (s.niet_beoordeeld ? " " + s.niet_beoordeeld + " niet beoordeeld." : ""),
+      [niet ? (niet >= totaal ? "fout" : "deels") : "ok", (niet ? (niet >= totaal ? "niets gelezen" : "deels") : "in orde") + ", " + dagTijd(p.meta.run)]) : stap(2, "Twee keurders", "–", REGIE && REGIE.peilFout ? esc(REGIE.peilFout) : "", null);
+    var open = (peilOpen() || []).filter(function (x) { return !x.besluit; }).length;
+    var s3 = stap(3, "Jij beslist", p ? open + (open === 1 ? " punt" : " punten") : "–", "Fase a en b: na drie maanden zonder fouten doet de AI dit zelf", null, true);
+    var s4 = stap(4, "In PEIL", "0 bijgewerkt", "Fase c altijd met jouw tik. Proefperiode: er wordt nog niets geschreven.", null);
+    $("peil").innerHTML = s1 + s2 + s3 + s4;
+  }
+
+  // ---------- keuzes ----------
+  document.addEventListener("click", function (e) {
+    var k = e.target.closest && e.target.closest("button[data-mutatie]");
+    if (!k) return;
+    var knoppen = k.parentNode.querySelectorAll("button");
+    for (var i = 0; i < knoppen.length; i++) knoppen[i].disabled = true;
+    fetch("/api/regie", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mutatie: k.getAttribute("data-mutatie"), keuze: k.getAttribute("data-keuze") }) })
+      .then(function (r) { if (r.status === 401) { location.href = "/login?terug=/regie"; throw new Error("login"); } return r.json(); })
+      .then(function (d) {
+        if (d && d.ok) { REGIE.besluiten = d.besluiten; tekenWacht(); tekenPeil(); }
+        else { $("melding").hidden = false; $("melding").textContent = (d && d.fout) || "Opslaan mislukt."; for (var j = 0; j < knoppen.length; j++) knoppen[j].disabled = false; }
+      })
+      .catch(function (err) { if (err && err.message === "login") return; $("melding").hidden = false; $("melding").textContent = "Niet bereikbaar. Probeer het zo opnieuw."; for (var j = 0; j < knoppen.length; j++) knoppen[j].disabled = false; });
+  });
+
+  laad();
+})();
+</script>
+</body>
+</html>

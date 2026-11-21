@@ -27,7 +27,7 @@ import { supabaseOmgeving, toegang, COOKIE_NAAM, schrijfCookie } from "./lib/aut
 export const config = {
   // /selectie is het go/no-go-scherm van de nieuwsselectie (sinds 7 november
   // 2026), achter dezelfde deur als /review.
-  matcher: ["/review", "/review.html", "/selectie", "/selectie.html", "/redactie", "/redactie.html"],
+  matcher: ["/review", "/review.html", "/selectie", "/selectie.html", "/redactie", "/redactie.html", "/regie", "/regie.html"],
 };
 
 // Terug naar het scherm waar de bezoeker heen wilde, uit een VASTE lijst: nooit
@@ -35,7 +35,7 @@ export const config = {
 function terugPad(url) {
   try {
     const pad = new URL(url).pathname;
-    return pad.startsWith("/selectie") ? "/selectie" : pad.startsWith("/redactie") ? "/redactie" : "/review";
+    return pad.startsWith("/selectie") ? "/selectie" : pad.startsWith("/redactie") ? "/redactie" : pad.startsWith("/regie") ? "/regie" : "/review";
   } catch {
     return "/review";
   }

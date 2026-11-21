@@ -122,3 +122,10 @@ test("persbronnen hebben nooit een overheidsthema (anders worden ze als overheid
     assert.ok(!OVERHEID_THEMAS.includes(b.thema), `${b.naam}: thema ${b.thema} is een overheidsthema`);
   }
 });
+
+test("isPersBron: persbron ja, overheidsbron nee", async () => {
+  const { isPersBron } = await import("../lib/poort.js");
+  assert.equal(isPersBron("Économie Matin"), true);
+  assert.equal(isPersBron("Public Sénat"), true);
+  assert.equal(isPersBron("Service-Public — particuliers"), false);
+});

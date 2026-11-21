@@ -154,6 +154,39 @@
       "verificatieDatum": "2026-08-04"
     },
     {
+      "naam": "Public Sénat",
+      "feed": "https://www.publicsenat.fr/feed",
+      "thema": "landelijk-fr",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 1,
+      "actief": true,
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-11-21"
+    },
+    {
+      "naam": "Économie Matin",
+      "feed": "https://www.economiematin.fr/rss",
+      "thema": "geld-belasting",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-11-21"
+    },
+    {
+      "naam": "Head Patrimoine",
+      "feed": "https://www.headpatrimoine.fr/feed/",
+      "thema": "geld-belasting",
+      "regime": "pers",
+      "taal": "fr",
+      "prioriteit": 2,
+      "actief": true,
+      "verificatie": "geverifieerd",
+      "verificatieDatum": "2026-11-21"
+    },
+    {
       "naam": "ici (France Bleu / France 3)",
       "feed": "https://www.ici.fr/rss",
       "thema": "regionaal-fr",

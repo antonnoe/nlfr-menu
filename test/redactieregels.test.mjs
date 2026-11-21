@@ -180,15 +180,13 @@ test("live-scenario: zonder score, met score onder de drempel en zonder redactie
   assert.equal(again.gewijzigd, 0);
 });
 
-test("live-scenario: alleen score vanaf de drempel of een plaatsing door de redactie maakt een overheidsbericht live", () => {
+test("live-scenario (keuze A): een overheidsbericht dat NL'ers in het buitenland raakt gaat vanzelf live", () => {
   const d = RIJK("r9", "AOW voor Nederlanders in Frankrijk verandert");
   assert.equal(poortUitslag(d, { kandidaten: [{ url: d.url, ai: { score: SCORE_DREMPEL } }] }).status, "ok");
-  assert.equal(poortUitslag(d, { kandidaten: [{ url: d.url, ai: { score: SCORE_DREMPEL - 1 } }] }).status, "wacht");
-  assert.equal(poortUitslag(d, {}).status, "wacht");
-  const nieuw = { ...d, poort: { status: "wacht", score: null, door: null } };
-  const keuze = { besluit: "go", redactie: { reviewId: d.id, herkomst: "overheid", nieuwspagina: true } };
-  assert.equal(poortUitslag(nieuw, { besluiten: [keuze] }).status, "wacht", "een besluit zonder poort.keuze telt niet");
-  assert.equal(poortUitslag({ ...nieuw, poort: { status: "ok", score: null, door: "redactie", keuze: true } }, { besluiten: [keuze] }).status, "ok");
+  assert.equal(poortUitslag(d, { kandidaten: [{ url: d.url, ai: { score: 5 } }] }).status, "ok");
+  assert.equal(poortUitslag(d, {}).status, "ok");
+  const weg = { besluit: "nogo", redactie: { reviewId: d.id, weg: true } };
+  assert.equal(poortUitslag(d, { besluiten: [weg] }).status, "afgewezen");
 });
 
 test("de cron en /api/actueel kennen geen 'zonder poortveld = live' meer", () => {

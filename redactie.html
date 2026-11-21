@@ -155,6 +155,7 @@
   .extra a { color:#2f6b3d; font-weight:700; }
   .extra .gewijzigd, .rij .s .gewijzigd { color:#8a4b00; font-weight:700; }
   .rij .s .peil { color:#2f6b3d; font-weight:700; }
+.rij .s .geenpeil { color:#6b6b6b; font-weight:700; }
 </style>
 </head>
 <body>
@@ -313,6 +314,7 @@
   function extraBlok(ai) {
     if (!ai) return "";
     var r = [];
+    if (!(ai.peil || []).length) r.push("<span><b>PEIL:</b> nee, geen relatie met een PEIL-parameter</span>");
     (ai.peil || []).forEach(function (p) {
       var tools = (p.tools || []).map(function (t) { return veilig(t.url) ? '<a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.naam) + "</a>" : esc(t.naam); }).join(", ");
       r.push("<span><b>PEIL:</b> " + esc(p.naam) + (p.verificatiedatum ? " · gecontroleerd " + esc(p.verificatiedatum) : "") +
@@ -325,10 +327,13 @@
     if (ai.gat) r.push('<span class="gewijzigd">Gat in PEIL: ' + esc(ai.gat) + "</span>");
     return r.length ? '<div class="extra">' + r.join("") + "</div>" : "";
   }
+  // PEIL ja/nee staat bij elk bericht met een AI-oordeel (afspraak 20-11-2026).
   function peilKort(ai) {
-    var p = ai && ai.peil && ai.peil[0];
-    if (!p) return ai && ai.tool && ai.tool.naam ? ' · <span class="peil">Tool: ' + esc(ai.tool.naam) + "</span>" : "";
-    return ' · <span class="' + (p.soort === "mogelijk-gewijzigd" ? "gewijzigd" : "peil") + '">PEIL: ' + esc(p.naam) + (p.soort === "mogelijk-gewijzigd" ? ", mogelijk gewijzigd" : "") + "</span>";
+    if (!ai) return "";
+    var p = ai.peil && ai.peil[0];
+    var tool = ai.tool && ai.tool.naam ? ' · <span class="peil">Tool: ' + esc(ai.tool.naam) + "</span>" : "";
+    if (!p) return ' · <span class="geenpeil">PEIL: nee</span>' + tool;
+    return ' · <span class="' + (p.soort === "mogelijk-gewijzigd" ? "gewijzigd" : "peil") + '">PEIL: ja, ' + esc(p.naam) + (p.soort === "mogelijk-gewijzigd" ? ", mogelijk gewijzigd" : "") + "</span>" + tool;
   }
   function score(it) { return it.ai && typeof it.ai.score === "number" ? it.ai.score : null; }
   function losKrantenbericht(it) { return it.soort === "kandidaat" && (!it.kSoort || it.kSoort === "pers"); }

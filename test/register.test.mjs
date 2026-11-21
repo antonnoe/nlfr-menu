@@ -291,3 +291,15 @@ test("overheidsberichten binnen hun live periode staan gewoon nog live", () => {
   assert.ok(ov, "een vers overheidsbericht hoort in zijn thema-tegel");
   assert.equal(ov.artikelen.length, 1);
 });
+
+test("syntheses van vóór de nieuwe syntheseregel (21-11-2026) staan niet live en niet in het archief", () => {
+  const nu = Date.parse("2026-11-21T05:00:00Z");
+  const pub = (id, op) => ({ ...persPub("vers", 0), id, gepubliceerdOp: op });
+  const tegels = assembleerTegels({
+    publicaties: [pub("oud-live", "2026-11-20T22:51:00Z"), pub("oud-archief", "2026-11-17T10:00:00Z"), pub("nieuw", "2026-11-21T02:00:00Z")],
+    overheidDocs: [], items: [], nu,
+  });
+  const ids = tegels.flatMap((t) => (t.artikelen || []).map((a) => a.id));
+  assert.ok(ids.includes("nieuw"), "nieuwe synthese staat er");
+  assert.ok(!ids.includes("oud-live") && !ids.includes("oud-archief"), "oude syntheses zijn weg");
+});

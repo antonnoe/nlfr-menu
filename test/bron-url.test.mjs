@@ -113,3 +113,19 @@ test("elk artikel draagt het veld url — absoluut of null, nooit ontbrekend", (
     }
   }
 });
+
+test("persbronnen hebben nooit een overheidsthema (anders worden ze als overheid behandeld)", async () => {
+  const { OVERHEID_THEMAS } = await import("../lib/config.js");
+  const { readFileSync } = await import("node:fs");
+  const d = JSON.parse(readFileSync(new URL("../bronnen.json", import.meta.url), "utf8"));
+  for (const b of d.bronnen.filter((x) => x.regime === "pers")) {
+    assert.ok(!OVERHEID_THEMAS.includes(b.thema), `${b.naam}: thema ${b.thema} is een overheidsthema`);
+  }
+});
+
+test("isPersBron: persbron ja, overheidsbron nee", async () => {
+  const { isPersBron } = await import("../lib/poort.js");
+  assert.equal(isPersBron("Économie Matin"), true);
+  assert.equal(isPersBron("Public Sénat"), true);
+  assert.equal(isPersBron("Service-Public — particuliers"), false);
+});

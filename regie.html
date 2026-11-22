@@ -55,6 +55,14 @@
   .stand { font-size:14px; font-weight:700; }
   .stand.ok { color:var(--ok); } .stand.deels { color:var(--deels); } .stand.fout { color:var(--fout); }
   .voet { margin:0; font-size:13px; color:var(--zacht); }
+  .paneel.cj { flex-direction:row; flex-wrap:wrap; align-items:center; gap:10px 16px; }
+  .cj .t { flex:1 1 220px; font-family:Poppins,sans-serif; font-weight:700; font-size:17px; }
+  .cj .st { display:block; font-family:Mulish,system-ui,sans-serif; font-size:15px; font-weight:700; color:var(--zacht); }
+  .cj.ja .st { color:var(--ok); }
+  .cj .knop[aria-pressed="true"] { background:var(--brand); border-color:var(--brand); color:#fff; font-weight:700; }
+  .cj .knop.ja[aria-pressed="true"] { background:var(--ok); border-color:var(--ok); }
+  .cj .ml { flex-basis:100%; font-size:15px; color:var(--ok); }
+  .cj .ml.fout { color:var(--fout); }
   .melding { background:#fff7ed; color:#8a4b00; border-radius:12px; padding:12px 16px; font-size:15px; }
 </style>
 </head>
@@ -72,6 +80,15 @@
   </div>
 
   <div id="melding" class="melding" hidden></div>
+
+  <section class="paneel cj" id="cj" aria-label="Café Jeudi deze week">
+    <div class="t" id="cjkop">Café Jeudi<span class="st" id="cjstand" role="status" aria-live="polite">Laden…</span></div>
+    <div class="knoppen" role="group" aria-label="Café Jeudi ja of nee">
+      <button type="button" class="knop ja" id="cjja" aria-pressed="false">Ja</button>
+      <button type="button" class="knop" id="cjnee" aria-pressed="false">Nee</button>
+    </div>
+    <div class="ml" id="cjml" role="status" aria-live="polite"></div>
+  </section>
 
   <section class="paneel" aria-labelledby="wacht-kop">
     <h2 id="wacht-kop">Wacht op jou</h2>
@@ -250,6 +267,38 @@
   });
 
   laad();
+
+  // ---------- Café Jeudi ja/nee (zelfde API en sessie als /review) ----------
+  var MND = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+  function cjDatum(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? Number(m[3]) + " " + MND[Number(m[2]) - 1] : ""; }
+  function cjTeken(aan, datum, volgende) {
+    var d = cjDatum(aan ? datum : volgende);
+    $("cjkop").firstChild.nodeValue = "Café Jeudi" + (d ? ", donderdag " + d : "");
+    $("cjstand").textContent = aan ? "Staat op Ja" : "Staat op Nee";
+    $("cj").className = "paneel cj" + (aan ? " ja" : "");
+    $("cjja").setAttribute("aria-pressed", aan ? "true" : "false");
+    $("cjnee").setAttribute("aria-pressed", aan ? "false" : "true");
+  }
+  function cjMl(t, fout) { $("cjml").textContent = t || ""; $("cjml").className = "ml" + (fout ? " fout" : ""); }
+  function cjLaad() {
+    haal("/api/review?deel=banner", true).then(function (d) {
+      if (d && d.ok === true) cjTeken(d.aan === true, d.datum, d.volgende); else $("cjstand").textContent = "Stand niet te laden";
+    }).catch(function () {});
+  }
+  function cjZet(ja) {
+    $("cjja").disabled = $("cjnee").disabled = true; cjMl("Bezig…");
+    fetch("/api/review", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actie: "cafejeudi", ja: ja }) })
+      .then(function (r) { if (r.status === 401) { location.href = "/login?terug=/regie"; throw new Error("login"); } return r.json(); })
+      .then(function (d) {
+        $("cjja").disabled = $("cjnee").disabled = false;
+        if (d && d.ok) { cjTeken(d.aan === true, d.datum, d.volgende); cjMl(d.aan ? "Opgeslagen: Café Jeudi staat op Ja voor donderdag " + cjDatum(d.datum) + "." : "Opgeslagen: Café Jeudi staat op Nee."); }
+        else cjMl("Niet opgeslagen: " + ((d && d.fout) || "onbekende fout"), true);
+      })
+      .catch(function (e) { $("cjja").disabled = $("cjnee").disabled = false; if (!e || e.message !== "login") cjMl("Niet opgeslagen: geen verbinding.", true); });
+  }
+  $("cjja").addEventListener("click", function () { cjZet(true); });
+  $("cjnee").addEventListener("click", function () { cjZet(false); });
+  cjLaad();
 })();
 </script>
 </body>

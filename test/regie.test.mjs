@@ -43,3 +43,13 @@ test("/regie leest de vier bronnen, stuurt bij 401 naar de inlog en linkt naar r
 test("/redactie linkt naar de regiekamer", () => {
   assert.match(readFileSync(new URL("../redactie.html", import.meta.url), "utf8"), /href="\/regie"/);
 });
+
+test("/regie heeft de Café Jeudi-knoppen via dezelfde sessie-API als /review", () => {
+  const html = readFileSync(new URL("../regie.html", import.meta.url), "utf8");
+  assert.match(html, /id="cjja"/);
+  assert.match(html, /id="cjnee"/);
+  assert.match(html, /\/api\/review\?deel=banner/);
+  assert.match(html, /actie: "cafejeudi"/);
+  const js = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
+  assert.doesNotThrow(() => new Function(js), "script is geldige JavaScript");
+});

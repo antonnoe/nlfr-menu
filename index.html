@@ -381,9 +381,11 @@
      regelovergang af, zodat de rijen altijd hetzelfde vallen. */
   html.compact .szoek { order: 4; flex: 0 0 100%; display: none; }
   html.compact .szoek.open { display: flex; }
-  /* Twee gelijke knoppen op een eigen regel: samen precies 100% + gap. */
-  html.compact .splaats { order: 5; flex: 1 1 calc(50% - 4px); }
-  html.compact .sactueel { order: 6; flex: 1 1 calc(50% - 4px); }
+  /* Twee gelijke knoppen op een eigen regel: samen precies 100% min de gap
+     van 10px. Staat hier 4px (de helft van de oude gap van 8), dan zijn ze
+     samen 2px te breed en vallen ze onder elkaar. */
+  html.compact .splaats { order: 5; flex: 1 1 calc(50% - 5px); }
+  html.compact .sactueel { order: 6; flex: 1 1 calc(50% - 5px); }
   html.compact .sadmin { order: 7; margin-left: 0; }
   html.compact .paneel { padding: 14px; }
   html.compact .kolommen { grid-template-columns: 1fr; gap: 8px; }

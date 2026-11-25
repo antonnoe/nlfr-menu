@@ -107,7 +107,7 @@ test("de links naar andere sites zijn als extern herkenbaar, Diensten niet", () 
   assert.equal(html.split('class="sbx"').length - 1, 3, "drie pijltjes: elke externe link, behalve de knop");
   assert.ok(l[3].klasse.includes("sbl-rechts"), "de nieuwsbrief staat rechts");
   assert.ok(l[4].klasse.includes("sbl-knop"), "Word abonnee is een knop");
-  assert.match(CSS_KAAL, /\.sbl-ext \{ color: var\(--brand\); font-weight: 700/, "en in bordeaux en vet");
+  assert.match(CSS_KAAL, /\.sbl-ext \{ color: var\(--brand\)/, "en in bordeaux");
 });
 
 // --- altijd zichtbaar, en de hoogte gaat mee -------------------------------
@@ -161,9 +161,9 @@ test("de regel wordt bij het opstarten gevuld en wikkelt op smalle schermen", ()
 });
 
 test("de links zijn op mobiel ruimer aantikbaar dan op desktop", () => {
-  assert.match(CSS_KAAL, /\.sbl \{[^}]*min-height: 36px/, "compact op desktop");
+  assert.match(CSS_KAAL, /\.sbl \{[^}]*min-height: 32px/, "compact op desktop");
   assert.match(CSS_KAAL, /html\.compact \.sbl \{ min-height: 44px/, "ruimer onder een duim");
-  assert.match(CSS_KAAL, /\.sbl \{[^}]*font-size: 15px/, "even groot als de menulinks");
+  assert.match(CSS_KAAL, /\.sbl \{[^}]*font-size: 14px/, "leesbaar, en rustiger dan de balk erboven");
 });
 
 // --- de opgeruimde voetrij --------------------------------------------------

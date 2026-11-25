@@ -67,21 +67,24 @@ function links(html) {
 
 // --- de vier links ----------------------------------------------------------
 
-// Sinds november 2026 drie links: Diensten, Nieuwspagina, Frankrijkkalender.
+// Sinds november 2026: Diensten, Nieuwspagina, Frankrijkkalender, en rechts
+// de aanmelding voor de nieuwsbrief en de knop Word abonnee.
 // De zusterplatforms staan in de netwerkbalk boven de titel (pagina van Ning).
-test("de smalle regel draagt precies drie links, in deze volgorde", () => {
+test("de smalle regel draagt precies vijf links, in deze volgorde", () => {
   const l = links(subbalkHTML());
   assert.deepEqual(l.map((x) => x.tekst),
-    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender"]);
+    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief, meld je aan", "Word abonnee"]);
 });
 
-test("de drie adressen staan voluit, en Diensten wijst binnen Ning", () => {
+test("de adressen staan voluit, en Diensten wijst binnen Ning", () => {
   const l = links(subbalkHTML());
   // Voluit vergelijken: een toets op "/diensten" slaagt ook bij het oude adres
   // buiten Ning, en dat is nu juist wat hier is rechtgezet.
   assert.equal(l[0].href, NL + "/page/diensten");
   assert.equal(l[1].href, "https://nieuws.infofrankrijk.com/");
   assert.equal(l[2].href, "https://kalender-frankrijk.vercel.app/");
+  assert.equal(l[3].href, "https://nlfr-nieuwsbrief.vercel.app/oproep");
+  assert.equal(l[4].href, "https://infofrankrijk.com/abonnement/");
   assert.ok(!HTML.includes('U("/diensten")'), "het oude /diensten hoort nergens meer te staan");
 });
 
@@ -101,7 +104,9 @@ test("de links naar andere sites zijn als extern herkenbaar, Diensten niet", () 
   for (const zuster of l.slice(1)) {
     assert.ok(zuster.klasse.includes("sbl-ext"), zuster.tekst + " hoort als extern gemarkeerd");
   }
-  assert.equal(html.split('class="sbx"').length - 1, 2, "twee pijltjes, één per externe link");
+  assert.equal(html.split('class="sbx"').length - 1, 3, "drie pijltjes: elke externe link, behalve de knop");
+  assert.ok(l[3].klasse.includes("sbl-rechts"), "de nieuwsbrief staat rechts");
+  assert.ok(l[4].klasse.includes("sbl-knop"), "Word abonnee is een knop");
   assert.match(CSS_KAAL, /\.sbl-ext \{ color: var\(--brand\); font-weight: 700/, "en in bordeaux en vet");
 });
 
@@ -118,14 +123,14 @@ test("op een breed scherm staat de regel buiten het paneel, dus altijd in beeld"
   assert.ok(!/display: none/.test(regel), "op breed wordt hij niet verborgen: " + regel);
 });
 
-test("op mobiel is de regel weg en staan de drie links in de voetrij", () => {
+test("op mobiel is de regel weg en staan de links in de voetrij", () => {
   // 89 pixels op elke pagina van de site, want de vier links wikkelen daar naar
   // twee regels. Ze zijn niet verdwenen maar verhuisd: één tik op Menu.
   assert.match(CSS_KAAL, /html\.compact \.subbalk \{ display: none/, "de regel is weg op mobiel");
   const smal = links(voetHTML(true));
   assert.deepEqual(smal.map((x) => x.tekst),
-    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender"],
-    "alle drie staan in de voetrij van het paneel");
+    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief, meld je aan", "Word abonnee"],
+    "alle vijf staan in de voetrij van het paneel");
   // En met dezelfde adressen en targets als in de regel: één renderer, één lijst.
   assert.deepEqual(smal.map((x) => [x.href, x.target]),
     links(subbalkHTML()).map((x) => [x.href, x.target]));

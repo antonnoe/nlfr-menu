@@ -177,8 +177,13 @@ test("de dubbele URL's zijn samengevoegd tot één adres", () => {
   assert.ok(alles.has(NL + "/page/nederlandse-verenigingen-in-frankrijk"), "Verenigingen");
   assert.ok(!alles.has(NL + "/profiles/blogs/overzicht-van-nederlandse-verenigingen-in-frankrijk"), "geen tweede verenigingen-URL");
   assert.ok(alles.has("https://laposta.nl/f/ssysinmqgflb"), "nieuwsbrief");
-  const brieven = [...alles].filter((u) => /nieuwsbrief|laposta/i.test(u));
-  assert.equal(brieven.length, 1, "de nieuwsbrief hoort maar op één adres te staan: " + brieven.join(", "));
+  // Sinds november 2026 staat de aanmeldpagina van de nieuwsbrief in de regel
+  // onder de balk (/oproep, op verzoek van de opdrachtgever). Dat is een ander
+  // adres dan het Laposta-formulier op de categoriepagina; deze twee, en geen
+  // derde.
+  const brieven = [...alles].filter((u) => /nieuwsbrief|laposta/i.test(u)).sort();
+  assert.deepEqual(brieven, ["https://laposta.nl/f/ssysinmqgflb", "https://nlfr-nieuwsbrief.vercel.app/oproep"],
+    "de nieuwsbrief hoort op deze twee adressen te staan en nergens anders: " + brieven.join(", "));
 });
 
 // Op de code toetsen, niet op de prozatekst: de commentaarkop hierboven noemt
@@ -233,15 +238,17 @@ test("de link-targetregels zijn ongewijzigd", () => {
   assert.equal(abo.pagina, NL + "/page/meedoen");
 });
 
-test("de smalle regel onder de balk telt precies drie links", () => {
+test("de smalle regel onder de balk telt precies vijf links", () => {
   const d = menuData();
   assert.deepEqual(d.SNELRIJ.map((k) => k[0]),
-    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender"],
-    "deze drie, in deze volgorde, en geen andere");
+    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief, meld je aan", "Word abonnee"],
+    "deze vijf, in deze volgorde, en geen andere");
   assert.equal(d.SNELRIJ[0][1], NL + "/page/diensten",
     "Diensten wijst naar de pagina binnen Ning, niet naar het oude /diensten");
   assert.equal(d.SNELRIJ[1][1], "https://nieuws.infofrankrijk.com/");
   assert.equal(d.SNELRIJ[2][1], "https://kalender-frankrijk.vercel.app/");
+  assert.equal(d.SNELRIJ[3][1], "https://nlfr-nieuwsbrief.vercel.app/oproep");
+  assert.equal(d.SNELRIJ[4][1], "https://infofrankrijk.com/abonnement/");
 });
 
 test("de knoppen onderin het paneel zijn vervallen", () => {

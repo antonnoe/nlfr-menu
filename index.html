@@ -343,6 +343,12 @@
          font-weight: 600; font-size: 15px; color: #1f1a18; }
   .sbl-ext { color: var(--brand); font-weight: 700; }
   .sbl:hover { background: rgba(128,0,0,.06); text-decoration: underline; }
+  /* Rechts in de regel: de nieuwsbrief als link, Word abonnee als groene knop.
+     Groen, zodat hij niet wegvalt naast het bordeaux van Plaats bericht.
+     Wit op #2f6b3a is 6,4:1. */
+  .sbl-rechts { margin-left: auto; }
+  .sbl-knop { background: var(--actueel); color: #fff; font-weight: 700; padding: 0 16px; }
+  .sbl-knop:hover { background: #245530; text-decoration: none; }
   .sbx { display: inline-flex; opacity: .75; }
 
   /* ---- Voetrij van het paneel ---- */
@@ -653,7 +659,8 @@
   };
 
   // De smalle regel onder de balk, ALTIJD ZICHTBAAR, ook met het menu dicht.
-  // Drie links: Diensten, de Nieuwspagina en de Frankrijkkalender.
+  // Links: Diensten, de Nieuwspagina en de Frankrijkkalender; rechts de
+  // aanmelding voor de nieuwsbrief en de knop Word abonnee.
   //
   // De zusterplatforms (Infofrankrijk, Café Claude, Nedergids) stonden hier
   // tot november 2026. Ze staan nu in de rode netwerkbalk boven de titel van
@@ -665,7 +672,13 @@
   var SNELRIJ = [
     ["Diensten", U("/page/diensten")],
     ["Nieuwspagina", "https://nieuws.infofrankrijk.com/"],
-    ["Frankrijk\u00adkalender", "https://kalender-frankrijk.vercel.app/"]
+    ["Frankrijk\u00adkalender", "https://kalender-frankrijk.vercel.app/"],
+    // Rechts in de regel. Het derde veld stuurt de vorm: "rechts" schuift de
+    // link naar de rechterkant, "knop" maakt er de groene knop van. Het menu
+    // weet niet wie al abonnee is (het krijgt alleen het profiel-id), dus de
+    // knop staat er voor iedereen.
+    ["Nieuwsbrief, meld je aan", "https://nlfr-nieuwsbrief.vercel.app/oproep", "rechts"],
+    ["Word abonnee", "https://infofrankrijk.com/abonnement/", "knop"]
   ];
 
   // De twee kolommen achter de knop "Plaats bericht". Naast elkaar op desktop,
@@ -837,10 +850,12 @@
   // tgt(), en het pijltje maakt dat verschil ook zichtbaar.
   function snelrijHTML(){
     return SNELRIJ.map(function(k){
-      var t = tgt(k[1]), extern = (t === "_blank");
-      return '<a class="sbl' + (extern ? " sbl-ext" : "") + '" href="' + k[1] + '" target="' + t + '"' +
+      var t = tgt(k[1]), extern = (t === "_blank"), vorm = k[2] || "";
+      var knop = (vorm === "knop");
+      return '<a class="sbl' + (extern ? " sbl-ext" : "") + (vorm === "rechts" ? " sbl-rechts" : "") +
+             (knop ? " sbl-knop" : "") + '" href="' + k[1] + '" target="' + t + '"' +
              (extern ? ' rel="noopener"' : '') + '>' + k[0] +
-             (extern ? '<span class="sbx">' + extSvg + '</span>' : '') + '</a>';
+             (extern && !knop ? '<span class="sbx">' + extSvg + '</span>' : '') + '</a>';
     }).join("");
   }
 

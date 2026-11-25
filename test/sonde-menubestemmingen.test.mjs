@@ -32,7 +32,7 @@ const HTML = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const SONDE = fs.readFileSync(new URL("../scripts/sonde.mjs", import.meta.url), "utf8");
 const NL = "https://www.nederlanders.fr";
 
-test("de acht bestemmingen komen uit index.html, niet uit een lijst hier", () => {
+test("de negen bestemmingen komen uit index.html, niet uit een lijst hier", () => {
   const uit = bestemmingenUit(HTML);
   assert.deepEqual(uit.map((b) => b.url), [
     NL + "/page/lezen",
@@ -40,9 +40,10 @@ test("de acht bestemmingen komen uit index.html, niet uit een lijst hier", () =>
     NL + "/page/vinden",
     NL + "/page/frankrijknieuws",
     NL + "/page/diensten",
-    "https://infofrankrijk.com/",
-    "https://www.cafeclaude.fr/",
-    "https://nedergids.nl/",
+    "https://nieuws.infofrankrijk.com/",
+    "https://kalender-frankrijk.vercel.app/",
+    "https://nlfr-nieuwsbrief.vercel.app/oproep",
+    "https://infofrankrijk.com/abonnement/",
   ]);
   // Elke bestemming zegt ook waar hij vandaan komt, anders staat er straks een
   // kale URL in een foutmelding en moet iemand gaan zoeken.

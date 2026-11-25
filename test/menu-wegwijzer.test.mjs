@@ -46,7 +46,7 @@ function menu(ingelogd) {
     pak("  var U = function(p)", "  // ---- De vier ingangen") +
     pak("  var DEUREN_LINK = {", "  // Mijn NLFR is de vijfde kolom") +
     pak("  function memberGroups()", "  // De beheerlade") +
-    pak("  var WERVING = {", "  var ZUSTERS") +
+    pak("  var WERVING = {", "  // De smalle regel onder de balk, ALTIJD ZICHTBAAR") +
     pak("  var caretSvg =", "  // ---- Hoogte melden") +
     pak("  function groepHTML(g){", "  // ---- Eén kolom in het paneel") +
     pak("  function puntHTML(p){", "  function bouwPaneel(){");

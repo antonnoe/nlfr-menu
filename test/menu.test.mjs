@@ -35,12 +35,22 @@ const NL = "https://www.nederlanders.fr";
 //                                      bezoeker; uit de zusterplatforms gehaald
 //   /diensten ........................ vervangen door /page/diensten, de pagina
 //                                      binnen Ning; de oude stond daarbuiten
+//   infofrankrijk.com, cafeclaude.fr . uit de regel onder de balk gehaald
+//                                      (november 2026): de zusterplatforms staan
+//                                      in de rode netwerkbalk boven de titel, op
+//                                      de pagina van Ning, niet in dit menu.
+//                                      LET OP: het menu mag daarom pas live als
+//                                      die balk er staat, anders zijn deze twee
+//                                      voor een bezoeker echt weg. (Nedergids
+//                                      staat ook op /page/vinden.)
 const BEWUST_WEG = new Set([
   NL + "/page/rubrieken",
   NL + "/group/vervoerspagina",
   NL + "/profiles/blogs/overzicht-van-nederlandse-verenigingen-in-frankrijk",
   "https://www.communitiesabroad.com",
   NL + "/diensten",
+  "https://infofrankrijk.com/",
+  "https://www.cafeclaude.fr/",
 ]);
 
 // De datablokken uit index.html uitvoeren. Het menu is één bestand zonder
@@ -56,12 +66,12 @@ function menuData() {
     pak("var DEUREN_LINK = {", "// Mijn NLFR is de vijfde kolom") +
     pak("function memberGroups()", "var ADMIN_LINKS") +
     pak("var ADMIN_LINKS =", "var WERVING") +
-    pak("var WERVING =", "var ZUSTERS") +
-    pak("var ZUSTERS =", "var DEUR_VOLGORDE") +
+    pak("var WERVING =", "var SNELRIJ") +
+    pak("var SNELRIJ =", "var DEUR_VOLGORDE") +
     pak("var DEUR_VOLGORDE =", "var ACTUEEL = null");
 
   const fn = new Function("U", "myPage", "uid",
-    bron + "\nreturn { DEUREN_LINK, memberGroups, ADMIN_LINKS, WERVING, ZUSTERS, SNELRIJ, PLAATS_KOLOMMEN, DEUR_VOLGORDE };");
+    bron + "\nreturn { DEUREN_LINK, memberGroups, ADMIN_LINKS, WERVING, SNELRIJ, PLAATS_KOLOMMEN, DEUR_VOLGORDE };");
   return fn((p) => NL + p, NL + "/profiles/settings/editProfileInfo", "UID");
 }
 
@@ -75,7 +85,6 @@ function nieuweUrls() {
   for (const deur of Object.values(d.DEUREN_LINK)) voegToe(deur.url);
   for (const [, links] of d.memberGroups()) for (const l of links) voegToe(l[1]);
   for (const l of d.ADMIN_LINKS) voegToe(l[1]);
-  for (const z of d.ZUSTERS) voegToe(z[1]);
   for (const k of d.SNELRIJ) voegToe(k[1]);
 
   // Vaste links in de markup en in de /m-lijst: die staan letterlijk in het
@@ -142,12 +151,12 @@ test("de TOPICS-items staan op de pagina waar ze thuishoren", () => {
     assert.ok(v, "niet in de verhuislijst: " + url);
     assert.equal(v.pagina, lezen, url + " hoorde onder Lezen te vallen");
   }
-  // Communities Abroad stond hier bij de zusterplatforms en is er in de
-  // opruiming van 07-09-2026 uit gehaald: corporate communicatie, niet waar een
-  // bezoeker van dit menu naar op zoek is.
-  assert.ok(!d.ZUSTERS.some((z) => z[1] === "https://www.communitiesabroad.com"),
-    "Communities Abroad hoort uit de zusterplatforms te zijn");
-  assert.deepEqual(d.ZUSTERS.map((z) => z[0]), ["Infofrankrijk", "Café Claude", "Nedergids"]);
+  // Communities Abroad stond bij de zusterplatforms en is er in de opruiming
+  // van 07-09-2026 uit gehaald. De zusterplatforms zelf zijn in november 2026
+  // naar de netwerkbalk boven de titel gegaan; het menu draagt ze niet meer.
+  assert.ok(!d.SNELRIJ.some((k) => k[1] === "https://www.communitiesabroad.com"),
+    "Communities Abroad hoort niet in het menu te staan");
+  assert.ok(!/var ZUSTERS/.test(HTML), "de lijst zusterplatforms hoort uit het menu te zijn");
 });
 
 test("de links uit de vorige opdracht zijn mee verhuisd, niet geschrapt", () => {
@@ -168,8 +177,13 @@ test("de dubbele URL's zijn samengevoegd tot één adres", () => {
   assert.ok(alles.has(NL + "/page/nederlandse-verenigingen-in-frankrijk"), "Verenigingen");
   assert.ok(!alles.has(NL + "/profiles/blogs/overzicht-van-nederlandse-verenigingen-in-frankrijk"), "geen tweede verenigingen-URL");
   assert.ok(alles.has("https://laposta.nl/f/ssysinmqgflb"), "nieuwsbrief");
-  const brieven = [...alles].filter((u) => /nieuwsbrief|laposta/i.test(u));
-  assert.equal(brieven.length, 1, "de nieuwsbrief hoort maar op één adres te staan: " + brieven.join(", "));
+  // Sinds november 2026 staat de aanmeldpagina van de nieuwsbrief in de regel
+  // onder de balk (/oproep, op verzoek van de opdrachtgever). Dat is een ander
+  // adres dan het Laposta-formulier op de categoriepagina; deze twee, en geen
+  // derde.
+  const brieven = [...alles].filter((u) => /nieuwsbrief|laposta/i.test(u)).sort();
+  assert.deepEqual(brieven, ["https://laposta.nl/f/ssysinmqgflb", "https://nlfr-nieuwsbrief.vercel.app/oproep"],
+    "de nieuwsbrief hoort op deze twee adressen te staan en nergens anders: " + brieven.join(", "));
 });
 
 // Op de code toetsen, niet op de prozatekst: de commentaarkop hierboven noemt
@@ -224,15 +238,17 @@ test("de link-targetregels zijn ongewijzigd", () => {
   assert.equal(abo.pagina, NL + "/page/meedoen");
 });
 
-test("de smalle regel onder de balk telt precies vier links", () => {
+test("de smalle regel onder de balk telt precies vijf links", () => {
   const d = menuData();
   assert.deepEqual(d.SNELRIJ.map((k) => k[0]),
-    ["Diensten", "Infofrankrijk", "Café Claude", "Nedergids"],
-    "deze vier, in deze volgorde, en geen andere");
+    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief, meld je aan", "Word abonnee"],
+    "deze vijf, in deze volgorde, en geen andere");
   assert.equal(d.SNELRIJ[0][1], NL + "/page/diensten",
     "Diensten wijst naar de pagina binnen Ning, niet naar het oude /diensten");
-  // De drie zusterplatforms komen uit ZUSTERS, dus ze staan op één plek.
-  assert.deepEqual(d.SNELRIJ.slice(1), d.ZUSTERS);
+  assert.equal(d.SNELRIJ[1][1], "https://nieuws.infofrankrijk.com/");
+  assert.equal(d.SNELRIJ[2][1], "https://kalender-frankrijk.vercel.app/");
+  assert.equal(d.SNELRIJ[3][1], "https://nlfr-nieuwsbrief.vercel.app/oproep");
+  assert.equal(d.SNELRIJ[4][1], "https://infofrankrijk.com/abonnement/");
 });
 
 test("de knoppen onderin het paneel zijn vervallen", () => {
@@ -248,7 +264,7 @@ test("de knoppen onderin het paneel zijn vervallen", () => {
   // oude knoppen. Zie test/subbalk.test.mjs voor beide standen.
   const voet = HTML.slice(HTML.indexOf("function voetHTML(smal){"), HTML.indexOf("function bouwPaneel(){"));
   assert.match(voet, /smal \? '<div class="voetlinks">' \+ snelrijHTML\(\)/,
-    "op mobiel de vier links uit SNELRIJ, uit dezelfde renderer");
+    "op mobiel de links uit SNELRIJ, uit dezelfde renderer");
   assert.match(voet, /id="sluitbtn"/, "en het kruisje");
   assert.ok(!/PANEELKNOPPEN|vlinks/.test(voet), "en niets van de oude voetrij");
 });

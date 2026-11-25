@@ -52,7 +52,7 @@
     - memberGroups   het ledenmenu (Mijn NLFR, ingelogd)
     - ADMIN_LINKS .. de beheerlade achter het tandwiel
     - WERVING ...... de wervende tekst voor wie niet is ingelogd
-    - ZUSTERS ...... de rij zusterplatforms onderin het paneel
+    - SNELRIJ ...... de drie links in de regel onder de balk
     - PANEELKNOPPEN  de knoppen links onderin het paneel
     De knop "Nu actueel" toont linkjes die LIVE uit actueel.json komen; de
     banner komt live uit /api/banner. Beheer-ID: ADMIN_ID. Zoek: ZOEK_APP.
@@ -80,27 +80,32 @@
   .card { background: #fff; border: 1px solid rgba(128,0,0,.12); border-radius: 16px;
           overflow: hidden; }
 
-  /* ---- Strip: één bordeaux balk ----
+  /* ---- Strip: een witte balk met ronde knoppen (huisstijl, november 2026) ----
+     Was één bordeaux balk met witte knoppen. Nu omgekeerd: wit vlak, knoppen
+     met een bordeaux rand, en alleen "Plaats bericht" en de knop die openstaat
+     zijn vol bordeaux. Maten en tikdoelen zijn gelijk gebleven of groter.
      Dit is het eerste element in de kaart. De kaart heeft overflow:hidden, dus
      de strip krijgt de bovenste afronding vanzelf mee. */
-  .strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-           min-height: 56px; padding: 10px 14px; background: var(--brand); }
-  .sknop { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-           min-height: 44px; padding: 0 14px; border-radius: 9px;
-           border: 1px solid rgba(255,255,255,.4); background: rgba(255,255,255,.12);
-           color: #fff; font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 16px; }
-  .sknop:hover { background: rgba(255,255,255,.2); }
-  .sknop:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-  .shome { flex: none; width: 44px; height: 44px; padding: 0; }
+  .strip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+           min-height: 56px; padding: 12px 14px; background: #fff; }
+  .sknop { display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+           min-height: 46px; padding: 0 18px; border-radius: 999px;
+           border: 1.5px solid var(--brand); background: #fff;
+           color: var(--brand); font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 16px; }
+  .sknop:hover { background: #fbf6f5; }
+  .sknop:focus-visible { outline: 2px solid var(--brand-dark); outline-offset: 2px; }
+  .shome { flex: none; width: 46px; height: 46px; padding: 0; }
   .smenu { flex: none; }
-  .splaats { flex: none; background: #fff; border-color: #fff; color: var(--brand); font-size: 15px; }
-  .splaats:hover { background: #f7ecea; }
-  .sactueel { flex: none; background: transparent; border-color: rgba(255,255,255,.4); font-size: 15px; }
-  .sadmin { flex: none; width: 44px; height: 44px; padding: 0; margin-left: auto; display: none; }
+  .splaats { flex: none; background: var(--brand); border-color: var(--brand); color: #fff; }
+  .splaats:hover { background: var(--brand-dark); }
+  .sactueel { flex: none; }
+  .sadmin { flex: none; width: 46px; height: 46px; padding: 0; margin-left: auto; display: none; }
   .sadmin.show { display: inline-flex; }
-  .sknop.active { background: rgba(255,255,255,.28); }
+  /* De knop waarvan de uitklapper openstaat: vol bordeaux, witte tekst. */
+  .sknop.active { background: var(--brand); color: #fff; }
+  .splaats.active { background: var(--brand-dark); border-color: var(--brand-dark); }
   /* Groene stip: pulseert alleen als er werkelijk iets live is. */
-  .dot { width: 9px; height: 9px; border-radius: 999px; background: var(--actueel); flex: none;
+  .dot { width: 10px; height: 10px; border-radius: 999px; background: var(--actueel); flex: none;
          box-shadow: 0 0 0 2px rgba(255,255,255,.55); }
   .dot.live { animation: puls 2.4s ease-out infinite; }
   @keyframes puls {
@@ -112,18 +117,19 @@
 
   /* Zoekveld */
   .szoek { flex: 1 1 160px; min-width: 160px; display: flex; }
-  .zoekbox { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px;
-             padding: 0 6px 0 12px; border-radius: 9px; background: rgba(255,255,255,.78); }
-  .zoekbox:focus-within { background: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.55); }
+  .zoekbox { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 46px;
+             padding: 0 5px 0 16px; border-radius: 999px; background: #faf7f4;
+             border: 1px solid #d9c3c0; }
+  .zoekbox:focus-within { background: #fff; border-color: var(--brand); box-shadow: 0 0 0 2px rgba(128,0,0,.18); }
   .zoekbox input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
-                   font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; color: #3a3330; }
-  .zoekbox input::placeholder { color: #8a7f7c; }
+                   font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; color: #3a3330; text-overflow: ellipsis; }
+  .zoekbox input::placeholder { color: #6f6660; }
   .zoekbox .wis { display: none; flex: none; width: 28px; height: 28px; border: 0; border-radius: 999px;
                   background: transparent; color: #8a7f7c; align-items: center; justify-content: center; }
   .zoekbox .wis.show { display: inline-flex; }
-  .zoekbox .ga { flex: none; display: inline-flex; align-items: center; gap: 5px; min-height: 34px;
-                 padding: 0 12px; border: 0; border-radius: 7px; background: var(--brand); color: #fff;
-                 font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
+  .zoekbox .ga { flex: none; display: inline-flex; align-items: center; gap: 5px; min-height: 36px;
+                 padding: 0 16px; border: 0; border-radius: 999px; background: var(--brand); color: #fff;
+                 font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 14px; }
 
   /* Alleen mobiel */
   .sforum, .sloep { display: none; }
@@ -204,8 +210,8 @@
   .plaatskolom p { margin: 7px 0 11px; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px;
                    line-height: 1.5; color: #333; }
   .plaatsknop { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
-                padding: 0 16px; border-radius: 9px; background: var(--brand); color: #fff;
-                font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
+                padding: 0 20px; border-radius: 999px; background: var(--brand); color: #fff;
+                font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 14px; }
   .plaatsknop:hover { filter: brightness(1.12); }
 
   /* ---- Paneel ---- */
@@ -316,38 +322,43 @@
   /* De kolommen zijn smaller sinds Lezen er twee pakt; 12px houdt
      "Word lid — gratis" op één regel in plaats van halverwege af te breken. */
   .teaser .btn-p, .teaser .btn-o { display: flex; align-items: center; justify-content: center; min-height: 44px;
-                                   padding: 0 8px; border-radius: 9px; text-align: center; line-height: 1.2;
+                                   padding: 0 8px; border-radius: 999px; text-align: center; line-height: 1.2;
                                    font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 12px; }
   html.compact .teaser .btn-p, html.compact .teaser .btn-o { font-size: 13px; }
   .teaser .btn-p { background: var(--brand); color: #fff; }
-  .teaser .btn-o { background: #fff; border: 1px solid rgba(128,0,0,.25); color: var(--brand); }
+  .teaser .btn-o { background: #fff; border: 1.5px solid var(--brand); color: var(--brand); }
 
   /* ---- Smalle regel onder de balk ---- */
-  /* Vier links die vroeger onderin het uitgeklapte paneel stonden. Op een breed
+  /* Drie links (Diensten, Nieuwspagina, Frankrijkkalender). Op een breed
      scherm staan ze hier op elke pagina in beeld. Op een telefoon niet: daar
      wikkelen ze naar twee regels en kosten ze 89px op elke pagina, terwijl
      verticale ruimte juist daar het schaarse goed is. Ze staan dan in de
      voetrij van het paneel — zie html.compact .subbalk hieronder. */
-  .subbalk { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px;
-             padding: 5px 10px; background: #fdfbfa;
+  .subbalk { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px;
+             padding: 0 14px 8px; background: #fff;
              border-bottom: 1px solid rgba(128,0,0,.10); }
-  .sbl { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 8px;
-         border-radius: 7px; text-decoration: none;
+  .sbl { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 8px;
+         border-radius: 999px; text-decoration: none;
          font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-         font-weight: 600; font-size: 12.5px; color: var(--brand); }
-  .sbl-ext { color: var(--actueel); }
+         font-weight: 600; font-size: 15px; color: #1f1a18; }
+  .sbl-ext { color: var(--brand); font-weight: 700; }
   .sbl:hover { background: rgba(128,0,0,.06); text-decoration: underline; }
-  .sbl-ext:hover { background: rgba(47,107,58,.08); }
+  /* Rechts in de regel: de nieuwsbrief als link, Word abonnee als groene knop.
+     Groen, zodat hij niet wegvalt naast het bordeaux van Plaats bericht.
+     Wit op #2f6b3a is 6,4:1. */
+  .sbl-rechts { margin-left: auto; }
+  .sbl-knop { background: var(--actueel); color: #fff; font-weight: 700; padding: 0 16px; }
+  .sbl-knop:hover { background: #245530; text-decoration: none; }
   .sbx { display: inline-flex; opacity: .75; }
 
   /* ---- Voetrij van het paneel ---- */
-  /* Op desktop alleen het kruisje, rechts: de vier links staan daar al in de
+  /* Op desktop alleen het kruisje, rechts: de links staan daar al in de
      regel onder de balk. Op mobiel staan ze hier, links van het kruisje. */
   .paneelvoet { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px;
                 margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(128,0,0,.10); }
   .voetlinks { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 2px 4px; }
   .pknop { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px;
-           border: 1px solid rgba(128,0,0,.22); border-radius: 9px; background: #fff; color: var(--brand);
+           border: 1.5px solid var(--brand); border-radius: 999px; background: #fff; color: var(--brand);
            font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 600; font-size: 13px; }
   .pknop:hover { background: rgba(128,0,0,.06); }
   /* Het kruisje draagt geen tekst, dus het tikdoel moet uit de maten komen:
@@ -360,10 +371,10 @@
   }
   html.compact .shome { display: none; }
   html.compact .sforum { display: inline-flex; order: 2; flex: 1 1 auto; min-height: 44px; padding: 0 12px;
-                         border-radius: 9px; background: #fff; border: 1px solid #fff; color: var(--brand);
+                         border-radius: 999px; background: #fff; border: 1.5px solid var(--brand); color: var(--brand);
                          align-items: center; justify-content: center; gap: 7px;
                          font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700; font-size: 15px; }
-  html.compact .sloep { display: inline-flex; order: 3; flex: 0 0 44px; width: 44px; height: 44px; padding: 0;
+  html.compact .sloep { display: inline-flex; order: 3; flex: 0 0 46px; width: 46px; height: 46px; padding: 0;
                         align-items: center; justify-content: center; }
   html.compact .smenu { order: 1; }
   /* Het zoekveld klapt open ONDER de eerste rij; flex-basis:100% dwingt de
@@ -419,16 +430,12 @@
   html.compact .pknop { width: 100%; }
   html.compact .sluitknop { width: 44px; }
   /* DE REGEL ONDER DE BALK IS OP MOBIEL WEG. Hij kostte daar 89px op elke
-     pagina van de site. De vier links staan in de voetrij van het paneel; de
+     pagina van de site. De links staan in de voetrij van het paneel; de
      grens is html.compact, dezelfde die het menu overal gebruikt, zodat er geen
      tweede drempel ontstaat. */
   html.compact .subbalk { display: none; }
   /* Onder een duim mag ruimer worden gemikt dan onder een muis. */
-  html.compact .sbl { min-height: 38px; padding: 0 9px; font-size: 12.5px; }
-  /* Raakvlakken van minstens 44px: op een telefoon mik je anders mis. De
-     zusterlinks staan in een lopende zin, dus ze blijven inline — alleen hun
-     tikhoogte gaat omhoog. */
-  html.compact .zusters a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; }
+  html.compact .sbl { min-height: 44px; padding: 0 9px; font-size: 15px; }
 
   /* ---- /m (html.msite): bewust beperkt, zoals /m altijd al was ---- */
   html.msite .paneel { display: none !important; }
@@ -562,8 +569,8 @@
   // pagina's moeten dekken; het menu bewaakt dat niet meer, want het kent de
   // inhoud van die pagina's niet.
   //
-  // Uit het oude "Onderwerpen"-menu (TOPICS) is Communities Abroad naar de rij
-  // zusterplatforms (ZUSTERS) gegaan; de vier andere items zaten in Lezen en
+  // Uit het oude "Onderwerpen"-menu (TOPICS) is Communities Abroad vervallen;
+  // de vier andere items zaten in Lezen en
   // staan daarmee nu op /page/lezen.
   //
   // Elke ingang draagt een tegel: een beschrijving van een of twee regels en
@@ -651,18 +658,28 @@
     knop: "Word lid, gratis"
   };
 
-  // De zusterplatforms. Communities Abroad is eruit: dat is corporate
-  // communicatie en niet waar een bezoeker van dit menu naar op zoek is.
-  var ZUSTERS = [["Infofrankrijk","https://infofrankrijk.com/"],["Café Claude","https://www.cafeclaude.fr/"],["Nedergids","https://nedergids.nl/"]];
-
   // De smalle regel onder de balk, ALTIJD ZICHTBAAR, ook met het menu dicht.
-  // Diensten stond met twee andere knoppen onderin het paneel; die twee zijn
-  // vervallen omdat ze al in de balk en in de tegel Meedoen staan. De
-  // zusterlinks stonden daar ook; ze zijn hierheen verhuisd, want een link die
-  // je pas ziet nadat je het menu hebt uitgeklapt, wordt niet gevonden.
+  // Links: Diensten, de Nieuwspagina en de Frankrijkkalender; rechts de
+  // aanmelding voor de nieuwsbrief en de knop Word abonnee.
+  //
+  // De zusterplatforms (Infofrankrijk, Café Claude, Nedergids) stonden hier
+  // tot november 2026. Ze staan nu in de rode netwerkbalk boven de titel van
+  // de site, de balk die alle sites delen; die balk hoort bij de pagina op
+  // Ning en niet bij dit menu. Twee plekken met dezelfde adressen lopen uit
+  // elkaar, dus hier zijn ze weg.
   //
   // /page/diensten en niet /diensten: dat laatste stond buiten Ning.
-  var SNELRIJ = [["Diensten", U("/page/diensten")]].concat(ZUSTERS);
+  var SNELRIJ = [
+    ["Diensten", U("/page/diensten")],
+    ["Nieuwspagina", "https://nieuws.infofrankrijk.com/"],
+    ["Frankrijk\u00adkalender", "https://kalender-frankrijk.vercel.app/"],
+    // Rechts in de regel. Het derde veld stuurt de vorm: "rechts" schuift de
+    // link naar de rechterkant, "knop" maakt er de groene knop van. Het menu
+    // weet niet wie al abonnee is (het krijgt alleen het profiel-id), dus de
+    // knop staat er voor iedereen.
+    ["Nieuwsbrief, meld je aan", "https://nlfr-nieuwsbrief.vercel.app/oproep", "rechts"],
+    ["Word abonnee", "https://infofrankrijk.com/abonnement/", "knop"]
+  ];
 
   // De twee kolommen achter de knop "Plaats bericht". Naast elkaar op desktop,
   // onder elkaar op mobiel. Het verschil gratis/betaald is de hele reden dat
@@ -829,14 +846,16 @@
 
   // De smalle regel onder de balk. Eén databron (SNELRIJ), dus er kan geen
   // tweede lijst ontstaan die gaat afwijken. nederlanders.fr opent in het
-  // bovenliggende venster, de zusterplatforms in een nieuw tabblad — dat regelt
+  // bovenliggende venster, andere sites in een nieuw tabblad — dat regelt
   // tgt(), en het pijltje maakt dat verschil ook zichtbaar.
   function snelrijHTML(){
     return SNELRIJ.map(function(k){
-      var t = tgt(k[1]), extern = (t === "_blank");
-      return '<a class="sbl' + (extern ? " sbl-ext" : "") + '" href="' + k[1] + '" target="' + t + '"' +
+      var t = tgt(k[1]), extern = (t === "_blank"), vorm = k[2] || "";
+      var knop = (vorm === "knop");
+      return '<a class="sbl' + (extern ? " sbl-ext" : "") + (vorm === "rechts" ? " sbl-rechts" : "") +
+             (knop ? " sbl-knop" : "") + '" href="' + k[1] + '" target="' + t + '"' +
              (extern ? ' rel="noopener"' : '') + '>' + k[0] +
-             (extern ? '<span class="sbx">' + extSvg + '</span>' : '') + '</a>';
+             (extern && !knop ? '<span class="sbx">' + extSvg + '</span>' : '') + '</a>';
     }).join("");
   }
 
@@ -850,7 +869,7 @@
   // beeld is geen wegwijzer maar ruis.
   //
   // Op een SMAL scherm staan ze hier. De regel onder de balk kostte daar 89px
-  // op elke pagina van de site, want de vier links wikkelen naar twee regels,
+  // op elke pagina van de site, want de links wikkelden naar twee regels,
   // en verticale ruimte is op een telefoon het schaarse goed. Ze zijn dus niet
   // verdwenen maar verhuisd: één tik op Menu en ze staan er.
   //

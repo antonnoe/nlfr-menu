@@ -81,8 +81,11 @@ test("de kaart wordt met een marge onder zijn eigen knop gelegd", () => {
 test("op mobiel neemt de kaart de volle breedte en vervalt het pijltje", () => {
   assert.match(CSS, /html\.compact \.ladekaart \{[^}]*width: auto !important/, "volle breedte");
   assert.match(CSS, /html\.compact \.ladepijl \{ display: none/, "geen pijltje");
-  assert.match(CSS, /html\.compact \.plaatskolommen \{ grid-template-columns: 1fr/, "kolommen onder elkaar");
-  assert.match(CSS, /html\.compact \.plaatskolom p \{ display: none; \}/, "op een telefoon geen tiptekst, alleen kop en knop");
+  assert.match(CSS, /html\.compact \.plaatskolommen \{ display: none; \}/, "op een telefoon geen vier tegels");
+  assert.match(CSS, /\n  \.plaatskort \{ display: none; \}/, "de twee knoppen zijn er alleen op een telefoon");
+  assert.match(CSS, /html\.compact \.plaatskort \{ display: grid; grid-template-columns: 1fr/, "twee knoppen onder elkaar");
+  assert.match(HTML, /\{ knop: "Plaats bericht", url: U\("\/profiles\/blog\/new"\) \},\s*\{ knop: "Plaats advertentie", url: U\("\/page\/betaalpagina-berichten"\), rand: true \}/,
+    "Plaats bericht en Plaats advertentie, en niets anders");
   assert.match(HTML, /if \(isNarrow\(\) \|\| !ladeKnop \|\| !ladeNu\) return;/, "en geen uitlijning");
 });
 

@@ -239,6 +239,7 @@
   .plaatsknop:hover { filter: brightness(1.12); }
   .plaatsknop.rand { background: #fff; color: #800000; padding: 0 12px; }
   .plaatsknop.rand:hover { filter: none; background: #f7efef; }
+  .plaatskort { display: none; }
   .plaatsvoet { margin: 10px 2px 0; font-family: 'Mulish', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px; color: #5b524f; }
 
   /* ---- Paneel ---- */
@@ -459,14 +460,11 @@
   html.compact .lade { padding: 10px 12px 12px; }
   html.compact .ladepijl { display: none; }
   html.compact .ladekaart { width: auto !important; margin-left: 0 !important; }
-  html.compact .plaatskolommen { grid-template-columns: 1fr; gap: 10px; }
-  /* Op een telefoon telt de korte weg naar het formulier: de tip valt weg,
-     kop en knop blijven (besluit Anton, 26-11-2026). */
-  html.compact .plaatskolom p { display: none; }
-  html.compact .plaatskolom { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 12px; }
-  html.compact .plaatskolom h4 { flex: 1 1 auto; }
-  html.compact .plaatskolom .pil { margin-top: 0; }
-  html.compact .plaatskolom .plaatsknop { flex: 1 0 100%; }
+  /* Op een telefoon telt de korte weg naar het formulier: geen vier tegels,
+     alleen Plaats bericht en Plaats advertentie (besluit Anton, 26-11-2026). */
+  html.compact .plaatskolommen { display: none; }
+  html.compact .plaatskort { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  html.compact .plaatskort .plaatsknop { width: 100%; }
   html.compact .ladekaart.actueel .h { flex: 1 0 100%; }
   html.compact .pknop { width: 100%; }
   html.compact .sluitknop { width: 44px; }
@@ -741,6 +739,11 @@
     { kop: "Advertentie", label: "BETAALD", pil: "betaald",
       tekst: "Vacatures, vastgoed en bedrijfsberichten worden alleen geplaatst na betaling.",
       knop: "Naar de betaalpagina", url: U("/page/betaalpagina-berichten") }
+  ];
+  // Op een telefoon staan er alleen deze twee knoppen (besluit Anton, 26-11-2026).
+  var PLAATS_KORT = [
+    { knop: "Plaats bericht", url: U("/profiles/blog/new") },
+    { knop: "Plaats advertentie", url: U("/page/betaalpagina-berichten"), rand: true }
   ];
   var PLAATS_VOET = "Auto, camper of caravan te koop? Dat plaats je gratis als forumbericht.";
 
@@ -1064,6 +1067,8 @@
         '<p>' + esc(k.tekst) + '</p>' +
         '<a class="plaatsknop' + (betaald ? ' rand' : '') + '" href="' + k.url + '" target="_parent">' + k.knop + '</a>' +
       '</div>';
+    }).join("") + '</div><div class="plaatskort">' + PLAATS_KORT.map(function(k){
+      return '<a class="plaatsknop' + (k.rand ? ' rand' : '') + '" href="' + k.url + '" target="_parent">' + k.knop + '</a>';
     }).join("") + '</div><p class="plaatsvoet">' + esc(PLAATS_VOET) + '</p>';
   }
 

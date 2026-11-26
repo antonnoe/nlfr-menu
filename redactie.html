@@ -6,25 +6,28 @@
 <meta name="robots" content="noindex, nofollow">
 <title>NLFR · Redactie</title>
 <link rel="icon" type="image/svg+xml" href="/assets/redactie-icoon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <style>
 /* Eén redactietool (besluit opdrachtgever 26-11-2026, mock-up goedgekeurd). De nieuwsmotor is
    Nieuwsvoorziening en publiceert zelf; deze tool grijpt alleen in. Huisstijl als de mock-up
-   (variabelen uit nieuwsvoorziening/docs/huisstijl). Geen webfonts (eerder besluit, zie
-   test/fonts.test.mjs): schreefletter Georgia, rest systeemfont. Tikvlakken minstens 44 px. */
+   (variabelen en letters uit nieuwsvoorziening/docs/huisstijl). Manrope en Source Serif 4 via Google Fonts,
+   alleen op deze pagina (herstelronde 1, 26-11-2026); het menu en de actueelpagina blijven zonder webfonts
+   (test/fonts.test.mjs). Valt de download weg, dan Georgia en het systeemfont. Tikvlakken minstens 44 px. */
 :root{--maroon:#800000;--wit:#faf7f4;--inkt:#1f1a18;--lijn:#e7dfd8;--groen:#2f6b3a;--grijs:#6f6660;--kaart:#ffffff;--groenzacht:#edf3ee;--rood:#9b1c1c;--roodzacht:#fbeeee}
 *{box-sizing:border-box;margin:0;padding:0}
-html{overflow-x:hidden}
-body{background:var(--wit);color:var(--inkt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+body{background:var(--wit);color:var(--inkt);font-family:Manrope,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5;overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}
 a{color:var(--maroon);font-weight:700;text-decoration:none}
 button{font:inherit;cursor:pointer;color:inherit}
 button:disabled{opacity:.5;cursor:not-allowed}
 .wrap{max-width:560px;margin:0 auto;padding:0 18px}
-.serif,h1,h2,h3,.t{font-family:Georgia,"Times New Roman",serif}
+.serif,h1,h2,h3,.t{font-family:"Source Serif 4",Georgia,"Times New Roman",serif}
 .net{background:var(--maroon);color:#fff;font-size:13px}
-.net .wrap{display:flex;align-items:center;height:40px}
-.net nav{display:flex;gap:20px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.net .wrap{display:flex;align-items:center;min-height:48px}
+.net nav{display:flex;gap:0;overflow-x:auto;white-space:nowrap;scrollbar-width:none;min-width:0;max-width:100%;margin-left:-12px}
 .net nav::-webkit-scrollbar{display:none}
-.net a{color:#fff;opacity:.78;font-weight:400;display:inline-flex;align-items:center;min-height:40px}
+.net a{flex:none;color:#fff;opacity:.85;font-weight:400;display:inline-flex;align-items:center;min-height:48px;min-width:44px;padding:0 12px}
 .kop{background:var(--kaart);border-bottom:1px solid var(--lijn)}
 .kop .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:14px;padding-bottom:12px;gap:12px}
 .kop h1{font-weight:700;font-size:26px;line-height:1.1}
@@ -40,7 +43,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .tab[aria-selected="true"]{background:var(--inkt);border-color:var(--inkt);color:#fff}
 .paneel[hidden],[hidden]{display:none!important}
 h2{font-weight:600;font-size:21px;line-height:1.25;margin:18px 0 10px}
-h2 small{font-family:system-ui,sans-serif;font-size:14px;font-weight:600;color:var(--grijs);margin-left:6px}
+h2 small{font-family:Manrope,system-ui,sans-serif;font-size:14px;font-weight:600;color:var(--grijs);margin-left:6px}
 .uitleg{font-size:15px;color:var(--grijs);margin:-4px 0 12px}
 .wacht{background:var(--kaart);border:1px solid var(--lijn);border-left:4px solid var(--maroon);border-radius:18px;padding:14px 16px;margin-bottom:12px}
 .wacht.peilk{border-left-color:var(--groen)}
@@ -61,7 +64,11 @@ h2 small{font-family:system-ui,sans-serif;font-size:14px;font-weight:600;color:v
 .rij .m{display:block;font-size:14px;color:var(--grijs);margin-top:3px}
 .rub{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--maroon)}
 .geld{color:var(--groen);font-weight:700}.min{color:var(--inkt);font-weight:700}
-.weg-knop{flex:none;min-height:44px;min-width:64px;border-radius:999px;border:1.5px solid var(--lijn);background:var(--kaart);font-weight:700;font-size:15px;padding:0 14px}
+.weg-knop{flex:none;min-height:44px;min-width:64px;border-radius:999px;border:1.5px solid var(--lijn);background:var(--kaart);font-weight:700;font-size:15px;padding:0 12px;line-height:1.2}
+.weg-knop.weg{border-color:var(--maroon);color:var(--maroon)}
+.weg-knop.lang{max-width:104px;padding:4px 10px;font-size:14px}
+.item{scroll-margin-top:70px;scroll-margin-bottom:110px}
+body.met-toast{padding-bottom:96px}
 .item.is-weg .t{text-decoration:line-through;color:var(--grijs)}
 .item.is-weg .weg-knop{border-color:var(--inkt)}
 .item.open .rij{background:var(--wit)}
@@ -84,7 +91,6 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
 .verwijzing{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:15px}
 .klein{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:8px}
 .klein button,.linkknop{min-height:44px;background:none;border:0;color:var(--maroon);font-weight:700;font-size:15px;padding:0}
-.groot-weg{width:100%;min-height:52px;border-radius:999px;border:1.5px solid var(--maroon);background:var(--kaart);color:var(--maroon);font-weight:700;font-size:16px;margin-top:12px}
 .reden{display:block;font-size:14px;color:var(--grijs);margin-top:3px}.reden b{color:var(--inkt)}
 .blok{background:var(--kaart);border:1px solid var(--lijn);border-radius:18px;padding:14px 16px;margin-bottom:12px}
 .blok h3{font-weight:600;font-size:19px;margin-bottom:4px}
@@ -93,6 +99,7 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
 .regel>span:first-child{color:var(--grijs)}
 .regel a,.regel button.linkknop{display:inline-flex;align-items:center;min-height:44px}
 .blok .keuze+.regel,.blok p+.regel{margin-top:8px}
+.links{padding-top:4px;padding-bottom:4px}.links .regel{min-height:44px;justify-content:flex-start}.links .regel:first-child{border-top:0}
 .voet{font-size:13px;color:var(--grijs);text-align:center;padding:20px 0 90px}
 .leeg{background:var(--groenzacht);color:var(--groen);border-radius:18px;padding:16px;font-weight:700;text-align:center}
 .veld{display:block;margin-top:10px;font-size:13px;font-weight:700;color:var(--grijs)}
@@ -129,7 +136,7 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   <section class="paneel" id="vandaag">
     <div id="wacht-vak"></div>
     <h2>Vandaag geplaatst <small id="n-vandaag"></small></h2>
-    <p class="uitleg">De motor plaatst zelf. Tik op een kop om plekken te wijzigen, of haal een bericht weg.</p>
+    <p class="uitleg">Tik op een kop om te kiezen waar het bericht staat.</p>
     <div id="melding-nv"></div>
     <div class="lijst" id="lijst-vandaag"></div>
     <p class="voet">Ouder nieuws staat op nieuws.infofrankrijk.com.</p>
@@ -137,32 +144,32 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
 
   <section class="paneel" id="niet" hidden>
     <h2>Niet geplaatst <small>laatste 24 uur</small></h2>
-    <p class="uitleg">Deze berichten liet de motor liggen. Vind je dat onterecht, plaats er dan zelf een.</p>
+    <p class="uitleg">De motor liet deze berichten liggen; plaats zelf wat je mist.</p>
     <div class="lijst" id="lijst-niet"></div>
-    <p class="voet">Plaats je zelf, dan kies je daarna de plekken. Alles blijft terug te draaien.</p>
+    <p class="voet">Na het plaatsen kies je de plekken.</p>
   </section>
 
   <section class="paneel" id="meer" hidden>
     <h2>Café Jeudi</h2>
     <div class="blok" id="cj"></div>
-    <h2>Zo staat het er nu</h2>
-    <div class="blok">
-      <div class="regel"><span>Nieuws</span><a href="https://nieuws.infofrankrijk.com" target="_blank" rel="noopener">nieuws.infofrankrijk.com ↗</a></div>
-      <div class="regel"><span>Nederlanders.fr</span><a href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_blank" rel="noopener">Nieuwspagina ↗</a></div>
-      <div class="regel"><span>Nieuwsbrief</span><a href="https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief" target="_blank" rel="noopener">Laatste editie ↗</a></div>
-      <div class="regel"><span>Infopoche</span><a href="https://infopoche.fr" target="_blank" rel="noopener">Openen ↗</a></div>
-      <div class="regel"><span>Forum</span><a href="https://www.nederlanders.fr/forum" target="_blank" rel="noopener">Forum met zijbalk ↗</a></div>
-      <div class="regel"><span>Infofrankrijk</span><a href="https://infofrankrijk.com" target="_blank" rel="noopener">Openen ↗</a></div>
-    </div>
     <h2>Bronnen</h2>
     <div class="blok" id="bronnen"><p>Laden…</p></div>
     <h2>Dit apparaat</h2>
     <div class="blok" id="apparaat">
       <p id="wieben"></p>
       <div id="passkeylijst"></div>
-      <div class="regel"><span>Dit apparaat instellen voor vingerafdruk</span><button type="button" class="linkknop" id="passkeynieuw" hidden>Instellen ›</button></div>
+      <div class="regel"><span>Inloggen met vingerafdruk op dit apparaat</span><button type="button" class="linkknop" id="passkeynieuw" hidden>Instellen ›</button></div>
       <div class="regel"><span>Klaar op een geleend toestel?</span><button type="button" class="linkknop" id="uitlog">Uitloggen</button></div>
       <p class="melding" id="appmelding" role="status"></p>
+    </div>
+    <h2>Zo staat het er nu</h2>
+    <div class="blok links">
+      <a class="regel" href="https://nieuws.infofrankrijk.com" target="_blank" rel="noopener">Nieuws op nieuws.infofrankrijk.com ↗</a>
+      <a class="regel" href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_blank" rel="noopener">Nieuwspagina van Nederlanders.fr ↗</a>
+      <a class="regel" href="https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief" target="_blank" rel="noopener">Laatste nieuwsbrief ↗</a>
+      <a class="regel" href="https://infopoche.fr" target="_blank" rel="noopener">Infopoche ↗</a>
+      <a class="regel" href="https://www.nederlanders.fr/forum" target="_blank" rel="noopener">Forum met zijbalk ↗</a>
+      <a class="regel" href="https://infofrankrijk.com" target="_blank" rel="noopener">Infofrankrijk ↗</a>
     </div>
   </section>
 </main>
@@ -204,12 +211,13 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   var toastTimer = null, toastTik = null;
   function toast(tekst, terug) {
     clearInterval(toastTik); clearTimeout(toastTimer);
-    $("toast-tekst").textContent = tekst; $("toast").hidden = false;
+    $("toast-tekst").textContent = tekst; $("toast").hidden = false; document.body.classList.add("met-toast");
     var kn = $("toast-terug");
-    if (!terug) { kn.hidden = true; toastTimer = setTimeout(function () { $("toast").hidden = true; }, 3500); return; }
+    function sluit() { clearInterval(toastTik); clearTimeout(toastTimer); $("toast").hidden = true; document.body.classList.remove("met-toast"); }
+    if (!terug) { kn.hidden = true; toastTimer = setTimeout(sluit, 3500); return; }
     var rest = 5; kn.hidden = false; kn.textContent = "Ongedaan maken (" + rest + ")";
-    kn.onclick = function () { clearInterval(toastTik); $("toast").hidden = true; terug(); };
-    toastTik = setInterval(function () { rest--; if (rest <= 0) { clearInterval(toastTik); $("toast").hidden = true; } else kn.textContent = "Ongedaan maken (" + rest + ")"; }, 1000);
+    kn.onclick = function () { sluit(); terug(); };
+    toastTik = setInterval(function () { rest--; if (rest <= 0) sluit(); else kn.textContent = "Ongedaan maken (" + rest + ")"; }, 1000);
   }
 
   // ---- de nieuwsmotor --------------------------------------------------------
@@ -237,17 +245,18 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
     return t || 0;
   }
   function plekTekst(b) {
-    var k = b.kanalen || {}, aan = PLEKKEN.filter(function (p) { return k[p[0]]; });
-    if (aan.length === 5) return '<span>overal</span>';
+    var k = b.kanalen || {}, aan = PLEKKEN.filter(function (p) { return k[p[0]]; }), uit = PLEKKEN.filter(function (p) { return !k[p[0]]; });
+    if (uit.length === 0) return '<span>overal</span>';
     if (aan.length === 0) return '<span class="min">nergens</span>';
-    if (aan.length === 1) return '<span class="min">alleen ' + esc(shortNaam(aan[0][0])) + "</span>";
-    return '<span class="min">' + aan.length + " van 5 plekken</span>";
+    if (uit.length >= 4) return '<span class="min">alleen ' + esc(aan.map(function (p) { return shortNaam(p[0]); }).join(", ")) + "</span>";
+    return '<span class="min">niet in ' + esc(uit.map(function (p) { return shortNaam(p[0]); }).join(", ")) + "</span>";
   }
   function shortNaam(k) { return { actueel: "nieuwspagina", nieuwsbrief: "nieuwsbrief", infopoche: "Infopoche", zijbalk: "zijbalk", infofrankrijk: "Infofrankrijk" }[k] || k; }
+  function lcEerste(t) { return t ? t.charAt(0).toLowerCase() + t.slice(1) : t; }
   function metaVandaag(b) {
     var d = [];
-    d.push('<span class="rub">' + esc(RUBRIEK[b.categorie] || b.categorie) + "</span>");
-    if (b.domein) d.push(esc(b.domein));
+    if (b.soort === "overheid") d.push('<span class="rub">Overheid</span>' + (b.domein ? " · " + esc(b.domein) : ""));
+    else d.push('<span class="rub">' + esc(RUBRIEK[b.categorie] || b.categorie) + "</span>");
     var t = b.gepubliceerdOp && tijd(b.gepubliceerdOp); if (t) d.push(t);
     if (b.portemonnee) d.push('<span class="geld">€ portemonnee</span>');
     d.push(plekTekst(b));
@@ -258,41 +267,57 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
     var meta, knop;
     if (modus === "vandaag") {
       meta = weg ? "Weggehaald door jou" + (b.redactieOp ? " om " + tijd(b.redactieOp) : "") : metaVandaag(b);
-      knop = '<button type="button" class="weg-knop" data-actie="' + (weg ? "terug" : "weg") + '">' + (weg ? "Terug" : "Weg") + "</button>";
+      knop = '<button type="button" class="weg-knop' + (weg ? "" : " weg") + '" data-actie="' + (weg ? "terug" : "weg") + '">' + (weg ? "Terug" : "Weg, overal") + "</button>";
     } else {
       var n = (b.bronnen || []).length, t = tijdVan(b);
       meta = '<span class="reden"><b>' + esc(redenKort(b)) + "</b> · " + n + (n === 1 ? " bron" : " bronnen") + (t ? " · " + tijd(new Date(t).toISOString()) : "") + "</span>";
-      knop = b.kanPlaatsen ? '<button type="button" class="weg-knop" data-actie="plaats">Plaats</button>' : '<button type="button" class="weg-knop" data-actie="herschrijf"' + (b.handmatigOp ? " disabled" : "") + ">Herschrijf</button>";
+      knop = b.kanPlaatsen ? '<button type="button" class="weg-knop" data-actie="plaats">Plaats</button>' : '<button type="button" class="weg-knop lang" data-actie="herschrijf"' + (b.handmatigOp ? " disabled" : "") + ">Opnieuw laten schrijven</button>";
     }
     var h = '<div class="item' + (weg ? " is-weg" : "") + (st.open[b.id] ? " open" : "") + '" data-id="' + esc(b.id) + '"><div class="rij">' +
       '<button type="button" class="open-knop" aria-expanded="' + (st.open[b.id] ? "true" : "false") + '"><span class="t">' + esc(b.kop) + '</span><span class="m">' + meta + "</span></button>" + knop + "</div>";
     h += '<div class="detail">' + (st.open[b.id] ? detail(b, modus) : "") + "</div></div>";
     return h;
   }
+  // Reden in gewone taal, nooit met getallen. De motor levert `redenTekst`; zonder dat veld
+  // vertalen we de bekende redenen zelf.
   function redenKort(b) {
-    var r = String(b.reden || "").replace(/^Kwaliteitspoort:\s*/i, "Kwaliteitspoort: ");
-    if (!r) return "Niet geplaatst";
-    return r.length > 110 ? r.slice(0, 107).replace(/[\s,;:]+$/, "") + "…" : r.replace(/\.$/, "");
+    var t = String(b.redenTekst || "").trim();
+    if (t) return t.replace(/\.$/, "");
+    var r = String(b.reden || "") + " " + (b.blokkadeRedenen || []).join(" "), l = r.toLowerCase();
+    if (!r.trim()) return "De motor plaatste dit bericht niet";
+    if (/krantennaam|perslink|persnaam/.test(l)) return "De tekst noemt een krant";
+    if (/letterlijk overgenomen|te dicht bij|te veel op/.test(l)) return "De tekst lijkt te veel op het origineel";
+    if (/relevantie|drempel|score|landelijke politiek|geen gevolg|raakt .* niet/.test(l)) return "Te weinig van belang voor onze lezers";
+    if (/(één|1|een) bron|minimaal|onafhankelijke bron|te weinig bronnen/.test(l)) return "Maar één bron gevonden";
+    if (/te kort|leeg/.test(l)) return "De tekst is te kort";
+    if (/alinea/.test(l)) return "De tekst heeft geen alinea's";
+    if (/praat over invoer|volgens de bronnen/.test(l)) return "De tekst praat over de bronnen";
+    if (/link of domeinnaam/.test(l)) return "Er staat een link in de tekst";
+    if (/bedrag niet in bron/.test(l)) return "Er staat een bedrag in dat niet in de bronnen staat";
+    if (/herschrijven/.test(l)) return "Opnieuw schrijven gaf geen goed bericht";
+    return "De kwaliteitscontrole hield dit bericht tegen";
   }
   function bronNamen(b) { var s = {}, uit = []; (b.bronnen || []).forEach(function (x) { if (x.naam && !s[x.naam]) { s[x.naam] = 1; uit.push(x.naam); } }); return uit; }
+  function plekkenBlok(b) {
+    return "<h4>Staat op</h4><div class=\"plekken\" role=\"group\" aria-label=\"Staat op\">" + PLEKKEN.map(function (p) {
+      var aan = !!(b.kanalen && b.kanalen[p[0]]);
+      return '<button type="button" class="plek" role="switch" aria-checked="' + aan + '" data-kanaal="' + p[0] + '"><span class="n">' + esc(p[1]) + (p[0] === "nieuwsbrief" && aan ? "<small>Brief van morgen 06:00</small>" : "") + '</span><span class="schakel"></span></button>';
+    }).join("") + "</div>";
+  }
   function detail(b, modus) {
-    var h = '<p class="sam">' + esc(b.samenvatting) + "</p>";
+    var h = "";
+    if (modus === "vandaag" && b.redactie !== "weg") h += plekkenBlok(b);
+    h += '<p class="sam" style="margin-top:12px">' + esc(b.samenvatting) + "</p>";
     h += '<a class="lees" target="_blank" rel="noopener" href="' + NV + "/bericht/" + encodeURIComponent(b.id) + '">Lees het hele bericht op nieuws.infofrankrijk.com ↗</a>';
-    if (modus === "vandaag") {
-      h += "<h4>Staat op</h4><div class=\"plekken\" role=\"group\" aria-label=\"Staat op\">" + PLEKKEN.map(function (p) {
-        var aan = !!(b.kanalen && b.kanalen[p[0]]);
-        return '<button type="button" class="plek" role="switch" aria-checked="' + aan + '" data-kanaal="' + p[0] + '"><span class="n">' + esc(p[1]) + (p[0] === "nieuwsbrief" ? "<small>Brief van morgen 06:00</small>" : "") + '</span><span class="schakel"></span></button>';
-      }).join("") + "</div>";
-    } else {
-      h += '<p class="reden" style="margin-top:6px"><b>Waarom niet:</b> ' + esc(b.reden || "Onbekend") + "</p>";
+    if (modus === "niet") {
+      h += '<p class="reden" style="margin-top:6px">' + (b.kanPlaatsen ? "<b>Waarom niet:</b> " + esc(redenKort(b)) + "." : "<b>Plaatsen kan niet:</b> " + esc(lcEerste(redenKort(b))) + ". Laat hem opnieuw schrijven of verbeter de kop.") + "</p>";
     }
-    var nm = bronNamen(b);
-    if (nm.length) h += "<h4>Bronnen</h4><p class=\"bronnen\">" + esc(nm.join(", ")) + " <span>· " + (b.bronnen || []).length + ((b.bronnen || []).length === 1 ? " bron" : " bronnen") + "</span></p>";
+    var nm = bronNamen(b), nb = (b.bronnen || []).length;
+    if (nm.length) h += "<h4>Bronnen</h4><p class=\"bronnen\">" + esc(nm.join(", ")) + " <span>· " + nb + (nb === 1 ? " bron" : " bronnen") + "</span></p>";
     if (b.peil && b.peil.regel) h += '<p class="peilregel">' + esc(b.peil.regel) + "</p>";
     if (b.verwijzing && b.verwijzing.titel) h += '<h4>Verwijzing eronder</h4><div class="verwijzing"><span>' + esc(b.verwijzing.titel) + "</span></div>";
     h += '<div class="klein"><button type="button" data-doe="bewerk">Kop of tekst verbeteren</button><button type="button" data-doe="rubriek">Rubriek wijzigen</button></div>';
     h += '<div id="bw-' + esc(b.id) + '"></div>';
-    if (modus === "vandaag" && b.redactie !== "weg") h += '<button type="button" class="groot-weg" data-actie="weg">Weg, overal (ook van nieuws.infofrankrijk.com)</button>';
     if (modus === "niet") {
       h += '<div class="keuze">' + (b.kanPlaatsen ? '<button type="button" class="knop hoofd breed" data-actie="plaats">Plaats</button>' : "") +
         '<button type="button" class="knop breed" data-actie="herschrijf"' + (b.handmatigOp ? " disabled" : "") + ">Opnieuw laten schrijven</button></div>";
@@ -332,10 +357,10 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   function tekenKeuken() {
     var el = $("keuken");
     if (st.nvFout) { el.innerHTML = '<span class="stip rood"></span>De nieuwsmotor is niet bereikbaar. Café Jeudi, PEIL en Bronnen werken gewoon.'; return; }
-    if (!st.run) { el.innerHTML = '<span class="stip oranje"></span>De nieuwsmotor heeft nog geen ronde gedraaid.'; return; }
+    if (!st.run) { el.innerHTML = '<span class="stip oranje"></span>De nieuwsmotor heeft nog niet gecontroleerd.'; return; }
     var laatste = st.run.klaarOp || st.run.gestartOp, oud = Date.now() - Date.parse(laatste) > 9 * 3600 * 1000;
     var vk = volgendeRonde();
-    el.innerHTML = '<span class="stip' + (oud ? " oranje" : "") + '"></span>De nieuwsmotor ' + (oud ? "heeft even stilgelegen" : "loopt") + " · laatste ronde <b>" + esc(tijd(laatste)) + "</b>" + (vk ? " · volgende " + esc(tijd(vk.toISOString())) : "");
+    el.innerHTML = '<span class="stip' + (oud ? " oranje" : "") + '"></span>De nieuwsmotor ' + (oud ? "heeft even stilgelegen" : "loopt") + " · laatst gecontroleerd om <b>" + esc(tijd(laatste)) + "</b>" + (vk ? " · volgende " + esc(tijd(vk.toISOString())) : "");
   }
 
   // ---- wacht op jou ----------------------------------------------------------------
@@ -343,9 +368,10 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
     var p = st.regie && st.regie.peil, b = (st.regie && st.regie.besluiten) || {};
     return ((p && p.besluiten) || []).filter(function (x) { return !b[x.mutatie]; });
   }
+  function cjNee() { try { return !!(st.cj && st.cj.volgende && localStorage.getItem("cj-nee:" + st.cj.volgende)); } catch (e) { return false; } }
   function cjVraag() {
     var c = st.cj; if (!c || c.aan === true || !c.volgende) return false;
-    try { if (localStorage.getItem("cj-nee:" + c.volgende)) return false; } catch (e) {}
+    if (cjNee()) return false;
     var d = new Date(c.volgende + "T12:00:00Z"); return d - Date.now() < 8 * 86400 * 1000;
   }
   function tekenWacht() {
@@ -365,17 +391,24 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
     });
     if (po.length > 3) kaarten.push('<p class="uitleg">En nog ' + (po.length - 3) + " PEIL-" + (po.length - 3 === 1 ? "punt" : "punten") + ". Die komen na deze.</p>");
     var fouten = (st.run && st.run.fouten) || [];
-    if (fouten.length) { n++; kaarten.push('<div class="wacht storing"><div class="rubriek">Storing</div><h3>De laatste ronde van de motor meldde ' + (fouten.length === 1 ? "een fout" : fouten.length + " fouten") + "</h3><p>" + esc(String(fouten[0]).slice(0, 200)) + "</p></div>"); }
+    if (fouten.length) { n++; kaarten.push('<div class="wacht storing"><div class="rubriek">Storing</div><h3>De laatste controle van de motor meldde ' + (fouten.length === 1 ? "een fout" : fouten.length + " fouten") + "</h3><p>" + esc(String(fouten[0]).slice(0, 200)) + "</p></div>"); }
     if (st.regie && st.regie.peilFout) { kaarten.push('<div class="wacht storing"><div class="rubriek">Storing</div><h3>' + esc(st.regie.peilFout) + "</h3></div>"); }
     $("wacht-vak").innerHTML = n || kaarten.length ? "<h2>Wacht op jou" + (n ? " <small>" + n + "</small>" : "") + "</h2>" + kaarten.join("") : "";
   }
 
   // ---- Meer: Café Jeudi ----------------------------------------------------------
   function tekenCj() {
-    var c = st.cj, b = st.banner;
+    var c = st.cj;
     if (!c) { $("cj").innerHTML = "<p>De stand van Café Jeudi is nu niet te laden.</p>"; return; }
-    var datum = datumLang(c.aan ? c.datum : c.volgende);
-    $("cj").innerHTML = "<h3>" + esc(datum ? datum.charAt(0).toUpperCase() + datum.slice(1) : "Café Jeudi") + "</h3><p>" + (c.aan ? "Staat op Ja. De banner is aan." : "Staat op Nee. De banner is uit.") + '</p><div class="keuze"><button type="button" class="knop breed' + (c.aan ? " hoofd" : "") + '" data-cj="ja">Ja, gaat door</button><button type="button" class="knop breed' + (!c.aan ? "\" style=\"border-color:var(--inkt)" : "") + '" data-cj="nee">Nee</button></div>' +
+    var ja = c.aan === true, nee = !ja && cjNee(), datum = datumLang(ja ? c.datum : c.volgende);
+    var kop, regel;
+    if (ja) { kop = "Gaat door"; regel = "Gaat door op " + datum + ". De banner is aan."; }
+    else if (nee) { kop = "Afgezegd"; regel = "Afgezegd voor " + datum + ". De banner is uit."; }
+    else { kop = "Nog niet bevestigd"; regel = "Gaat Café Jeudi door op " + datum + "? Bij Ja staat de banner op Nederlanders.fr."; }
+    var knoppen = (ja || nee) && !st.cjWijzig
+      ? '<div class="keuze"><button type="button" class="knop breed" id="cj-wijzig">Wijzigen</button></div>'
+      : '<div class="keuze"><button type="button" class="knop hoofd breed" data-cj="ja">Ja, gaat door</button><button type="button" class="knop breed" data-cj="nee">Nee</button></div>';
+    $("cj").innerHTML = "<h3>" + esc(kop) + "</h3><p>" + esc(regel) + "</p>" + knoppen +
       '<div class="regel"><span>Banner: tekst, tijd en knop</span><button type="button" class="linkknop" id="cj-aanpassen">Aanpassen ›</button></div><div id="cj-form"></div><p class="melding" id="cj-melding" role="status"></p>';
   }
   function cjForm() {
@@ -394,9 +427,9 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
     api("/api/review", { body: { actie: "cafejeudi", ja: ja } }).then(function (d) {
       if (!d.ok) { toast("Niet opgeslagen: " + (d.fout || "onbekende fout")); return; }
       if (st.cj) { st.cj.aan = d.aan === true; st.cj.datum = d.datum; st.cj.volgende = d.volgende || st.cj.volgende; }
-      if (!ja && st.cj) { try { localStorage.setItem("cj-nee:" + st.cj.volgende, "1"); } catch (e) {} }
-      tekenWacht(); tekenCj();
-      toast(ja ? "Opgeslagen: Café Jeudi staat op Ja voor " + datumLang(d.datum) + "." : "Opgeslagen: Café Jeudi gaat niet door, de banner is uit.");
+      if (st.cj) { try { if (ja) localStorage.removeItem("cj-nee:" + st.cj.volgende); else localStorage.setItem("cj-nee:" + st.cj.volgende, "1"); } catch (e) {} }
+      st.cjWijzig = false; tekenWacht(); tekenCj();
+      toast(ja ? "Opgeslagen: Café Jeudi gaat door op " + datumLang(d.datum) + "." : "Opgeslagen: Café Jeudi is afgezegd, de banner is uit.");
     }).catch(function (e) { stil(e); });
   }
   function laadCj() {
@@ -413,14 +446,15 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
     if (!bs.length) { $("bronnen").innerHTML = "<p>De status van de bronnen is nu niet te laden.</p>"; return; }
     var stuk = bs.filter(function (b) { return b && b.ok === false; });
     var geblokkeerd = (st.blok && st.blok.geblokkeerd) || [];
-    var h = "<p>" + (bs.length - stuk.length) + " bronnen bereikbaar" + (stuk.length ? ", " + stuk.length + " niet" : "") + ".</p>";
+    var ok = bs.length - stuk.length;
+    var h = "<p>" + ok + (ok === 1 ? " bron" : " bronnen") + " bereikbaar" + (stuk.length ? ", " + stuk.length + " niet" : "") + ".</p>";
     stuk.forEach(function (b) { h += '<div class="regel"><span>Niet bereikbaar</span><span>' + esc(b.naam) + "</span></div>"; });
     geblokkeerd.forEach(function (b) { h += '<div class="regel"><span>Geblokkeerd: ' + esc(b.naam) + '</span><button type="button" class="linkknop" data-deblokkeer="' + esc(b.naam) + '">Weer aan</button></div>'; });
     h += '<div class="regel"><span>Een bron uitzetten</span><button type="button" class="linkknop" id="bron-toon">' + (st.bronnenOpen ? "Verberg" : "Bronnen") + " ›</button></div>";
     if (st.bronnenOpen) {
       var blokNamen = geblokkeerd.map(function (b) { return b.naam; });
       bs.forEach(function (b) { if (blokNamen.indexOf(b.naam) < 0) h += '<div class="regel"><span>' + esc(b.naam) + '</span><button type="button" class="linkknop" data-blokkeer="' + esc(b.naam) + '">Blokkeren</button></div>'; });
-      h += '<p class="melding">Blokkeren geldt voor de nieuwsstroom van Nederlanders.fr (Nu actueel). De nieuwsmotor heeft een eigen bronnenlijst.</p>';
+      h += '<p class="melding">Blokkeren geldt voor de oude nieuwsstroom van Nederlanders.fr. De nieuwsmotor heeft een eigen bronnenlijst.</p>';
     }
     $("bronnen").innerHTML = h;
   }
@@ -448,15 +482,19 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
     var t = e.target.closest ? e.target.closest("button,a") : null; if (!t) return;
     if (t.classList.contains("tab")) {
       var id = t.getAttribute("data-tab");
-      [].forEach.call(document.querySelectorAll(".tab"), function (x) { x.setAttribute("aria-selected", x === t ? "true" : "false"); });
-      ["vandaag", "niet", "meer"].forEach(function (p) { $(p).hidden = p !== id; });
+      zetTab(id);
       window.scrollTo(0, 0);
       if (id === "meer") { if (!st.blok) laadBlok().then(tekenBronnen); if (!st.apparaatGeladen) { st.apparaatGeladen = true; laadApparaat(); } }
       return;
     }
     var it = t.closest(".item"), b = it ? vind(it.getAttribute("data-id")) : null;
     var modus = it && it.parentNode.id === "lijst-niet" ? "niet" : "vandaag";
-    if (b && t.classList.contains("open-knop")) { st.open[b.id] = !st.open[b.id]; vervang(b, modus); return; }
+    if (b && t.classList.contains("open-knop")) {
+      var was = !!st.open[b.id], eerder = Object.keys(st.open).filter(function (k) { return st.open[k]; });
+      st.open = {}; if (!was) st.open[b.id] = true;
+      eerder.forEach(function (k) { var o = vind(k); if (o && k !== b.id) vervang(o, document.querySelector('.item[data-id="' + k + '"]') && document.querySelector('.item[data-id="' + k + '"]').parentNode.id === "lijst-niet" ? "niet" : "vandaag"); });
+      vervang(b, modus); return;
+    }
     if (b && t.hasAttribute("data-kanaal")) {
       var kanaal = t.getAttribute("data-kanaal"), aan = t.getAttribute("aria-checked") !== "true";
       t.setAttribute("aria-checked", String(aan)); t.disabled = true;
@@ -478,6 +516,7 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
       }).catch(function (er) { stil(er); });
       return;
     }
+    if (t.id === "cj-wijzig") { st.cjWijzig = true; tekenCj(); return; }
     if (t.id === "cj-aanpassen") { cjForm(); return; }
     if (t.id === "f-sluit") { $("cj-form").innerHTML = ""; return; }
     if (t.id === "f-bewaar") { bewaarBanner(); return; }
@@ -509,29 +548,42 @@ h4{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
     var tmp = document.createElement("div"); tmp.innerHTML = item(b, modus); el.parentNode.replaceChild(tmp.firstChild, el);
   }
   function actie(b, a, modus) {
-    var wasGeplaatst = b.geplaatst;
     if (a === "weg") {
-      stuur({ id: b.id, actie: "weg" }).then(function () { tekenAlles(); toast("Weggehaald, overal.", function () { stuur({ id: b.id, actie: "terug" }).then(tekenAlles).catch(fout); }); }).catch(fout);
+      stuur({ id: b.id, actie: "weg" }).then(function () { tekenAlles(); toast("Weggehaald, overal.", function () { stuur({ id: b.id, actie: "terug" }).then(tekenAlles).catch(fout); }); naarItem(b.id); }).catch(fout);
     } else if (a === "terug") {
       stuur({ id: b.id, actie: "terug" }).then(function () { tekenAlles(); toast("Teruggezet op dezelfde plekken."); }).catch(fout);
     } else if (a === "plaats") {
-      stuur({ id: b.id, actie: "plaats" }).then(function () { tekenAlles(); toast("Geplaatst. Kies in het bericht de plekken."); }).catch(fout);
+      stuur({ id: b.id, actie: "plaats" }).then(function () {
+        st.open = {}; st.open[b.id] = true; tekenAlles(); zetTab("vandaag"); naarItem(b.id); toast("Geplaatst. Kies hieronder de plekken.");
+      }).catch(fout);
     } else if (a === "herschrijf") {
-      stuur({ id: b.id, actie: "herschrijf" }).then(function () { tekenAlles(); toast("De motor schrijft dit bericht bij de volgende ronde opnieuw."); }).catch(fout);
+      stuur({ id: b.id, actie: "herschrijf" }).then(function () { tekenAlles(); toast("De motor schrijft dit bericht bij de volgende controle opnieuw."); }).catch(fout);
     }
+  }
+  function naarItem(id) {
+    var el = document.querySelector('.item[data-id="' + id + '"]');
+    if (el && el.scrollIntoView && el.offsetParent) el.scrollIntoView({ block: "nearest" });
+  }
+  function zetTab(id) {
+    [].forEach.call(document.querySelectorAll(".tab"), function (x) { x.setAttribute("aria-selected", x.getAttribute("data-tab") === id ? "true" : "false"); });
+    ["vandaag", "niet", "meer"].forEach(function (p) { $(p).hidden = p !== id; });
   }
   function bewerkForm(b, wat) {
     var vak = $("bw-" + b.id); if (!vak) return;
     if (wat === "rubriek") {
       vak.innerHTML = '<div class="bewerk"><label class="veld">Rubriek<select id="bw-cat">' + Object.keys(RUBRIEK).map(function (k) { return '<option value="' + esc(k) + '"' + (k === b.categorie ? " selected" : "") + ">" + esc(RUBRIEK[k]) + "</option>"; }).join("") + '</select></label><div class="keuze"><button type="button" class="knop hoofd breed" data-bewaar="1">Bewaren</button></div></div>';
     } else {
-      vak.innerHTML = '<div class="bewerk"><label class="veld">Kop<input id="bw-kop" maxlength="300" value="' + esc(b.kop) + '"></label><label class="veld">Samenvatting<textarea id="bw-sam">' + esc(b.samenvatting) + '</textarea></label><p class="melding">Een aangepast bericht wordt nooit meer automatisch herschreven.</p><div class="keuze"><button type="button" class="knop hoofd breed" data-bewaar="1">Bewaren</button></div></div>';
+      vak.innerHTML = '<div class="bewerk"><label class="veld">Kop<input id="bw-kop" maxlength="300" value="' + esc(b.kop) + '"></label><label class="veld">Samenvatting<textarea id="bw-sam">' + esc(b.samenvatting) + '</textarea></label><p class="melding">De motor past deze kop daarna niet meer aan.</p><div class="keuze"><button type="button" class="knop hoofd breed" data-bewaar="1">Bewaren</button></div></div>';
     }
   }
   function bewaarBewerking(b, modus) {
     var o = { id: b.id, actie: "bewerk" };
     if ($("bw-cat")) o.categorie = $("bw-cat").value; else { o.kop = $("bw-kop").value; o.samenvatting = $("bw-sam").value; }
-    stuur(o).then(function () { vervang(vind(b.id), modus); toast("Opgeslagen."); }).catch(fout);
+    stuur(o).then(function () {
+      vervang(vind(b.id), modus); toast("Opgeslagen.");
+      var vak = $("bw-" + b.id);
+      if (vak) vak.innerHTML = '<p class="melding">Opgeslagen. <a target="_blank" rel="noopener" href="' + NV + "/bericht/" + encodeURIComponent(b.id) + '">Bekijk op nieuws.infofrankrijk.com ↗</a></p>';
+    }).catch(fout);
   }
   function bewaarBanner() {
     var b = st.banner, nieuw = JSON.parse(JSON.stringify(b)); delete nieuw.aanIngesteld;

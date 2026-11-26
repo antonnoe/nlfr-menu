@@ -68,7 +68,7 @@ function links(html) {
 // --- de vier links ----------------------------------------------------------
 
 // Sinds november 2026: Diensten, Nieuwspagina, Frankrijkkalender en de
-// nieuwsbrief, met rechts drie uitnodigingen om een bericht te plaatsen.
+// nieuwsbrief. De drie uitnodigingen zijn op 26-11-2026 uit de regel gehaald.
 // De zusterplatforms en Word abonnee staan in de netwerkbalk boven de titel
 // (pagina van Ning).
 const snel = () => links(subbalkHTML()).slice(0, 4);
@@ -78,18 +78,15 @@ test("de smalle regel draagt precies vier links, in deze volgorde", () => {
     ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief"]);
 });
 
-test("rechts staan drie uitnodigingen die het formulier voor een nieuw bericht openen", () => {
+test("de drie uitnodigingen staan niet meer in de regel", () => {
+  // Besluit Anton, 26-11-2026: overbodig geworden. Ze staan als tegels achter
+  // de knop Plaats bericht; de regel draagt alleen nog de vier links.
   const html = subbalkHTML();
-  const nodig = html.slice(html.indexOf('<span class="sbl-nodig">'));
-  assert.ok(html.indexOf('<span class="sbl-nodig">') > 0, "de uitnodigingen staan in hun eigen groep, na de links");
-  const l = links(nodig);
-  assert.deepEqual(l.map((x) => x.tekst), ["Stel een vraag", "Deel je ervaring", "Een leuk verhaal?"]);
-  for (const u of l) {
-    assert.equal(u.href, NL + "/profiles/blog/new", u.tekst + " opent het formulier voor een nieuw bericht");
-    assert.equal(u.target, "_parent", u.tekst + " blijft binnen de site");
+  assert.equal(links(html).length, 4, "vier links, en niets anders");
+  assert.ok(!html.includes("sbl-nodig"), "geen groep uitnodigingen meer");
+  for (const tekst of ["Stel een vraag", "Deel je ervaring", "Een leuk verhaal?"]) {
+    assert.ok(!html.includes(tekst), tekst + " hoort niet meer in de regel");
   }
-  assert.equal(links(html).length, 7, "vier links en drie uitnodigingen, en niets anders");
-  assert.match(CSS_KAAL, /\.sbl-nodig \{ margin-left: auto/, "de groep staat rechts, onder Plaats bericht");
 });
 
 test("de adressen staan voluit, en Diensten wijst binnen Ning", () => {

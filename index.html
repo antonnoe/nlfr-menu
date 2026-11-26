@@ -384,16 +384,11 @@
          font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
          font-weight: 500; font-size: 14px; color: var(--actueel); }
   /* De links staan in het groen van de bijkleur (#2f6b3a op wit is 6,4:1),
-     zonder pijltje: rood is er in deze regel alleen voor de uitnodigingen. */
+     zonder pijltje. */
   .sbl:hover { background: rgba(47,107,58,.08); text-decoration: underline; }
   /* Rechts in de regel: de nieuwsbrief als link, Word abonnee als knop met een
      groene rand. Geen vol vlak: dat was er één te veel naast Plaats bericht en
      de knop van de banner. #2f6b3a op wit is 6,4:1. */
-  /* Rechts, onder Plaats bericht: drie uitnodigingen om te schrijven. */
-  .sbl-nodig { margin-left: auto; display: inline-flex; align-items: center; white-space: nowrap; }
-  .sbl-nodig .sbl { color: var(--brand); padding: 0 7px; }
-  .sbl-nodig .sbl:hover { background: rgba(128,0,0,.06); }
-  .sbl-nodig i { color: #c9bdb7; font-style: normal; }
 
   /* ---- Voetrij van het paneel ---- */
   /* Op desktop alleen het kruisje, rechts: de links staan daar al in de
@@ -733,11 +728,9 @@
     ["Frankrijk\u00adkalender", "https://kalender-frankrijk.vercel.app/"],
     ["Nieuwsbrief", "https://nlfr-nieuwsbrief.vercel.app/oproep"]
   ];
-  // Drie uitnodigingen rechts in de regel, onder de knop Plaats bericht. Ze
-  // openen alle drie hetzelfde formulier; het verschil zit in de aanspreking.
-  // Word abonnee staat sinds november 2026 in de netwerkbalk boven de titel
-  // (pagina van Ning), los van Plaats bericht.
-  var UITNODIGINGEN = ["Stel een vraag", "Deel je ervaring", "Een leuk verhaal?"];
+  // De drie uitnodigingen (Stel een vraag, Deel je ervaring, Een leuk verhaal?)
+  // stonden tot 26-11-2026 ook rechts in de regel onder de balk. Ze zijn daar
+  // weggehaald (besluit Anton): ze staan als tegels achter Plaats bericht.
 
   // De tegels achter de knop "Plaats bericht": drie gratis ingangen met elk
   // een korte tip (alle drie naar hetzelfde formulier) en de betaalde
@@ -926,15 +919,9 @@
     }).join("");
   }
 
-  function nodigHTML(){
-    return '<span class="sbl-nodig">' + UITNODIGINGEN.map(function(t){
-      return '<a class="sbl" href="' + U("/profiles/blog/new") + '" target="_parent">' + t + '</a>';
-    }).join('<i>·</i>') + '</span>';
-  }
-
   function bouwSubbalk(){
     if (!subbalk) return;
-    subbalk.innerHTML = snelrijHTML() + nodigHTML();
+    subbalk.innerHTML = snelrijHTML();
   }
 
   // De voetrij van het paneel. Op een BREED scherm alleen het kruisje: de vier

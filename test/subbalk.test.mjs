@@ -67,29 +67,44 @@ function links(html) {
 
 // --- de vier links ----------------------------------------------------------
 
-// Sinds november 2026: Diensten, Nieuwspagina, Frankrijkkalender, en rechts
-// de aanmelding voor de nieuwsbrief en de knop Word abonnee.
-// De zusterplatforms staan in de netwerkbalk boven de titel (pagina van Ning).
-test("de smalle regel draagt precies vijf links, in deze volgorde", () => {
-  const l = links(subbalkHTML());
-  assert.deepEqual(l.map((x) => x.tekst),
-    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief, meld je aan", "Word abonnee"]);
+// Sinds november 2026: Diensten, Nieuwspagina, Frankrijkkalender en de
+// nieuwsbrief, met rechts drie uitnodigingen om een bericht te plaatsen.
+// De zusterplatforms en Word abonnee staan in de netwerkbalk boven de titel
+// (pagina van Ning).
+const snel = () => links(subbalkHTML()).slice(0, 4);
+
+test("de smalle regel draagt precies vier links, in deze volgorde", () => {
+  assert.deepEqual(snel().map((x) => x.tekst),
+    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief"]);
+});
+
+test("rechts staan drie uitnodigingen die het formulier voor een nieuw bericht openen", () => {
+  const html = subbalkHTML();
+  const nodig = html.slice(html.indexOf('<span class="sbl-nodig">'));
+  assert.ok(html.indexOf('<span class="sbl-nodig">') > 0, "de uitnodigingen staan in hun eigen groep, na de links");
+  const l = links(nodig);
+  assert.deepEqual(l.map((x) => x.tekst), ["Stel een vraag", "Deel je ervaring", "Een leuk verhaal?"]);
+  for (const u of l) {
+    assert.equal(u.href, NL + "/profiles/blog/new", u.tekst + " opent het formulier voor een nieuw bericht");
+    assert.equal(u.target, "_parent", u.tekst + " blijft binnen de site");
+  }
+  assert.equal(links(html).length, 7, "vier links en drie uitnodigingen, en niets anders");
+  assert.match(CSS_KAAL, /\.sbl-nodig \{ margin-left: auto/, "de groep staat rechts, onder Plaats bericht");
 });
 
 test("de adressen staan voluit, en Diensten wijst binnen Ning", () => {
-  const l = links(subbalkHTML());
+  const l = snel();
   // Voluit vergelijken: een toets op "/diensten" slaagt ook bij het oude adres
   // buiten Ning, en dat is nu juist wat hier is rechtgezet.
   assert.equal(l[0].href, NL + "/page/diensten");
   assert.equal(l[1].href, "https://nieuws.infofrankrijk.com/");
   assert.equal(l[2].href, "https://kalender-frankrijk.vercel.app/");
   assert.equal(l[3].href, "https://nlfr-nieuwsbrief.vercel.app/oproep");
-  assert.equal(l[4].href, "https://infofrankrijk.com/abonnement/");
   assert.ok(!HTML.includes('U("/diensten")'), "het oude /diensten hoort nergens meer te staan");
 });
 
 test("nederlanders.fr opent in het bovenliggende venster, de andere sites in een tabblad", () => {
-  const l = links(subbalkHTML());
+  const l = snel();
   assert.equal(l[0].target, "_parent", "Diensten blijft binnen de site");
   for (const zuster of l.slice(1)) {
     assert.equal(zuster.target, "_blank", zuster.tekst + " opent in een nieuw tabblad");
@@ -99,15 +114,17 @@ test("nederlanders.fr opent in het bovenliggende venster, de andere sites in een
 
 test("de links naar andere sites zijn als extern herkenbaar, Diensten niet", () => {
   const html = subbalkHTML();
-  const l = links(html);
+  const l = snel();
   assert.ok(!l[0].klasse.includes("sbl-ext"), "Diensten is geen externe link");
   for (const zuster of l.slice(1)) {
     assert.ok(zuster.klasse.includes("sbl-ext"), zuster.tekst + " hoort als extern gemarkeerd");
   }
-  assert.equal(html.split('class="sbx"').length - 1, 3, "drie pijltjes: elke externe link, behalve de knop");
-  assert.ok(l[3].klasse.includes("sbl-rechts"), "de nieuwsbrief staat rechts");
-  assert.ok(l[4].klasse.includes("sbl-knop"), "Word abonnee is een knop");
-  assert.match(CSS_KAAL, /\.sbl-ext \{ color: var\(--brand\)/, "en in bordeaux");
+  // Sinds de strakke opmaak (november 2026) zonder pijltje: de regel was te
+  // druk. Het verschil staat nog in de titel van de link, voor wie de muis
+  // erboven houdt en voor een schermlezer.
+  assert.equal(html.split('title="Opent in een nieuw tabblad"').length - 1, 3, "elke externe link zegt dat hij een tabblad opent");
+  assert.ok(!html.includes('class="sbx"'), "geen pijltjes meer");
+  assert.match(CSS_KAAL, /\.sbl \{[^}]*color: var\(--actueel\)/, "de links staan in het groen van de bijkleur");
 });
 
 // --- altijd zichtbaar, en de hoogte gaat mee -------------------------------
@@ -129,11 +146,11 @@ test("op mobiel is de regel weg en staan de links in de voetrij", () => {
   assert.match(CSS_KAAL, /html\.compact \.subbalk \{ display: none/, "de regel is weg op mobiel");
   const smal = links(voetHTML(true));
   assert.deepEqual(smal.map((x) => x.tekst),
-    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief, meld je aan", "Word abonnee"],
-    "alle vijf staan in de voetrij van het paneel");
+    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief"],
+    "alle vier staan in de voetrij van het paneel");
   // En met dezelfde adressen en targets als in de regel: één renderer, één lijst.
   assert.deepEqual(smal.map((x) => [x.href, x.target]),
-    links(subbalkHTML()).map((x) => [x.href, x.target]));
+    snel().map((x) => [x.href, x.target]));
 });
 
 test("de grens is dezelfde die het menu overal gebruikt", () => {

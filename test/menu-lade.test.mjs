@@ -82,6 +82,7 @@ test("op mobiel neemt de kaart de volle breedte en vervalt het pijltje", () => {
   assert.match(CSS, /html\.compact \.ladekaart \{[^}]*width: auto !important/, "volle breedte");
   assert.match(CSS, /html\.compact \.ladepijl \{ display: none/, "geen pijltje");
   assert.match(CSS, /html\.compact \.plaatskolommen \{ grid-template-columns: 1fr/, "kolommen onder elkaar");
+  assert.match(CSS, /html\.compact \.plaatskolom p \{ display: none; \}/, "op een telefoon geen tiptekst, alleen kop en knop");
   assert.match(HTML, /if \(isNarrow\(\) \|\| !ladeKnop \|\| !ladeNu\) return;/, "en geen uitlijning");
 });
 

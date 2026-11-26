@@ -460,6 +460,13 @@
   html.compact .ladepijl { display: none; }
   html.compact .ladekaart { width: auto !important; margin-left: 0 !important; }
   html.compact .plaatskolommen { grid-template-columns: 1fr; gap: 10px; }
+  /* Op een telefoon telt de korte weg naar het formulier: de tip valt weg,
+     kop en knop blijven (besluit Anton, 26-11-2026). */
+  html.compact .plaatskolom p { display: none; }
+  html.compact .plaatskolom { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 12px; }
+  html.compact .plaatskolom h4 { flex: 1 1 auto; }
+  html.compact .plaatskolom .pil { margin-top: 0; }
+  html.compact .plaatskolom .plaatsknop { flex: 1 0 100%; }
   html.compact .ladekaart.actueel .h { flex: 1 0 100%; }
   html.compact .pknop { width: 100%; }
   html.compact .sluitknop { width: 44px; }

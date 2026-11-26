@@ -126,10 +126,6 @@
       <label for="titel">Titel</label>
       <input type="text" id="titel" maxlength="120">
 
-      <label for="toelichting">Toelichting naast de titel (optioneel)</label>
-      <input type="text" id="toelichting" maxlength="120" placeholder="bijv. Beeldscherm-apéro. Maak kennis, maak kennissen.">
-      <p class="hint">Eén korte regel die zegt wat het is. Leeg laten kan, dan staat er alleen de titel.</p>
-
       <div id="boekvak" hidden>
         <div class="rij">
           <div><label for="boektitel">Boektitel</label><input type="text" id="boektitel" maxlength="160"></div>
@@ -186,7 +182,7 @@
 
       <label for="onderschrift">Onderschrift</label>
       <select id="onderschriftkeuze">
-        <option value="open">Iedereen is van harte welkom (met datum en tijd in één zin)</option>
+        <option value="open">Iedereen is van harte welkom | Soyez les bienvenus</option>
         <option value="leden">Alleen voor geregistreerde leden</option>
         <option value="vrij">Eigen tekst…</option>
       </select>
@@ -274,7 +270,6 @@ function naarFormulier(r){
   $("begin").value = w ? w.begin : "18:00";
   $("eind").value = w ? w.eind : "19:30";
   $("datumtekst").value = r.datumtekst || "";
-  $("toelichting").value = r.toelichting == null ? STANDAARD.toelichting : r.toelichting;
 
   const vast = Object.prototype.hasOwnProperty.call(ONDERSCHRIFTEN, r.onderschrift);
   $("onderschriftkeuze").value = vast ? r.onderschrift : "vrij";
@@ -302,7 +297,6 @@ function uitFormulier(){
     // zodat een verouderd formulier de laatste keuze niet kan overschrijven.
     soort: $("soort").value,
     titel: $("titel").value.trim() || STANDAARD.titel,
-    toelichting: $("toelichting").value.trim(),
     wekelijks,
     overslaan: record.overslaan.slice(),
     datumtekst: $("datumtekst").value.trim() || null,
@@ -376,7 +370,7 @@ function tekenVoorbeeld(){
 }
 
 // --- reageren op invoer ---------------------------------------------------
-for (const id of ["aan","soort","titel","toelichting","boektitel","boekauteur","afbeelding","wekelijksaan",
+for (const id of ["aan","soort","titel","boektitel","boekauteur","afbeelding","wekelijksaan",
                   "weekdag","begin","eind","datumtekst","onderschriftkeuze","onderschriftvrij",
                   "knoptekst","knopurl","uitleg"]) {
   const el = $(id);

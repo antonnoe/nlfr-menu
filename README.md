@@ -86,10 +86,7 @@ knoptekst en -URL, de uitleg achter de `[?]` en een klein icoontje.
 De datumregel wordt zelf berekend in Parijse tijd: de eerstvolgende weekdag,
 waarbij het op de dag zelf tot de eindtijd nog "vandaag" is. Staat die datum in
 de overslaan-lijst, dan schuift hij een week op. Dat levert bijvoorbeeld
-"Donderdag 10 september van 18:00 tot +/- 19:30". Met het onderschrift
-"Iedereen is van harte welkom" staat het in de banner als één zin: "Iedereen is
-van harte welkom op donderdag 10 september, 18:00 tot +/- 19:30". Naast de titel
-staat een korte toelichting (eigen veld in de banner-maker). Zonder weekschema en zonder
+"Donderdag 10 september van 18:00 tot +/- 19:30". Zonder weekschema en zonder
 eigen datumtekst is er geen datumregel en wordt de knop "Lees meer…", die de
 uitleg opent.
 

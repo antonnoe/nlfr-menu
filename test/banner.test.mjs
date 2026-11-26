@@ -109,34 +109,18 @@ test("staat de banner uit, dan is er geen banner", () => {
 test("de banner toont titel, datumregel, onderschrift en knop", () => {
   const h = bannerHTML(JA, new Date("2026-09-07T10:00Z"));
   assert.match(h, /Café Jeudi/);
-  assert.match(h, /class="bnr-toel">Beeldscherm-apéro\. Maak kennis, maak kennissen\.</);
-  // Regel 2 is één zin: welkom met dag en tijd.
-  assert.match(h, /Iedereen is van harte welkom op <\/span><span class="bnr-dag">donderdag 10 september, 18:00 tot \+\/- 19:30</);
-  assert.ok(!/bnr-onder/.test(h), "het welkom staat al in de zin, niet nog eens los");
+  assert.match(h, /Donderdag 10 september van 18:00 tot \+\/- 19:30/);
+  assert.match(h, /Iedereen is van harte welkom \| Soyez les bienvenus/);
   assert.match(h, /ENTREZ/);
   assert.match(h, /https:\/\/meet\.google\.com\/gea-tjsy-gwk/);
   assert.match(h, /border-left-color:#2f6b3a/);
   assert.match(h, /class="bnr-vraag"/, "de [?]-knop hoort erbij");
 });
 
-test("toelichting: leeg laat hem weg, een ouder record krijgt de standaardtekst", () => {
-  const nu = new Date("2026-09-07T10:00Z");
-  assert.ok(!/bnr-toel/.test(bannerHTML({ ...JA, toelichting: "" }, nu)));
-  const oud = { ...JA }; delete oud.toelichting;
-  assert.match(bannerHTML(oud, nu), /bnr-toel">Beeldscherm-apéro/);
-  assert.equal(valideer(oud).record.toelichting, STANDAARD.toelichting);
-  assert.equal(valideer({ ...JA, toelichting: "" }).record.toelichting, "");
-  assert.equal(valideer({ ...JA, toelichting: "x".repeat(300) }).record.toelichting.length, 120);
-});
-
-test("eigen datumtekst of ander onderschrift: datum en onderschrift naast elkaar", () => {
-  const nu = new Date("2026-09-07T10:00Z");
-  const eigen = bannerHTML({ ...JA, datumtekst: "Kerstborrel, zaterdag 20 december" }, nu);
-  assert.match(eigen, /class="bnr-datum">Kerstborrel, zaterdag 20 december</);
-  assert.match(eigen, /class="bnr-onder">Iedereen is van harte welkom</);
-  const leden = bannerHTML({ ...JA, onderschrift: "leden" }, nu);
-  assert.match(leden, /class="bnr-datum">Donderdag 10 september van 18:00 tot \+\/- 19:30</);
-  assert.match(leden, /class="bnr-onder">Alleen voor geregistreerde leden</);
+test("datum en onderschrift staan onder elkaar in het middenblok", () => {
+  const h = bannerHTML(JA, new Date("2026-09-07T10:00Z"));
+  assert.match(h, /<div class="bnr-mid"><div class="bnr-datum">[^<]+<\/div><div class="bnr-onder">[^<]+<\/div><\/div>/);
+  assert.match(BANNER_CSS, /\.bnr-mid \{[^}]*flex-direction:column[^}]*text-align:center/);
 });
 
 test("zonder datumregel wordt de knop 'Lees meer…' en opent hij de uitleg", () => {

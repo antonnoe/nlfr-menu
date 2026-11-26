@@ -2,6 +2,7 @@
   "aan": true,
   "soort": "cafe",
   "titel": "Café Jeudi",
+  "toelichting": "Beeldscherm-apéro. Maak kennis, maak kennissen.",
   "wekelijks": { "weekdag": 4, "begin": "18:00", "eind": "19:30" },
   "overslaan": [],
   "datumtekst": null,

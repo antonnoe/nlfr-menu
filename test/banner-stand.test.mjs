@@ -22,7 +22,7 @@ test("aan zonder aanTot is effectief uit", () => {
 test("aan met aanTot in de toekomst is effectief aan, met die datum", () => {
   const s = effectieveStand(REC({ aanTot: "2026-09-10" }), maandag7sep);
   assert.deepEqual(s, { aan: true, datum: "2026-09-10", aanTot: "2026-09-10" });
-  assert.match(bannerHTML(REC({ aanTot: "2026-09-10" }), maandag7sep), /Donderdag 10 september/);
+  assert.match(bannerHTML(REC({ aanTot: "2026-09-10" }), maandag7sep), /donderdag 10 september/);
 });
 
 test("op de dag zelf blijft hij aan, de hele dag, ook na de eindtijd", () => {
@@ -33,7 +33,7 @@ test("op de dag zelf blijft hij aan, de hele dag, ook na de eindtijd", () => {
   // Na 19:30 wijst de gewone logica al naar volgende week; de banner noemt dan
   // nog steeds de donderdag van het "ja", niet een week later.
   const h = bannerHTML(rec, new Date("2026-09-10T19:00Z"));
-  assert.match(h, /Donderdag 10 september/);
+  assert.match(h, /donderdag 10 september/);
   assert.ok(!/17 september/.test(h), "geen datum waar niemand ja op zei");
 });
 

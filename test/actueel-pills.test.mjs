@@ -104,14 +104,13 @@ test("href, target, rel en de tooltip blijven werken zoals voorheen", () => {
 
 // ---- (b) de inhoud van actueel.json ---------------------------------------
 // LET OP: dit legt redactionele inhoud vast, wat actueel-json.test.mjs met
-// opzet NIET doet. Het staat hier omdat deze vier items en hun volgorde deel
+// opzet NIET doet. Het staat hier omdat deze drie items en hun volgorde deel
 // zijn van het afgesproken ontwerp van de lade. Wie de lade herschikt, hoort
 // deze lijst mee te veranderen — het is geen bestand dat je stilletjes bijwerkt.
 
 const DOC = JSON.parse(readFileSync(new URL("../actueel.json", import.meta.url), "utf8"));
 
 const AFGESPROKEN = [
-  { titel: "Recente activiteiten", href: "https://www.nederlanders.fr/#xg_network_activity", live: true, vorm: undefined },
   { titel: "Frankrijknieuws", href: "https://www.nederlanders.fr/page/actueel-frankrijknieuws", live: true, vorm: undefined },
   { titel: "Nieuwsbrief van vandaag", href: "https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", live: false, vorm: undefined },
   { titel: "Meld je aan voor de nieuwsbrief",
@@ -119,22 +118,25 @@ const AFGESPROKEN = [
     live: false, vorm: "tekst" },
 ];
 
-test("de lade toont vier items", () => {
+test("de lade toont drie items", () => {
+  // Recente activiteiten staat sinds 26-11-2026 als knop in de balk (besluit
+  // Anton) en is daarom uit de lade gehaald: het stond er anders dubbel.
   assert.ok(Array.isArray(DOC.kaarten), "kaarten hoort een lijst te zijn");
-  assert.equal(DOC.kaarten.length, 4);
+  assert.equal(DOC.kaarten.length, 3);
+  assert.ok(!DOC.kaarten.some((k) => k.titel === "Recente activiteiten"), "Recente activiteiten hoort niet dubbel in de lade");
 });
 
-test("de vier items staan in de afgesproken volgorde, met de afgesproken links", () => {
+test("de drie items staan in de afgesproken volgorde, met de afgesproken links", () => {
   assert.deepEqual(
     DOC.kaarten.map((k) => ({ titel: k.titel, href: k.href, live: k.live, vorm: k.vorm })),
     AFGESPROKEN
   );
 });
 
-test("precies twee items staan op live", () => {
-  // Drie zou het stipje betekenisloos maken (dan pulseert bijna alles), nul
+test("precies één item staat op live", () => {
+  // Meer zou het stipje betekenisloos maken (dan pulseert bijna alles), nul
   // haalt het stipje van de balkknop weg.
-  assert.equal(DOC.kaarten.filter((k) => k.live === true).length, 2);
+  assert.equal(DOC.kaarten.filter((k) => k.live === true).length, 1);
 });
 
 test("de nieuwsbriefkaart draagt geen accent meer", () => {

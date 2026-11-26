@@ -104,7 +104,19 @@
   /* De belangrijkste knop van het forum: de enige in kleur, en uiterst rechts. */
   .splaats { flex: none; padding: 0 26px; background: var(--brand); border-color: var(--brand); color: #fff; }
   .splaats:hover { background: var(--brand-dark); }
-  .sactueel { flex: none; }
+  /* Gesplitste knop: links een gewone link naar Recente activiteiten op de
+     voorpagina, rechts een pijl die de uitklapper "Nu actueel" opent. */
+  .sactueel { flex: none; padding: 0; gap: 0; overflow: hidden; }
+  .sactlink { display: inline-flex; align-items: center; justify-content: center; gap: 9px; flex: 1 1 auto;
+              min-height: 42px; padding: 0 10px 0 14px; color: inherit; text-decoration: none; white-space: nowrap; }
+  .sactkort { display: none; }
+  .sactpijl { display: inline-flex; align-items: center; justify-content: center; flex: none;
+              min-width: 38px; min-height: 42px; padding: 0; margin: 0; border: 0; border-left: 1px solid #d8ccc7;
+              background: transparent; color: var(--brand); font: inherit; cursor: pointer; }
+  .sactpijl:hover { background: #f3e9e6; }
+  .sactpijl.active { background: var(--brand); color: #fff; border-left-color: var(--brand); }
+  .sactpijl.active svg { color: #fff; }
+  .sactlink:focus-visible, .sactpijl:focus-visible { outline: 2px solid var(--brand-dark); outline-offset: -3px; border-radius: 999px; }
   .sadmin { flex: none; width: 44px; height: 44px; padding: 0; margin-left: auto; display: none; }
   .sadmin.show { display: inline-flex; }
   /* De knop waarvan de uitklapper openstaat: vol bordeaux, witte tekst. */
@@ -417,6 +429,11 @@
      van 10px. Staat hier 4px (de helft van de oude gap van 8), dan zijn ze
      samen 2px te breed en vallen ze onder elkaar. */
   html.compact .sactueel { order: 5; flex: 1 1 calc(50% - 5px); }
+  /* Smal venster: korte naam, anders past de gesplitste knop niet in de helft. */
+  html.compact .sactlang { display: none; }
+  html.compact .sactkort { display: inline; }
+  html.compact .sactlink { padding: 0 6px 0 12px; min-width: 0; }
+  html.compact .sactpijl { min-width: 44px; }
   html.compact .splaats { order: 6; flex: 1 1 calc(50% - 5px); padding: 0 12px; }
   html.compact .sadmin { order: 7; margin-left: 0; }
   html.compact .paneel { padding: 14px; }
@@ -519,13 +536,13 @@
       <form class="szoek" id="searchform">
         <div class="zoekbox">
           <button type="submit" class="zloep" aria-label="Zoek in het forum"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
-          <input type="text" id="q" placeholder="Zoek in het forum…" autocomplete="off" aria-label="Zoeken in het forum">
+          <input type="text" id="q" placeholder="Zoek in forum…" autocomplete="off" aria-label="Zoeken in het forum">
           <button type="button" class="wis" id="wis" aria-label="Wissen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
           <button type="button" class="ga" id="aibtn" title="Zoek met AI in forum en Infofrankrijk"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.3L19 9.2l-5.1 1.9L12 16.4l-1.9-5.3L5 9.2l5.1-1.9z"/></svg>AI-modus</button>
         </div>
       </form>
 
-      <button type="button" class="sknop sactueel" id="actueelbtn" aria-expanded="false" aria-controls="lade"><span class="dot" id="actueeldot"></span>Nu actueel</button>
+      <span class="sknop sactueel"><a class="sactlink" href="https://www.nederlanders.fr/#xg_network_activity" target="_parent"><span class="dot" id="actueeldot"></span><span class="sactlang">Recente activiteiten</span><span class="sactkort">Activiteiten</span></a><button type="button" class="sactpijl" id="actueelbtn" aria-label="Nu actueel" title="Nu actueel" aria-expanded="false" aria-controls="lade"><svg class="caret" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></span>
 
       <button type="button" class="sknop splaats" id="plaatsbtn" aria-expanded="false" aria-controls="lade">Plaats bericht<svg class="caret" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
 

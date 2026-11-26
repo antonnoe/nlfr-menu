@@ -210,11 +210,12 @@ test("de zoekbalk, Nu actueel en de beheerknop staan er ongewijzigd", () => {
   assert.ok(HTML.includes('<form class="szoek" id="searchform">'), "het zoekformulier");
   // Sinds november 2026 zoekt het veld gewoon in het forum; de AI-zoeker is
   // een keuze ernaast (knop AI-modus), geen verplichte route.
-  assert.ok(HTML.includes('placeholder="Zoek in het forum…"'), "met zijn placeholder");
+  assert.ok(HTML.includes('placeholder="Zoek in forum…"'), "met zijn placeholder");
   assert.ok(HTML.includes('id="aibtn"'), "en de knop AI-modus");
   assert.ok(HTML.includes('id="loepbtn"'), "en de loep ernaast");
   assert.ok(HTML.includes('id="actueelbtn"'), "Nu actueel");
-  assert.ok(HTML.includes("Nu actueel</button>"), "met zijn label");
+  assert.ok(HTML.includes('aria-label="Nu actueel"'), "met zijn naam voor schermlezers");
+  assert.ok(HTML.includes('<a class="sactlink" href="https://www.nederlanders.fr/#xg_network_activity" target="_parent">'), "en de link naar Recente activiteiten ervoor");
   assert.ok(HTML.includes('id="actueeldot"'), "en zijn stiplampje");
   assert.ok(HTML.includes('id="adminbtn"'), "de beheerknop");
   assert.ok(HTML.includes("function syncAdmin"), "die alleen voor de beheerder zichtbaar is");

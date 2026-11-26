@@ -9,6 +9,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
+  BANNER_CSS,
   STANDAARD, KLEUREN, ONDERSCHRIFTEN,
   volgendeDatum, datumRegel, onderschriftTekst,
   valideer, normaliseer, bannerHTML, inParijs,
@@ -224,4 +225,14 @@ test("normaliseer vult een half record aan tot het hele schema", () => {
   assert.deepEqual(uit.overslaan, []);
   // Ook een leeg of onzinnig record levert een bruikbaar schema.
   assert.deepEqual(Object.keys(normaliseer(null)).sort(), Object.keys(STANDAARD).sort());
+});
+
+test("de banner is laag en rustig: knop met rand, geen vol vlak, geen knipperen", () => {
+  const h = bannerHTML({ aan: true }, new Date("2026-09-07T10:00Z"), { voorbeeld: true });
+  assert.match(h, /--bk:#2f6b3a/, "de gekozen kleur gaat als --bk mee");
+  assert.ok(!/class="bnr-knop"[^>]*style=/.test(h), "de knop krijgt geen eigen vulkleur meer");
+  const css = BANNER_CSS;
+  assert.match(css, /\.bnr-knop \{[^}]*background:#fff; color:var\(--bk\); border:1\.5px solid var\(--bk\)/);
+  assert.ok(!/animation/.test(css), "het vraagteken knippert niet");
+  assert.match(css, /\.bnr-knop::after \{[^}]*height:44px/, "raakvlak van de knop blijft 44px");
 });

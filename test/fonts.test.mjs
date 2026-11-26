@@ -68,3 +68,20 @@ test("Poppins en Mulish staan nog wel vooraan, voor wie ze lokaal heeft", () => 
     assert.match(s, /'Mulish',\s*system-ui/, naam + ": Mulish hoort de eerste keus te blijven");
   }
 });
+
+// Uitzondering (herstelronde 1, 26-11-2026): de redactietool /redactie gebruikt de huisstijlletters
+// Manrope en Source Serif 4 (zelfde als nieuws.infofrankrijk.com, docs/huisstijl). Dat is een
+// bewuste keuze voor alleen dit beheerscherm; het menu (index.html) en Nu actueel (actueel.html)
+// blijven zonder webfonts, daarvoor gelden de tests hierboven ongewijzigd.
+test("redactie.html: huisstijlletters via Google Fonts, met terugval op het systeemfont", () => {
+  const s = lees("redactie.html");
+  assert.match(s, /fonts\.googleapis\.com\/css2\?family=Manrope[^"]*family=Source\+Serif\+4/);
+  assert.match(s, /body\{[^}]*font-family:Manrope,system-ui/);
+  assert.match(s, /\.t\{font-family:"Source Serif 4",Georgia/);
+});
+
+test("het menu en Nu actueel blijven zonder Google Fonts, ook nu redactie.html ze wel gebruikt", () => {
+  for (const naam of ["index.html", "actueel.html"]) {
+    assert.ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(lees(naam)), naam);
+  }
+});

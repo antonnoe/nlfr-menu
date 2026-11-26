@@ -117,6 +117,12 @@ test("de banner toont titel, datumregel, onderschrift en knop", () => {
   assert.match(h, /class="bnr-vraag"/, "de [?]-knop hoort erbij");
 });
 
+test("datum en onderschrift staan onder elkaar in het middenblok", () => {
+  const h = bannerHTML(JA, new Date("2026-09-07T10:00Z"));
+  assert.match(h, /<div class="bnr-mid"><div class="bnr-datum">[^<]+<\/div><div class="bnr-onder">[^<]+<\/div><\/div>/);
+  assert.match(BANNER_CSS, /\.bnr-mid \{[^}]*flex-direction:column[^}]*text-align:center/);
+});
+
 test("zonder datumregel wordt de knop 'Lees meer…' en opent hij de uitleg", () => {
   const h = bannerHTML({ ...STANDAARD, aanTot: "2999-12-31", wekelijks: null, datumtekst: null });
   assert.match(h, /Lees meer…/);

@@ -238,17 +238,20 @@ test("de link-targetregels zijn ongewijzigd", () => {
   assert.equal(abo.pagina, NL + "/page/meedoen");
 });
 
-test("de smalle regel onder de balk telt precies vijf links", () => {
+test("de smalle regel onder de balk telt precies vier links", () => {
   const d = menuData();
   assert.deepEqual(d.SNELRIJ.map((k) => k[0]),
-    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief, meld je aan", "Word abonnee"],
-    "deze vijf, in deze volgorde, en geen andere");
+    ["Diensten", "Nieuwspagina", "Frankrijk\u00adkalender", "Nieuwsbrief"],
+    "deze vier, in deze volgorde, en geen andere");
   assert.equal(d.SNELRIJ[0][1], NL + "/page/diensten",
     "Diensten wijst naar de pagina binnen Ning, niet naar het oude /diensten");
   assert.equal(d.SNELRIJ[1][1], "https://nieuws.infofrankrijk.com/");
   assert.equal(d.SNELRIJ[2][1], "https://kalender-frankrijk.vercel.app/");
   assert.equal(d.SNELRIJ[3][1], "https://nlfr-nieuwsbrief.vercel.app/oproep");
-  assert.equal(d.SNELRIJ[4][1], "https://infofrankrijk.com/abonnement/");
+  // Word abonnee staat sinds november 2026 in de netwerkbalk boven de titel
+  // (pagina van Ning), los van Plaats bericht. Dit menu mag daarom pas live
+  // samen met die knop in de balk, anders is Word abonnee voor bezoekers weg.
+  assert.ok(!d.SNELRIJ.some((k) => /abonnement/.test(k[1])), "Word abonnee staat niet meer in het menu");
 });
 
 test("de knoppen onderin het paneel zijn vervallen", () => {
@@ -312,7 +315,12 @@ test("er staat geen kaartkop meer boven de strip", () => {
 });
 
 test("de strip en de hoogte-sync staan er zoals afgesproken", () => {
-  assert.ok(HTML.includes("AI-zoek in forum &amp; Infofrankrijk…"), "zoekplaceholder");
+  assert.ok(HTML.includes("Zoek in het forum…"), "zoekplaceholder");
+  // Gewoon zoeken gaat naar de zoekfunctie van Ning, AI-modus naar de AI-zoeker.
+  assert.ok(HTML.includes('var ZOEK_FORUM = "https://www.nederlanders.fr/main/search/search?q="'), "gewone zoekroute");
+  assert.ok(HTML.includes('var ZOEK_APP = "https://www.nederlanders.fr/page/ai-zoek?q="'), "AI-zoekroute");
+  assert.match(HTML, /function doeZoek\(\)\{[\s\S]*?ZOEK_FORUM/, "Enter zoekt in het forum");
+  assert.match(HTML, /function doeAi\(\)\{[\s\S]*?ZOEK_APP/, "AI-modus opent de AI-zoeker");
   assert.ok(HTML.includes("nlfrMenuHeight"), "hoogte-sync");
   assert.ok(HTML.includes("noresize"), "noresize-terugval");
   assert.ok(HTML.includes('e.origin !== PARENT_ORIGIN'), "PARENT_ORIGIN-check ongewijzigd");

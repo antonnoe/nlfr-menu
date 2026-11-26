@@ -208,7 +208,10 @@ test("op mobiel staat er bij het openen van het menu niets open", () => {
 
 test("de zoekbalk, Nu actueel en de beheerknop staan er ongewijzigd", () => {
   assert.ok(HTML.includes('<form class="szoek" id="searchform">'), "het zoekformulier");
-  assert.ok(HTML.includes('placeholder="AI-zoek in forum &amp; Infofrankrijk…"'), "met zijn placeholder");
+  // Sinds november 2026 zoekt het veld gewoon in het forum; de AI-zoeker is
+  // een keuze ernaast (knop AI-modus), geen verplichte route.
+  assert.ok(HTML.includes('placeholder="Zoek in het forum…"'), "met zijn placeholder");
+  assert.ok(HTML.includes('id="aibtn"'), "en de knop AI-modus");
   assert.ok(HTML.includes('id="loepbtn"'), "en de loep ernaast");
   assert.ok(HTML.includes('id="actueelbtn"'), "Nu actueel");
   assert.ok(HTML.includes("Nu actueel</button>"), "met zijn label");

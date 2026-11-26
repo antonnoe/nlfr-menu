@@ -49,13 +49,34 @@ test("alleen de zes bekende acties en vijf kanalen gaan door", () => {
   assert.equal(sleutel({ NV_REDACTIE_SECRET: "  " }), "");
 });
 
-test("de pagina: drie tabs, 5 schakelaars, geen waarde van een sleutel", () => {
+test("de pagina: één lijst zonder tabs, geen herlaadknop, geen waarde van een sleutel", () => {
   const h = lees("redactie.html");
-  for (const t of ["Vandaag", "Niet geplaatst", "Meer", "Wacht op jou", "Ongedaan maken", "Opnieuw laten schrijven", "Café Jeudi", "Zo staat het er nu", "Dit apparaat"]) assert.ok(h.includes(t), t);
-  for (const p of ["Nederlanders.fr nieuws", "Nieuwsbrief", "Infopoche", "Zijbalk van het forum", "Infofrankrijk"]) assert.ok(h.includes(p), p);
-  // Webfonts: zie test/fonts.test.mjs (redactie.html is daar de enige uitzondering).
+  for (const t of ["Instellingen", "Bekijken", "Weg, overal", "Ongedaan maken", "Opnieuw laten schrijven", "Café Jeudi", "Zo staat het er nu", "Dit apparaat", "In de nieuwsbrief", "Kop of samenvatting verbeteren", "Andere plekken", "Bekijk op de site"]) assert.ok(h.includes(t), t);
+  for (const p of ["Nederlanders.fr nieuws", "Infopoche", "Zijbalk van het forum", "Infofrankrijk"]) assert.ok(h.includes(p), p);
+  assert.ok(!/role="tablist"|data-tab=|id="ververs"|Opnieuw laden/.test(h), "geen tabs en geen herlaadknop");
+  assert.ok(h.includes("visibilitychange"), "verversen bij terugkomen in het tabblad");
   assert.ok(!/BANNER_TOKEN|NV_REDACTIE_SECRET|CRON_SECRET/.test(h));
   assert.ok(h.includes("/api/redactie-nv") && h.includes("/api/regie") && h.includes("/api/redactie-banner"));
+  assert.ok(fs.existsSync(new URL("../archief/redactie-v2.html", import.meta.url)), "vorige versie bewaard");
+});
+
+test("peil is een toegestane actie met eigen keuzes; id en keuze worden gecontroleerd", () => {
+  assert.deepEqual(leesOpdracht({ id: "m.2026.0037", actie: "peil", keuze: "vastgesteld", rommel: 1 }).opdracht, { id: "m.2026.0037", actie: "peil", keuze: "vastgesteld" });
+  for (const k of ["vastgesteld", "verwacht", "raakt_niet", "lijst", "niet_nodig"]) assert.equal(leesOpdracht({ id: "p1", actie: "peil", keuze: k }).ok, true, k);
+  assert.equal(leesOpdracht({ id: "p1", actie: "peil", keuze: "weg" }).ok, false);
+  assert.equal(leesOpdracht({ id: "p1", actie: "peil" }).ok, false);
+  assert.equal(leesOpdracht({ id: "../p1", actie: "peil", keuze: "lijst" }).ok, false);
+  assert.equal(leesOpdracht({ id: "a b", actie: "peil", keuze: "lijst" }).ok, false);
+});
+
+test("het veld peil uit de GET van de motor gaat ongewijzigd door; zonder veld geen fout", async () => {
+  const env = { NV_REDACTIE_SECRET: "x" };
+  const peil = [{ id: "p1", soort: "wijziging", zekerheid: "groen", titel: "T", advies: "vastgesteld" }];
+  const uit = await roepMotor({ methode: "GET", env, haal: antw(200, { berichten: [], peil }) });
+  assert.deepEqual(uit.body.peil, peil);
+  const zonder = await roepMotor({ methode: "GET", env, haal: antw(200, { berichten: [] }) });
+  assert.equal(zonder.status, 200);
+  assert.equal(zonder.body.peil, undefined);
 });
 
 test("gearchiveerde schermen staan in archief/ en sturen door naar /redactie", () => {
@@ -69,25 +90,18 @@ test("gearchiveerde schermen staan in archief/ en sturen door naar /redactie", (
   assert.ok(!v.redirects.some((r) => r.source === "/archief"), "/archief (archief.html, het nieuwsarchief) blijft staan");
 });
 
-test("herstelronde 1: één Weg-knop, plekken onder de kop, één bericht open, geen getallen in redenen", () => {
+test("eenvoudig scherm: Weg per rij, 44 px, plekken achter de kop, geen getallen in redenen", () => {
   const h = lees("redactie.html");
-  assert.ok(h.includes("Weg, overal"), "Weg, overal");
-  assert.ok(!h.includes("groot-weg"), "geen tweede Weg-knop in het uitgeklapte bericht");
-  assert.ok(!/Herschrijf\b/.test(h), "geen afgekapt Herschrijf");
-  assert.ok(!/overflow-x:\s*hidden/.test(h.slice(0, h.indexOf("</style>")).replace(/\.net[^}]*}/g, "")), "geen overflow-x:hidden op html");
-  assert.ok(!/html\{overflow-x/.test(h));
-  assert.ok(h.includes("laatst gecontroleerd om") && !/laatste ronde/.test(h));
-  assert.ok(h.includes("De motor past deze kop daarna niet meer aan.") && h.includes("Bekijk op nieuws.infofrankrijk.com"));
+  assert.ok(!h.includes("groot-weg"));
+  assert.ok(!/overflow-x:\s*hidden/.test(h.slice(0, h.indexOf("</style>"))), "geen overflow-x:hidden");
+  assert.ok(h.includes("niet in de brief") && h.includes(" geplaatst vandaag") && h.includes(", motor liep om "));
+  assert.ok(h.includes("brief van morgen 06:00"));
+  assert.ok(h.includes("Na bewaren laat de motor kop en samenvatting met rust"));
+  assert.ok(!/data-doe="bewerk"|Volledige tekst|id="bw-tekst"/.test(h), "volledige tekst bewerken is vervallen");
   assert.ok(h.includes("Inloggen met vingerafdruk op dit apparaat"));
-  assert.ok(!h.includes("Nu actueel"));
   assert.ok(h.includes("Nog niet bevestigd") && h.includes("Afgezegd voor ") && h.includes("Gaat door op "));
-  assert.ok(!h.includes("Staat op Nee"));
-  assert.ok(h.includes("Plaatsen kan niet:") && h.includes("Laat hem opnieuw schrijven of verbeter de kop."));
   assert.ok(h.includes("redenTekst"), "gebruikt het veld redenTekst van de motor");
   for (const z of ["Te weinig van belang voor onze lezers", "De tekst noemt een krant", "De tekst lijkt te veel op het origineel", "Maar één bron gevonden"]) assert.ok(h.includes(z), z);
-  // Meer: Café Jeudi bovenaan, Zo staat het er nu onderaan
-  const meer = h.slice(h.indexOf('id="meer"'));
-  assert.ok(meer.indexOf("Café Jeudi") < meer.indexOf("Bronnen") && meer.indexOf("Dit apparaat") < meer.indexOf("Zo staat het er nu"));
-  // netwerkbalk: tikvlak minstens 44 px
-  assert.match(h, /\.net a\{[^}]*min-height:48px/);
+  assert.match(h, /\.wegk\{[^}]*min-height:44px/);
+  assert.match(h, /\.lk\{[^}]*min-height:48px/);
 });

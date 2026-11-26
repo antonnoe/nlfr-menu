@@ -1,6 +1,6 @@
 // /api/redactie-nv — de brug tussen /redactie en Nieuwsvoorziening.
 // GET  -> berichten van de laatste dagen (?dagen=2) uit nieuws.infofrankrijk.com/api/redactie
-// POST -> { id, actie: weg|terug|kanaal|plaats|herschrijf|bewerk, ... }
+// POST -> { id, actie: weg|terug|kanaal|plaats|herschrijf|bewerk, ... } of { id, actie: "peil", keuze }
 // Achter de bestaande inlog (zoals /api/regie). De sleutel voor de motor staat in
 // NV_REDACTIE_SECRET en verlaat deze server nooit: niet in antwoorden, niet in logs.
 import { toegangVanVerzoek } from "../lib/auth-node.js";

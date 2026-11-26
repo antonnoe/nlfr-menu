@@ -227,12 +227,12 @@ test("normaliseer vult een half record aan tot het hele schema", () => {
   assert.deepEqual(Object.keys(normaliseer(null)).sort(), Object.keys(STANDAARD).sort());
 });
 
-test("de banner is laag en rustig: knop met rand, geen vol vlak, geen knipperen", () => {
+test("de banner is laag maar heeft kleur: kleine volle knop, geen knipperen", () => {
   const h = bannerHTML({ aan: true }, new Date("2026-09-07T10:00Z"), { voorbeeld: true });
   assert.match(h, /--bk:#2f6b3a/, "de gekozen kleur gaat als --bk mee");
-  assert.ok(!/class="bnr-knop"[^>]*style=/.test(h), "de knop krijgt geen eigen vulkleur meer");
   const css = BANNER_CSS;
-  assert.match(css, /\.bnr-knop \{[^}]*background:#fff; color:var\(--bk\); border:1\.5px solid var\(--bk\)/);
+  assert.match(css, /\.bnr-knop \{[^}]*min-height:34px[^}]*background:var\(--bk\); color:#fff/, "kleine knop, vol in de gekozen kleur");
+  assert.match(css, /\.bnr \{[^}]*background:rgba\(128,0,0,\.05\)/, "zachtrood vlak");
   assert.ok(!/animation/.test(css), "het vraagteken knippert niet");
   assert.match(css, /\.bnr-knop::after \{[^}]*height:44px/, "raakvlak van de knop blijft 44px");
 });

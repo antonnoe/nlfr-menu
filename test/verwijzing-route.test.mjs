@@ -347,7 +347,7 @@ test("alleen de reviewroute schrijft verwijzingen — de cron niet", () => {
 test("elke actie die de reviewtool stuurt, kent de route ook", () => {
   // De tool is losstaande HTML; een typefout in een actienaam zou pas op
   // productie opvallen, als een klik niets doet.
-  const tool = readFileSync(new URL("../review.html", import.meta.url), "utf8");
+  const tool = readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
   const route = readFileSync(new URL("../api/review.js", import.meta.url), "utf8");
   const acties = [...tool.matchAll(/actie:\s*"([a-z-]+)"/g)].map((m) => m[1]);
   assert.ok(acties.includes("verwijs"), "de tool stuurt geen verwijs-actie meer");

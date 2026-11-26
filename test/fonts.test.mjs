@@ -12,7 +12,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const BESTANDEN = ["index.html", "actueel.html", "archief.html", "banner-beheer.html", "lib/banner.js"];
+const BESTANDEN = ["index.html", "actueel.html", "archief.html", "archief/banner-beheer.html", "lib/banner.js"];
 const lees = (naam) => readFileSync(new URL("../" + naam, import.meta.url), "utf8");
 
 // De stapel die overal achter 'Poppins' en 'Mulish' hoort te staan.

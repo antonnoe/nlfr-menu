@@ -283,11 +283,12 @@ test("de vijf kolommen staan in de goede volgorde", () => {
   assert.ok(!d.DEUREN_LINK.mijn, "Mijn NLFR hoort zijn lade te houden");
 });
 
-test("de beheerlade begint met Banner beheren", () => {
+test("de beheerlade begint met Redactie en linkt niet meer naar gearchiveerde schermen", () => {
   const d = menuData();
-  assert.equal(d.ADMIN_LINKS[0][0], "Banner beheren");
-  assert.equal(d.ADMIN_LINKS[0][1], "/banner-beheer");
+  assert.equal(d.ADMIN_LINKS[0][0], "Redactie");
+  assert.equal(d.ADMIN_LINKS[0][1], "/redactie");
   assert.equal(d.ADMIN_LINKS[0][2], "_blank", "de beheerpagina opent in een nieuw tabblad");
+  for (const l of d.ADMIN_LINKS) assert.ok(!/^\/(review|regie|selectie|banner-beheer)/.test(l[1]), l[1] + " is gearchiveerd");
   assert.ok(!/BANNER_TOKEN/.test(HTML), "er hoort geen token in de menu-HTML te staan");
 });
 

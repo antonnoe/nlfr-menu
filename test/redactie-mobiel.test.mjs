@@ -4,7 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { PLEKKEN_VIJF, RUBRIEKEN, RUBRIEK_LABEL, REDENEN, LOS_TEKST } from "../lib/redactieregels.js";
 
-const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
+const html = fs.readFileSync(new URL("../archief/redactie-oud.html", import.meta.url), "utf8");
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const regels = { plekken: PLEKKEN_VIJF, rubrieken: RUBRIEKEN.map((key) => ({ key, label: RUBRIEK_LABEL[key] })), redenen: REDENEN, losTekst: LOS_TEKST };
 

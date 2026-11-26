@@ -203,7 +203,7 @@ test("zonder overheidsberichten is er niets te signaleren", () => {
 
 test("de reviewtool toont de melding in de gevraagde bewoording", async () => {
   const fs = await import("node:fs");
-  const html = fs.readFileSync(new URL("../review.html", import.meta.url), "utf8");
+  const html = fs.readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
   assert.ok(html.includes("Over dit onderwerp staat al een overheidsbericht live:"));
   assert.ok(html.includes("primaireBronHtml(c)"), "de melding wordt bij het concept gerenderd");
 });

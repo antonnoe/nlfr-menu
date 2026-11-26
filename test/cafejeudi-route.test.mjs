@@ -188,14 +188,14 @@ test("banner-POST bij een mislukte lezing schrijft niets", async () => {
 });
 
 test("het beheerformulier stuurt geen aanTot mee", () => {
-  const beheer = readFileSync(new URL("../banner-beheer.html", import.meta.url), "utf8");
+  const beheer = readFileSync(new URL("../archief/banner-beheer.html", import.meta.url), "utf8");
   assert.ok(!/aanTot:\s*record\.aanTot/.test(beheer));
 });
 
 // --- de pagina ---------------------------------------------------------------
 
 import { readFileSync } from "node:fs";
-const reviewHtml = readFileSync(new URL("../review.html", import.meta.url), "utf8");
+const reviewHtml = readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
 
 test("review.html: blok met Ja en Nee, via de sessie en zonder BANNER_TOKEN", () => {
   assert.match(reviewHtml, /id="cafejeudi"/);

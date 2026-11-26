@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const actueel = readFileSync(new URL("../actueel.html", import.meta.url), "utf8");
-const review = readFileSync(new URL("../review.html", import.meta.url), "utf8");
+const review = readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
 const actueelStijl = actueel.slice(actueel.indexOf("<style>"), actueel.indexOf("</style>"));
 const reviewStijl = review.slice(review.indexOf("<style>"), review.indexOf("</style>"));
 

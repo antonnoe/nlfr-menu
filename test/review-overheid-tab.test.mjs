@@ -30,7 +30,7 @@ import { readFileSync } from "node:fs";
 import { assembleerTegels } from "../lib/tegels.js";
 import { splitsAntwoord, artikelSleutel } from "../lib/levering.js";
 
-const review = readFileSync(new URL("../review.html", import.meta.url), "utf8");
+const review = readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
 
 // ---- De twee tabbladen in de markup ----------------------------------------
 

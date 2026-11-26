@@ -6,10 +6,66 @@
     }
   },
   "rewrites": [
-    { "source": "/auth/callback", "destination": "/api/auth-callback" }
+    {
+      "source": "/auth/callback",
+      "destination": "/api/auth-callback"
+    }
   ],
   "crons": [
-    { "path": "/api/cron", "schedule": "7 * * * *" },
-    { "path": "/api/selectie-cron", "schedule": "37 * * * *" }
+    {
+      "path": "/api/cron",
+      "schedule": "7 * * * *"
+    },
+    {
+      "path": "/api/selectie-cron",
+      "schedule": "37 * * * *"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/review",
+      "destination": "/redactie",
+      "permanent": false
+    },
+    {
+      "source": "/review.html",
+      "destination": "/redactie",
+      "permanent": false
+    },
+    {
+      "source": "/regie",
+      "destination": "/redactie",
+      "permanent": false
+    },
+    {
+      "source": "/regie.html",
+      "destination": "/redactie",
+      "permanent": false
+    },
+    {
+      "source": "/banner-beheer",
+      "destination": "/redactie",
+      "permanent": false
+    },
+    {
+      "source": "/banner-beheer.html",
+      "destination": "/redactie",
+      "permanent": false
+    },
+    {
+      "source": "/selectie",
+      "destination": "/redactie",
+      "permanent": false
+    },
+    {
+      "source": "/selectie.html",
+      "destination": "/redactie",
+      "permanent": false
+    },
+    {
+      "source": "/archief/:path+",
+      "destination": "/redactie",
+      "permanent": false
+    }
   ]
 }

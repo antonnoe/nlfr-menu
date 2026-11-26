@@ -121,4 +121,5 @@ Doel: `/redactie` zo eenvoudig dat de beheerder het op zijn telefoon zonder nade
 - B9. Maat 390 px, tikdoelen minstens 44 px, ook goed op laptopbreedte (kolom van 560 px).
 - Gemeten: Playwright op 390 px, scrollWidth 390 in lijst, open bericht en verbeterscherm. Tests: `test/redactie-eenvoudig.test.mjs` (paginacode in een vm), `test/redactie-nv.test.mjs`.
 - Open: de motor moet het veld `peil` en de POST-actie `peil` nog leveren; tot dan toont het scherm alleen de bestaande PEIL-bewaking. De netwerkbalk bovenaan de pagina is vervallen (links staan onder Instellingen, "Zo staat het er nu").
+- Herstelronde 1 (26-11-2026, reiskeuring op 390 x 844): in Wacht op jou hooguit 2 kaarten (Café Jeudi telt mee), de rest achter "Nog N wachten op jou ›"; PEIL-kaart compacter (bron als "Bron ↗" op de regel met de tekstlinks, tikvlak 44 px); eerste bericht-rij staat nu op ca. 535 px bij Café Jeudi + PEIL-kaart; Bewaren in het verbeterscherm doet history.back() naar het bericht; een melding verdwijnt bij navigeren, behalve Ongedaan maken als je in de lijst komt; Dit apparaat direct onder Café Jeudi; geen "Bekijk op de site" bij een weggehaald bericht.
 

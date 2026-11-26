@@ -33,23 +33,23 @@ button:disabled{opacity:.5;cursor:not-allowed}
 main{padding-bottom:40px}
 body.met-toast main{padding-bottom:110px}
 .storing{background:var(--roodzacht);color:var(--rood);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:15px;font-weight:700}
-.wacht{margin-top:12px;border:1px solid var(--lijn2);border-radius:16px;padding:14px;background:var(--zacht)}
+.wacht{margin-top:10px;border:1px solid var(--lijn2);border-radius:16px;padding:12px 14px 6px;background:var(--zacht)}
 .wacht .r{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--grijs)}
-.wacht h3{font-weight:600;font-size:18px;line-height:1.3;margin:4px 0 10px}
-.wacht .regel{font-size:15px;color:#3b3430;margin:0 0 6px}
+.wacht h3{font-weight:600;font-size:17px;line-height:1.25;margin:2px 0 8px}
+.wacht .regel{font-size:14px;line-height:1.35;color:#3b3430;margin:0 0 6px}
 .wacht .regel s{color:var(--grijs)}
-.wacht .twijfel{font-size:14px;color:var(--grijs);margin:0 0 6px}
-.wacht .uit{font-size:13px;color:var(--grijs);margin:0 0 10px}
-.wacht .uit a{font-weight:600}
-.twee{display:flex;gap:8px}
+.wacht .twijfel{font-size:13px;line-height:1.35;color:var(--grijs);margin:0 0 8px}
+.twee{display:flex;gap:8px;margin-bottom:6px}
 .knop{flex:1;min-height:48px;border-radius:12px;border:1px solid var(--lijn2);background:var(--kaart);font-weight:700;font-size:15px;padding:0 14px}
 .knop.hoofd{background:var(--inkt);color:#fff;border-color:var(--inkt)}
 .knop.weg{color:var(--rood);border-color:var(--rood);width:100%}
-.knop.peilknop{width:100%;flex:none}
+.knop.peilknop{width:100%;flex:none;min-height:48px;margin-bottom:0}
 .knop.peilknop.groen{background:var(--peil-groen,#2f6b3a);border-color:var(--peil-groen,#2f6b3a);color:#fff}
 .knop.peilknop.oranje{background:#EF9F27;border-color:#EF9F27;color:#412402}
-.tekstlinks{display:flex;flex-wrap:wrap;gap:0 18px;margin-top:2px}
-.tekstlinks button{min-height:44px;background:none;border:0;color:var(--maroon);font-weight:700;font-size:15px;padding:0}
+.tekstlinks{display:flex;flex-wrap:wrap;align-items:center;gap:0 14px;margin-top:0}
+.tekstlinks button,.tekstlinks a{min-height:44px;background:none;border:0;color:var(--maroon);font-weight:700;font-size:14px;padding:0;display:inline-flex;align-items:center;white-space:nowrap}
+.tekstlinks a{margin-left:auto}
+.nog{display:flex;width:100%;align-items:center;justify-content:space-between;min-height:48px;margin-top:6px;padding:0 4px;background:none;border:0;border-bottom:1px solid var(--lijn);color:var(--maroon);font-weight:700;font-size:15px;text-align:left}
 .stand{font-size:13px;color:var(--grijs);padding:16px 2px 6px}
 .lijst{border-top:1px solid var(--lijn)}
 .rij{display:flex;align-items:center;gap:10px;padding:6px 0 6px 2px;border-bottom:1px solid var(--lijn)}
@@ -93,9 +93,9 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
 .blok h3{font-weight:600;font-size:18px;margin-bottom:4px}
 .blok p{font-size:15px;color:var(--grijs)}
 .regel2{display:flex;justify-content:space-between;align-items:center;min-height:48px;border-top:1px solid var(--lijn);font-size:15px;gap:10px}
-.regel2>span:first-child{color:var(--grijs)}
+.regel2>span:first-child{color:var(--grijs);flex:1;min-width:0}
 .regel2 a,.regel2 .linkknop{display:inline-flex;align-items:center;min-height:44px}
-.linkknop{background:none;border:0;color:var(--maroon);font-weight:700;font-size:15px;padding:0;min-height:44px}
+.linkknop{background:none;border:0;color:var(--maroon);font-weight:700;font-size:15px;padding:0;min-height:44px;white-space:nowrap;flex:none}
 .blok .twee{margin-top:12px}
 .links{padding-top:4px;padding-bottom:4px}.links .regel2:first-child{border-top:0}
 .bewerk{background:var(--wit);border:1px solid var(--lijn);border-radius:14px;padding:4px 14px 14px;margin-top:8px}
@@ -157,16 +157,18 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
   function stil(e) { if (e && e.message === "login") return; }
 
   // ---- melding onderaan, met ongedaan maken (5 seconden) -----------------------------
-  var toastTimer = null, toastTik = null;
+  var toastTimer = null, toastTik = null, toastUndo = false, houdToast = false;
+  function sluitToast() { clearInterval(toastTik); clearTimeout(toastTimer); toastUndo = false; $("toast").hidden = true; document.body.classList.remove("met-toast"); }
+  // Bij navigeren naar een ander scherm gaat de melding weg, behalve de ongedaan-maken-melding als je in de lijst komt.
+  function naNavigatie(view) { if (houdToast) { houdToast = false; return; } if (!(view === "lijst" && toastUndo)) sluitToast(); }
   function toast(tekst, terug) {
     clearInterval(toastTik); clearTimeout(toastTimer);
     $("toast-tekst").textContent = tekst; $("toast").hidden = false; document.body.classList.add("met-toast");
-    var kn = $("toast-terug");
-    function sluit() { clearInterval(toastTik); clearTimeout(toastTimer); $("toast").hidden = true; document.body.classList.remove("met-toast"); }
-    if (!terug) { kn.hidden = true; toastTimer = setTimeout(sluit, 3500); return; }
+    var kn = $("toast-terug"); toastUndo = !!terug;
+    if (!terug) { kn.hidden = true; toastTimer = setTimeout(sluitToast, 3500); return; }
     var rest = 5; kn.hidden = false; kn.textContent = "Ongedaan maken (" + rest + ")";
-    kn.onclick = function () { sluit(); terug(); };
-    toastTik = setInterval(function () { rest--; if (rest <= 0) sluit(); else kn.textContent = "Ongedaan maken (" + rest + ")"; }, 1000);
+    kn.onclick = function () { sluitToast(); terug(); };
+    toastTik = setInterval(function () { rest--; if (rest <= 0) sluitToast(); else kn.textContent = "Ongedaan maken (" + rest + ")"; }, 1000);
   }
 
   // ---- de nieuwsmotor --------------------------------------------------------
@@ -267,17 +269,14 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
     var h = '<div class="wacht peil" data-zeker="' + k.zekerheid + '"><div class="r">' + label + "</div><h3>" + esc(k.titel) + "</h3>";
     var regel = peilRegel(k); if (regel) h += '<p class="regel">' + regel + "</p>";
     if (k.zekerheid === "oranje" && k.twijfel) h += '<p class="twijfel">' + esc(k.twijfel) + "</p>";
-    var uit = [];
-    if (k.berichtKop) uit.push("Uit het bericht “" + esc(k.berichtKop) + "”");
-    if (k.bronUrl) uit.push((k.berichtKop ? "bron" : "Bron") + ': <a href="' + esc(k.bronUrl) + '" target="_blank" rel="noopener">' + esc(host(k.bronUrl)) + "</a>");
-    if (uit.length) h += '<p class="uit">' + uit.join(" · ") + "</p>";
+    var bron = k.bronUrl ? '<a href="' + esc(k.bronUrl) + '" target="_blank" rel="noopener" aria-label="Bron: ' + esc(host(k.bronUrl)) + '" title="' + esc(host(k.bronUrl)) + '">Bron ↗</a>' : "";
     function knop(keuze, tekst, groot) { return '<button type="button" ' + (groot ? 'class="knop peilknop ' + (k.zekerheid === "groen" ? "groen" : "oranje") + '"' : "") + d + ' data-peil-keuze="' + keuze + '">' + tekst + "</button>"; }
     if (k.soort === "ontbreekt") {
-      h += knop("lijst", "Zet op de lijst voor PEIL", true) + '<div class="tekstlinks">' + knop("niet_nodig", "Niet nodig") + "</div>";
+      h += knop("lijst", "Zet op de lijst voor PEIL", true) + '<div class="tekstlinks">' + knop("niet_nodig", "Niet nodig") + bron + "</div>";
     } else if (k.advies === "verwacht") {
-      h += knop("verwacht", "Nog niet definitief", true) + '<div class="tekstlinks">' + knop("vastgesteld", "Toch vastgesteld") + knop("raakt_niet", "Raakt PEIL niet") + "</div>";
+      h += knop("verwacht", "Nog niet definitief", true) + '<div class="tekstlinks">' + knop("vastgesteld", "Toch vastgesteld") + knop("raakt_niet", "Raakt PEIL niet") + bron + "</div>";
     } else {
-      h += knop("vastgesteld", "Klopt, zo in PEIL", true) + '<div class="tekstlinks">' + knop("verwacht", "Nog niet definitief") + knop("raakt_niet", "Raakt PEIL niet") + "</div>";
+      h += knop("vastgesteld", "Klopt, zo in PEIL", true) + '<div class="tekstlinks">' + knop("verwacht", "Nog niet definitief") + knop("raakt_niet", "Raakt PEIL niet") + bron + "</div>";
     }
     return h + "</div>";
   }
@@ -406,7 +405,7 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
       return '<div><h1>Redactie</h1><div class="dag">' + esc(hoofdletter(dag)) + '</div></div><button type="button" class="lk" data-ga="instellingen">Instellingen</button>';
     }
     var links = v === "verbeter" ? "‹ Annuleren" : v === "instellingen" ? "‹ Vandaag" : v === "niet" ? "‹ Vandaag" : "‹ Vandaag";
-    var rechts = v === "open" && b ? '<a class="lk" target="_blank" rel="noopener" href="' + NV + "/bericht/" + encodeURIComponent(b.id) + '">Bekijk op de site ↗</a>' : "<span></span>";
+    var rechts = v === "open" && b && b.redactie !== "weg" ? '<a class="lk" target="_blank" rel="noopener" href="' + NV + "/bericht/" + encodeURIComponent(b.id) + '">Bekijk op de site ↗</a>' : "<span></span>";
     return '<button type="button" class="lk terugk" data-terug="1">' + links + "</button>" + rechts;
   }
   function metaRij(b) {
@@ -429,10 +428,12 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
   function vwLijst() {
     var v = vandaagLijst(), n = nietLijst(), nPlaats = v.filter(function (b) { return b.redactie !== "weg"; }).length;
     var h = storingRegel();
-    if (cjVraag()) h += cjKaart();
-    var pk = peilKaarten();
-    pk.slice(0, 3).forEach(function (k) { h += peilKaart(k); });
-    if (pk.length > 3) h += '<p class="stand" style="padding-top:8px">En nog ' + (pk.length - 3) + "</p>";
+    var wacht = [];
+    if (cjVraag()) wacht.push(cjKaart());
+    peilKaarten().forEach(function (k) { wacht.push(peilKaart(k)); });
+    var zicht = st.wachtOpen ? wacht.length : 2;
+    wacht.slice(0, zicht).forEach(function (x) { h += x; });
+    if (wacht.length > 2) h += '<button type="button" class="nog" data-wacht="1" aria-expanded="' + !!st.wachtOpen + '">' + (st.wachtOpen ? "Minder tonen" : "Nog " + (wacht.length - 2) + " wacht" + (wacht.length - 2 === 1 ? "" : "en") + " op jou") + " <span>" + (st.wachtOpen ? "‹" : "›") + "</span></button>";
     if (!st.nvFout) {
       var klaar = st.run && (st.run.klaarOp || st.run.gestartOp);
       h += '<div class="stand">' + nPlaats + (nPlaats === 1 ? " bericht" : " berichten") + " geplaatst vandaag" + (klaar && tijd(klaar) ? ", motor liep om " + tijd(klaar) : "") + "</div>";
@@ -482,10 +483,10 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
   }
   function vwInstellingen() {
     return '<h2 class="sec">Café Jeudi</h2><div class="blok" id="cj"></div>' +
-      '<h2 class="sec">Bronnen</h2><div class="blok" id="bronnen"><p>Laden…</p></div>' +
       '<h2 class="sec">Dit apparaat</h2><div class="blok" id="apparaat"><p id="wieben"></p><div id="passkeylijst"></div>' +
       '<div class="regel2"><span>Inloggen met vingerafdruk op dit apparaat</span><button type="button" class="linkknop" id="passkeynieuw" hidden>Instellen ›</button></div>' +
       '<div class="regel2"><span>Klaar op een geleend toestel?</span><button type="button" class="linkknop" id="uitlog">Uitloggen</button></div><p class="melding" id="appmelding" role="status"></p></div>' +
+      '<h2 class="sec">Bronnen</h2><div class="blok" id="bronnen"><p>Laden…</p></div>' +
       '<h2 class="sec">Zo staat het er nu</h2><div class="blok links">' +
       [["https://nieuws.infofrankrijk.com", "Nieuws op nieuws.infofrankrijk.com"], ["https://www.nederlanders.fr/page/actueel-frankrijknieuws", "Nieuwspagina van Nederlanders.fr"], ["https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief", "Laatste nieuwsbrief"], ["https://infopoche.fr", "Infopoche"], ["https://www.nederlanders.fr/forum", "Forum met zijbalk"], ["https://infofrankrijk.com", "Infofrankrijk"]].map(function (l) {
         return '<a class="regel2" href="' + l[0] + '" target="_blank" rel="noopener">' + l[1] + " ↗</a>";
@@ -514,6 +515,7 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
   // ---- navigatie (ook met de terugknop van de telefoon) --------------------------------------
   var diepte = 0;
   function ga(view, id) {
+    naNavigatie(view);
     st.view = view; st.id = id || null; st.plekkenOpen = false;
     diepte++; try { history.pushState({ v: view, id: st.id, n: diepte }, ""); } catch (e) {}
     teken(); window.scrollTo(0, 0);
@@ -521,10 +523,11 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
   }
   function terug() {
     if (diepte > 0) { try { history.back(); return; } catch (e) {} }
-    st.view = "lijst"; st.id = null; teken();
+    naNavigatie("lijst"); st.view = "lijst"; st.id = null; teken();
   }
   window.addEventListener("popstate", function (e) {
     var s = e.state || { v: "lijst", n: 0 };
+    naNavigatie(s.v || "lijst");
     diepte = s.n || 0; st.view = s.v || "lijst"; st.id = s.id || null; st.plekkenOpen = false; teken(); window.scrollTo(0, 0);
   });
 
@@ -552,7 +555,12 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
   function bewaarVerbetering(id) {
     var o = { id: id, actie: "bewerk", kop: $("vb-kop").value.trim(), samenvatting: $("vb-sam").value.trim(), categorie: $("vb-cat").value };
     if (!o.kop) { toast("De kop mag niet leeg zijn."); return; }
-    stuur(o).then(function () { st.view = "open"; st.id = id; teken(); window.scrollTo(0, 0); toast("Bewaard. De motor laat kop en samenvatting met rust."); }).catch(fout);
+    stuur(o).then(function () {
+      // Terug naar het geopende bericht via de geschiedenis, zodat één tik terug naar de lijst volstaat.
+      if (diepte > 0) { houdToast = true; try { history.back(); } catch (e) { houdToast = false; st.view = "open"; st.id = id; teken(); } }
+      else { st.view = "open"; st.id = id; teken(); window.scrollTo(0, 0); }
+      toast("Bewaard. De motor laat kop en samenvatting met rust.");
+    }).catch(fout);
   }
 
   document.addEventListener("click", function (e) {
@@ -562,6 +570,7 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
     if (heeft("data-terug")) { terug(); return; }
     if (heeft("data-open")) { ga("open", g("data-open")); return; }
     if (heeft("data-verbeter")) { ga("verbeter", g("data-verbeter")); return; }
+    if (heeft("data-wacht")) { st.wachtOpen = !st.wachtOpen; teken(); return; }
     if (heeft("data-plekken")) { st.plekkenOpen = !st.plekkenOpen; teken(); return; }
     if (heeft("data-kanaal")) { zetKanaal(g("data-id"), g("data-kanaal"), g("aria-checked") !== "true"); return; }
     if (heeft("data-actie")) { actie(g("data-id"), g("data-actie")); return; }

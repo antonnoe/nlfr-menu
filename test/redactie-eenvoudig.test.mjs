@@ -133,22 +133,25 @@ const peilNv = [
   { id: "p4", soort: "wijziging", zekerheid: "groen", titel: "Vierde" },
 ];
 
-test("PEIL uit de nieuwe motor: groen, oranje en ontbreekt; hooguit drie kaarten en En nog N", async () => {
+test("PEIL uit de nieuwe motor: groen, oranje en ontbreekt; hooguit twee kaarten, daaronder Nog N wachten op jou", async () => {
   const m = basis(); m.peil = peilNv;
   const s = await scherm({ motor: m });
-  const h = s.app();
-  assert.equal((h.match(/class="wacht peil"/g) || []).length, 3);
+  let h = s.app();
+  assert.equal((h.match(/class="wacht/g) || []).length, 2, "hooguit twee kaarten tegelijk");
+  assert.match(h, /data-wacht="1"[^>]*>Nog 2 wachten op jou/);
+  await s.klik({ "data-wacht": "1" });
+  h = s.app();
+  assert.equal((h.match(/class="wacht peil"/g) || []).length, 4);
   assert.match(h, /PEIL · wijziging/); assert.match(h, /PEIL · twijfel/); assert.match(h, /PEIL · ontbreekt/);
   assert.match(h, /Nu in PEIL <s>10%<\/s> → nieuw <b>12%<\/b>, vanaf 1 januari 2027/);
   assert.match(h, /Alleen een voorstel, nog niet gestemd\./);
-  assert.match(h, /Uit het bericht “Het tarief stijgt” · bron: <a href="https:\/\/www\.service-public\.gouv\.fr\/x"[^>]*>service-public\.gouv\.fr/);
+  assert.match(h, /<a href="https:\/\/www\.service-public\.gouv\.fr\/x"[^>]*>Bron ↗<\/a><\/div>/, "bronlink staat op de regel met de tekstlinks");
   assert.match(h, /knop peilknop groen"[^>]*data-peil-keuze="vastgesteld">Klopt, zo in PEIL/);
   assert.match(h, /knop peilknop oranje"[^>]*data-peil-keuze="verwacht">Nog niet definitief/);
   assert.match(h, /data-peil-keuze="lijst">Zet op de lijst voor PEIL/);
   assert.match(h, /data-peil-keuze="niet_nodig">Niet nodig/);
   assert.match(h, /data-peil-keuze="raakt_niet">Raakt PEIL niet/);
   assert.match(h, /data-peil-keuze="vastgesteld">Toch vastgesteld/);
-  assert.match(h, /En nog 1/);
   await s.klik({ "data-peil-bron": "nv", "data-peil-id": "p3", "data-peil-keuze": "lijst" });
   assert.deepEqual(s.posts.at(-1), { pad: "/api/redactie-nv", body: { actie: "peil", id: "p3", keuze: "lijst" } });
   assert.ok(!s.app().includes("Nieuwe belasting niet in PEIL"), "beantwoorde kaart verdwijnt");
@@ -168,6 +171,7 @@ test("bestaande PEIL-bewaking: groen bij twee kloppende citaten met dezelfde waa
     { mutatie: "m.2026.0003", naam: "Oranje citaat", reden: "", oordelen: [o("7%", true), o("7%", false)] },
   ] } };
   const s = await scherm({ motor: basis(), regie });
+  await s.klik({ "data-wacht": "1" });
   const h = s.app();
   const kaarten = h.split('<div class="wacht peil"').slice(1);
   assert.equal(kaarten.length, 3);
@@ -187,4 +191,14 @@ test("instellingen: Café Jeudi, Bronnen, Dit apparaat en Zo staat het er nu", a
   await s.klik({ "data-ga": "instellingen" });
   const h = s.app();
   for (const t of ["Café Jeudi", "Bronnen", "Dit apparaat", "Zo staat het er nu", "Uitloggen"]) assert.ok(h.includes(t), t);
+});
+
+test("herstelronde 1: geen Bekijk op de site bij een weggehaald bericht; Dit apparaat staat direct onder Café Jeudi", async () => {
+  const s = await scherm({ motor: basis() });
+  await s.klik({ "data-open": "a4" });
+  assert.ok(!/Bekijk op de site/.test(s.kop()), "weggehaald bericht heeft geen sitelink");
+  await s.klik({ "data-terug": "1" });
+  await s.klik({ "data-ga": "instellingen" });
+  const h = s.app();
+  assert.ok(h.indexOf("Dit apparaat") > h.indexOf("Café Jeudi") && h.indexOf("Dit apparaat") < h.indexOf(">Bronnen<"));
 });

@@ -557,7 +557,7 @@ h2.sec{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:20px
     if (!o.kop) { toast("De kop mag niet leeg zijn."); return; }
     stuur(o).then(function () {
       // Terug naar het geopende bericht via de geschiedenis, zodat één tik terug naar de lijst volstaat.
-      if (diepte > 0) { houdToast = true; try { history.back(); } catch (e) { houdToast = false; st.view = "open"; st.id = id; teken(); } }
+      if (diepte > 0) { houdToast = true; setTimeout(function () { houdToast = false; }, 500); try { history.back(); } catch (e) { houdToast = false; st.view = "open"; st.id = id; teken(); } }
       else { st.view = "open"; st.id = id; teken(); window.scrollTo(0, 0); }
       toast("Bewaard. De motor laat kop en samenvatting met rust.");
     }).catch(fout);

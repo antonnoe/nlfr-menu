@@ -13,7 +13,7 @@ const iso = (uur, min = 0) => new Date(Date.UTC(2026, 10, 26, uur, min)).toISOSt
 const bericht = (id, extra = {}) => ({ id, kop: "Kop " + id, samenvatting: "Samenvatting " + id, categorie: "algemeen", soort: "pers", geplaatst: true, gepubliceerdOp: iso(10), kanalen: { actueel: true, nieuwsbrief: true, infopoche: true, zijbalk: true, infofrankrijk: true }, bronnen: [{ naam: "A", datum: iso(9) }, { naam: "B", datum: iso(9) }], ...extra });
 
 async function scherm({ motor, regie, posts = [] } = {}) {
-  const els = new Map(), luisteraars = {};
+  const els = new Map(), luisteraars = {}, timers = [];
   const el = (id) => { if (!els.has(id)) els.set(id, { id, innerHTML: "", textContent: "", hidden: false, value: "", classList: { add() {}, remove() {} } }); return els.get(id); };
   class Klok extends Date { constructor(...a) { super(...(a.length ? a : [NU])); } static now() { return NU; } }
   const geschiedenis = { state: null, pushState(s) { this.state = s; }, replaceState(s) { this.state = s; }, back() {} };
@@ -22,7 +22,7 @@ async function scherm({ motor, regie, posts = [] } = {}) {
     window: { addEventListener(t, f) { (luisteraars["w:" + t] ||= []).push(f); }, scrollTo() {}, confirm: () => true },
     history: geschiedenis, location: {}, localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     URL, Date: Klok, Promise, JSON, Object, Array, String, Number, Math, isNaN, encodeURIComponent,
-    setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
+    setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; }, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
     fetch: async (pad, o = {}) => {
       const body = o.body ? JSON.parse(o.body) : null;
       if (o.method === "POST") {
@@ -42,7 +42,7 @@ async function scherm({ motor, regie, posts = [] } = {}) {
   await rust(); await rust();
   const knop = (attrs) => ({ id: attrs.id || "", getAttribute: (k) => (k in attrs ? attrs[k] : null), hasAttribute: (k) => k in attrs, classList: { contains: () => false }, disabled: false });
   return {
-    posts, app: () => els.get("app").innerHTML, kop: () => els.get("kop").innerHTML,
+    posts, timers, toastZichtbaar: () => els.get("toast") && els.get("toast").hidden === false, app: () => els.get("app").innerHTML, kop: () => els.get("kop").innerHTML,
     async klik(attrs) { const b = knop(attrs); for (const f of luisteraars.click) f({ target: { closest: () => b } }); await rust(); await rust(); },
     zetWaarde(id, v) { el(id).value = v; },
   };
@@ -201,4 +201,17 @@ test("herstelronde 1: geen Bekijk op de site bij een weggehaald bericht; Dit app
   await s.klik({ "data-ga": "instellingen" });
   const h = s.app();
   assert.ok(h.indexOf("Dit apparaat") > h.indexOf("Café Jeudi") && h.indexOf("Dit apparaat") < h.indexOf(">Bronnen<"));
+});
+
+test("houdToast blijft niet hangen als history.back geen popstate oplevert: na 500 ms terug, de volgende navigatie sluit de melding", async () => {
+  const s = await scherm({ motor: basis() });
+  await s.klik({ "data-verbeter": "a1" });
+  s.zetWaarde("vb-kop", "Nieuwe kop"); s.zetWaarde("vb-sam", "Tekst"); s.zetWaarde("vb-cat", "politiek");
+  await s.klik({ "data-bewaar-vb": "a1" });
+  assert.ok(s.toastZichtbaar(), "de melding staat er na het bewaren");
+  const t = s.timers.filter((x) => x.ms === 500);
+  assert.equal(t.length, 1, "een timer van 500 ms zet houdToast terug");
+  t[0].f(); // er kwam geen popstate: de timer ruimt de vlag op
+  await s.klik({ "data-ga": "niet" });
+  assert.ok(!s.toastZichtbaar(), "de eerstvolgende navigatie wordt niet meer ingeslikt");
 });

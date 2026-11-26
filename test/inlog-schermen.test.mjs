@@ -18,7 +18,7 @@ import { createHash } from "node:crypto";
 
 const lees = (naam) => readFileSync(new URL(`../${naam}`, import.meta.url), "utf8");
 const login = lees("login.html");
-const review = lees("review.html");
+const review = lees("archief/review.html");
 const middleware = lees("middleware.js");
 const inlogbron = lees("src/inlog.js");
 const bundel = lees("assets/inlog.js");
@@ -287,7 +287,7 @@ test("de uitlegpagina beschrijft de nieuwe route, niet het oude token", () => {
 });
 
 test("geen enkel uitgeleverd bestand stuurt nog naar een token-URL", () => {
-  for (const naam of ["index.html", "review.html", "login.html", "uitleg.html", "actueel.html"]) {
+  for (const naam of ["index.html", "archief/review.html", "redactie.html", "login.html", "uitleg.html", "actueel.html"]) {
     assert.doesNotMatch(lees(naam), /\?token=/, `${naam} draagt nog een token-URL`);
   }
 });

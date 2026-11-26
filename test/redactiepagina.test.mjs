@@ -123,13 +123,13 @@ test("selectie-API: opgenomen bronartikelen niet los op het scherm, terugdraaien
 });
 
 test("/redactie toont gepubliceerde syntheses zonder zijbalkkeuze", () => {
-  const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
+  const html = fs.readFileSync(new URL("../archief/redactie-oud.html", import.meta.url), "utf8");
   assert.match(html, /rev\.publicaties/);
   assert.match(html, /weg: weg \|\| undefined/);
 });
 
 test("/redactie staat achter de login en roept beide backends aan", () => {
-  const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
+  const html = fs.readFileSync(new URL("../archief/redactie-oud.html", import.meta.url), "utf8");
   assert.match(html, /\/api\/review/);
   assert.match(html, /\/api\/selectie/);
   assert.match(html, /noindex/);
@@ -169,7 +169,7 @@ test("nieuwsbrief en Infopoche: alleen booleans voor die twee sleutels gaan mee 
 });
 
 test("/redactie heeft vijf plekken, Ja/Alleen zijbalk/Nee en Plaats zo, en beheer- en voorbeeldlinks", () => {
-  const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
+  const html = fs.readFileSync(new URL("../archief/redactie-oud.html", import.meta.url), "utf8");
   // de lijsten komen uit het regelbestand via /api/selectie, niet uit de pagina zelf
   assert.match(html, /PLEKKEN = \(rg\.plekken \|\| \[\]\)\.map/);
   assert.match(html, /REDENEN = rg\.redenen/);
@@ -184,8 +184,8 @@ test("/redactie is de ene ingang: tandwiel, login en /selectie verwijzen ernaar;
   assert.match(rd("../index.html"), /\["Redactie","\/redactie"/);
   assert.match(rd("../login.html"), /return "\/redactie"/);
   assert.match(rd("../api/auth-callback.js"), /stuurDoor\(res, "\/redactie"\)/);
-  assert.match(rd("../selectie.html"), /url=\/redactie/);
-  assert.ok(fs.existsSync(new URL("../review.html", import.meta.url)));
+  assert.match(rd("../archief/selectie.html"), /url=\/redactie/);
+  assert.ok(fs.existsSync(new URL("../archief/review.html", import.meta.url)));
 });
 
 test("/api/actueel: een publicatie met kanalen geeft ze mee per artikel, zonder kanalen geen veld", () => {

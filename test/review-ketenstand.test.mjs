@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { startNepKv, roeper } from "./fixtures/nep-kv.mjs";
 import { startNepSessie } from "./fixtures/nep-supabase.mjs";
 
-const review = readFileSync(new URL("../review.html", import.meta.url), "utf8");
+const review = readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
 
 test("de lege conceptlijst belooft niet langer dat het aan het nieuws ligt", () => {
   assert.doesNotMatch(

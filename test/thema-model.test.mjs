@@ -188,7 +188,7 @@ test("een ontbrekend of ongeldig opgeslagen thema valt terug op de regels", () =
 });
 
 // ---- 4. Reviewtool: opslaan en autorisatie -----------------------------------
-const review = readFileSync(new URL("../review.html", import.meta.url), "utf8");
+const review = readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
 
 test("review.html toont het thema met een keuzelijst die labels en een stuurt actie 'thema'", () => {
   assert.match(review, /data-thema-select/);

@@ -15,7 +15,7 @@ import { readFileSync, existsSync, statSync } from "node:fs";
 
 const wortel = new URL("../", import.meta.url);
 const uitleg = readFileSync(new URL("uitleg.html", wortel), "utf8");
-const review = readFileSync(new URL("review.html", wortel), "utf8");
+const review = readFileSync(new URL("archief/review.html", wortel), "utf8");
 
 test("elke schermafdruk waarnaar de uitleg verwijst, bestaat", () => {
   const verwezen = [...uitleg.matchAll(/src="\/schermen\/([^"]+)"/g)].map((m) => m[1]);

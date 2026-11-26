@@ -33,7 +33,7 @@ test("een PEIL-oordeel zonder geldig parameter-id of een bericht zonder https-ad
 });
 
 test("/redactie heeft de tab PEIL-acties en leest de openbare kandidatenlijst", () => {
-  const html = readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../archief/redactie-oud.html", import.meta.url), "utf8");
   assert.match(html, /data-tab="peil"/);
   assert.match(html, /\/api\/selectie-feed\?peil=1/);
   assert.match(html, /id="peilacties"/);

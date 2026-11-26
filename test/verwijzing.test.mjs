@@ -303,7 +303,7 @@ test("de kop in de pagina en die in de configuratie zijn dezelfde tekst", () => 
 // knoppen de acties aanroepen die api/review.js ook echt kent — een typefout in
 // een `data-`attribuut zou anders pas op productie opvallen.
 
-const reviewHtml = readFileSync(new URL("../review.html", import.meta.url), "utf8");
+const reviewHtml = readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
 const rBegin = reviewHtml.indexOf("function ifDatum(iso){");
 const rEind = reviewHtml.indexOf("// ---- Geweigerde bron-URL's");
 assert.ok(rBegin > 0 && rEind > rBegin, "IF-renderfuncties niet gevonden in review.html");

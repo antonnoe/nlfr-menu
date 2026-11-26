@@ -17,7 +17,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const review = readFileSync(new URL("../review.html", import.meta.url), "utf8");
+const review = readFileSync(new URL("../archief/review.html", import.meta.url), "utf8");
 const stijl = review.slice(review.indexOf("<style>"), review.indexOf("</style>"));
 
 // De hoogte van elke regel die er één opgeeft. Nodig, maar niet genoeg: zie de

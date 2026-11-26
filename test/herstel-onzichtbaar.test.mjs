@@ -11,7 +11,7 @@ import { SCORE_DREMPEL } from "../lib/config.js";
 import { LOS_SCORE_DREMPEL } from "../lib/redactieregels.js";
 import { poortUitslag, verwerkPoort, overheidIsLive } from "../lib/overheidpoort.js";
 
-const html = fs.readFileSync(new URL("../redactie.html", import.meta.url), "utf8");
+const html = fs.readFileSync(new URL("../archief/redactie-oud.html", import.meta.url), "utf8");
 const lees = (p) => fs.readFileSync(new URL(p, import.meta.url), "utf8");
 
 // ---- 1. tekstverlies -------------------------------------------------------

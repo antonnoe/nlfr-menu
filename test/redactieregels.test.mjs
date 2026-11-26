@@ -145,7 +145,7 @@ test("meten: klopt bij x van y, grens van 7 dagen, tonen pas bij minstens 5 besl
   assert.deepEqual([vijf.klopt, vijf.totaal, vijf.tonen], [4, 5, true]);
   // weg voorgesteld en Nee gekozen klopt ook
   assert.equal(meetVoorstel([BESLUIT({ besluit: "nogo", kanalen: [], ai: { score: 10, plek: "weg" } })], nu).klopt, 1);
-  const html = lees("../redactie.html");
+  const html = lees("../archief/redactie-oud.html");
   assert.match(html, /Deze week klopte het voorstel bij/);
   assert.match(html, /m\.tonen/);
   assert.match(lees("../api/selectie.js"), /meting: meetVoorstel\(besluiten\)/);
@@ -212,7 +212,7 @@ test("R17: Rijksoverheid-berichten van 20-11 komen ook bij een hoge modelscore n
 });
 
 test("synthese zonder AI-oordeel: standaard alleen zijbalk en Infofrankrijk", () => {
-  const html = lees("../redactie.html");
+  const html = lees("../archief/redactie-oud.html");
   assert.match(html, /if \(!it\.ai && \(it\.soort === "concept"[^\n]*k\.zijbalk = true; k\.infofrankrijk = true; return schoon/);
   assert.match(html, /voorstel: ai && ai\.plek \? ai\.plek : "zijbalk", altijd: true/);
   assert.ok(!/ai\.plek : "beide"/.test(html));
@@ -278,7 +278,7 @@ test("de zeven: woordgrenzen voor korte termen; deze koppen komen door", () => {
 });
 
 test("een synthese leidt zijn voorstel los af en het besluit meet tegen het getoonde voorstel", () => {
-  const html = lees("../redactie.html");
+  const html = lees("../archief/redactie-oud.html");
   assert.match(html, /it\.soort === "concept" \|\| it\.soort === "publicatie"\) \{\s*var laag/);
   assert.match(html, /function voorstelLijst\(it\)/);
   assert.ok((html.match(/voorstel: voorstelLijst\(it\)/g) || []).length >= 4);
@@ -305,7 +305,7 @@ test("R17 op /redactie: de poort legt de reden vast en het voorstel is Nee, met 
   assert.equal(tel.gewijzigd, 1);
   assert.equal(opslag.get(d.id).poort.reden, "r17");
   // de pagina: geen eigen lijst of tekst, het voorstel is Nee
-  const html = lees("../redactie.html");
+  const html = lees("../archief/redactie-oud.html");
   assert.match(html, /function r17\(it\)[^\n]*poort\.reden === "r17"/);
   assert.match(html, /if \(r17\(it\)\) return \{\}/);
   assert.match(html, /R17_REDEN = rg\.r17Reden/);
@@ -372,7 +372,7 @@ test("R17 zinsgrens: kop telt mee met de eerste zin van de samenvatting; afkorti
 });
 
 test("redactie.html: overheid, ook onder 'Al automatisch live', stuurt de echte nieuwspagina-keuze en live:true mee", () => {
-  const html = lees("../redactie.html");
+  const html = lees("../archief/redactie-oud.html");
   assert.match(html, /opPagina: it\.soort === "overheid" \|\| it\.wacht \? !!k\.nieuwspagina : true/);
   assert.match(html, /live: !weg && \(it\.soort === "overheid" \|\| it\.wacht\) && k\.nieuwspagina \? true : undefined/);
 });

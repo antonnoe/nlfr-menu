@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>NLFR · Redactie</title>
+<link rel="icon" type="image/svg+xml" href="/assets/redactie-icoon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Redactiepagina (20-11-2026, mock-up goedgekeurd door Anton): alleen wat een
+     beslissing nodig heeft, het voorstel in woorden, drie knoppen, na een tik
+     krimpt de kaart ter plekke tot één regel met Ongedaan maken. Tekst minstens
+     16 px, tikvlakken minstens 44 px, bordeaux #800000 als enige accent. */
+  :root { --brand:#800000; --brand-zacht:#f6eaea; --tekst:#2b2624; --zacht:#5f5755; --lijn:#d9cfcc; --vlak:#fff; --achter:#f4f1ef; --oranje:#8a4b00; --ok:#1f6b35; --ok-zacht:#e9f3ec; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { background:var(--achter); color:var(--tekst); font-family:Mulish,system-ui,sans-serif; font-size:17px; line-height:1.5; }
+  button { font:inherit; cursor:pointer; }
+  a { color:var(--brand); }
+  .kop { position:sticky; top:0; z-index:5; background:var(--brand); color:#fff; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+  .kop h1 { margin:0; font-family:Poppins,sans-serif; font-size:22px; line-height:1.2; }
+  .kop .dag { font-size:16px; opacity:.9; }
+  .kop .teller { margin-left:auto; font-size:16px; font-weight:700; background:rgba(255,255,255,.16); border-radius:999px; padding:6px 12px; white-space:nowrap; }
+  .kop .ververs { min-height:44px; min-width:44px; border:1px solid rgba(255,255,255,.5); border-radius:12px; background:transparent; color:#fff; font-size:22px; line-height:1; padding:0; flex:0 0 44px; }
+  .kop .dag { white-space:nowrap; }
+  .kop > div:first-child { min-width:0; }
+  .kop .teller { padding:6px 10px; }
+  .bol { width:12px; height:12px; border-radius:50%; background:var(--ok); flex:0 0 12px; }
+  .wrap { max-width:760px; margin:0 auto; }
+  .romp { padding:12px 16px 32px; display:flex; flex-direction:column; gap:14px; }
+  .zij { display:none; }
+  .leer { margin:6px 0 0; font-size:16px; color:var(--zacht); }
+  .uitleg { margin:0; font-size:16px; color:var(--zacht); }
+  .status { margin:0; font-size:16px; color:var(--zacht); }
+  .fout-blok { background:#fff7ed; color:var(--oranje); border-radius:14px; padding:14px; font-size:16px; display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+  details { background:var(--vlak); border:1px solid var(--lijn); border-radius:14px; }
+  summary { list-style:none; min-height:56px; padding:12px 14px; display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px; cursor:pointer; }
+  summary::-webkit-details-marker { display:none; }
+  summary .pijl { margin-left:auto; color:var(--brand); font-size:16px; font-weight:700; white-space:nowrap; }
+  details[open] summary .pijl::after { content:" ▴"; } details:not([open]) summary .pijl::after { content:" ▾"; }
+  .klein-lijst { margin:0; padding:0 14px 10px; list-style:none; }
+  .klein-lijst li { border-top:1px solid #eee5e2; padding:10px 0; display:flex; gap:10px; align-items:center; font-size:16px; }
+  .klein-lijst li .t { flex:1; min-width:0; }
+  .klein-lijst li .b { display:block; color:var(--zacht); font-size:16px; }
+  .klein-lijst li.weg .t { text-decoration:line-through; color:var(--zacht); }
+  .groep { font-size:16px; font-weight:700; color:var(--zacht); margin:6px 0 -4px; }
+  .lijst { display:flex; flex-direction:column; gap:14px; }
+  .kaart { background:var(--vlak); border:1px solid var(--lijn); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .soort { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; font-size:16px; color:var(--zacht); }
+  .label { font-weight:700; color:var(--tekst); background:#efe9e7; border-radius:8px; padding:2px 8px; }
+  .kaart h2 { margin:0; font-family:Poppins,sans-serif; font-size:20px; line-height:1.35; color:var(--tekst); }
+  .kaart h2 a { color:inherit; display:inline-block; min-height:44px; }
+  .fr { margin:0; font-size:16px; color:var(--zacht); font-style:italic; }
+  .samenvatting { margin:0; font-size:17px; white-space:pre-line; }
+  .voorstel { background:var(--brand-zacht); border-radius:12px; padding:12px; font-size:17px; }
+  .voorstel b { color:var(--brand); }
+  .voorstel .waarom { display:block; font-size:16px; color:var(--zacht); margin-top:4px; }
+  .voorstel .let { display:block; font-size:16px; color:var(--oranje); margin-top:4px; font-weight:700; }
+  .melding-kaart { font-size:16px; color:var(--oranje); background:#fff7ed; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+  .knoppen { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .knop { min-height:52px; border-radius:12px; border:2px solid var(--brand); background:#fff; color:var(--brand); font-weight:700; font-size:17px; padding:6px 12px; line-height:1.25; }
+  .knop.ja { grid-column:1 / -1; background:var(--brand); color:#fff; }
+  .knop.nee { border-color:#9b9290; color:var(--tekst); }
+  .knop:disabled { opacity:.5; cursor:not-allowed; }
+  .anders-knop { min-height:48px; background:none; border:0; color:var(--brand); font-weight:700; font-size:17px; text-decoration:underline; text-underline-offset:3px; padding:0; text-align:left; }
+  .anders { border-top:1px solid #eee5e2; padding-top:12px; display:flex; flex-direction:column; gap:12px; }
+  .anders h3 { margin:0; font-size:17px; }
+  .plekken { display:grid; grid-template-columns:1fr .75fr 1.45fr .95fr 1fr; gap:4px; }
+  .plek { display:flex; align-items:center; justify-content:center; min-height:44px; min-width:0; border:1px solid var(--lijn); border-radius:8px; padding:6px 2px; background:#fff; text-align:center; width:100%; font-size:14px; line-height:1.2; color:var(--tekst); }
+  .plek .naam { font-weight:700; }
+  .plek[aria-pressed="true"] { border-color:var(--brand); background:var(--brand); color:#fff; }
+  .plek:disabled { cursor:not-allowed; opacity:.55; }
+  .plek:disabled .naam { color:var(--zacht); }
+  .plek:disabled[aria-pressed="true"] .naam { color:#fff; }
+  .kaart.bewerken { padding:12px; gap:10px; }
+  .anders .chip { min-height:44px; padding:0 10px; font-size:15px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { min-height:48px; border-radius:999px; border:1px solid var(--lijn); background:#fff; padding:0 16px; font-size:17px; color:var(--tekst); }
+  .chip[aria-pressed="true"] { background:var(--tekst); border-color:var(--tekst); color:#fff; }
+  label.veld { display:flex; flex-direction:column; gap:6px; font-weight:700; font-size:17px; }
+  input.veld-in, textarea { font:inherit; font-size:17px; border:1px solid var(--lijn); border-radius:10px; padding:10px; width:100%; font-weight:400; }
+  textarea { min-height:96px; line-height:1.5; overflow-y:hidden; resize:vertical; }
+  .samen { font-size:16px; color:var(--zacht); margin:0; }
+  .rij2 { display:grid; grid-template-columns:2fr 1fr; gap:10px; }
+  .klaar { background:var(--vlak); border:1px solid var(--lijn); border-left:6px solid var(--ok); border-radius:14px; padding:8px 12px; display:flex; flex-direction:column; gap:2px; }
+  .klaar .kk { font-size:15px; line-height:1.3; }
+  .klaar.nee { border-left-color:#9b9290; }
+  .klaar.wacht { border-left-color:var(--oranje); }
+  .klaar .r1 { display:flex; align-items:center; gap:10px; }
+  .klaar .wat { flex:1; min-width:0; font-size:14px; color:var(--zacht); }
+  .klaar .wat b { display:block; font-size:16px; line-height:1.3; }
+  .klaar .wat span { color:var(--zacht); }
+  .terug { min-height:40px; min-width:44px; border-radius:12px; border:2px solid var(--tekst); background:#fff; font-weight:700; font-size:16px; padding:0 12px; white-space:nowrap; color:var(--tekst); }
+  .terug.wijzig { border:1px solid var(--lijn); color:var(--brand); }
+  .reden-vraag { font-size:16px; color:var(--zacht); margin:0; }
+  .chips.reden .chip { min-height:44px; font-size:16px; }
+  .rest { min-height:56px; border-radius:14px; border:2px solid #9b9290; background:#fff; font-weight:700; font-size:17px; color:var(--tekst); width:100%; }
+  .rest:disabled { opacity:.5; }
+  .rest-uitleg { margin:6px 0 10px; font-size:16px; color:var(--zacht); }
+  .toast { position:sticky; bottom:12px; z-index:6; margin:0 auto; background:var(--tekst); color:#fff; border-radius:14px; padding:8px 8px 8px 16px; display:flex; align-items:center; gap:10px; font-size:16px; max-width:520px; width:100%; }
+  .toast[hidden] { display:none; }
+  .toast .t { flex:1; }
+  .toast button { min-height:48px; border-radius:10px; border:0; background:#fff; color:var(--tekst); font-weight:700; font-size:16px; padding:0 12px; white-space:nowrap; }
+  .beheer a { display:flex; align-items:center; min-height:52px; padding:0 14px; border-top:1px solid #eee5e2; color:var(--brand); font-weight:700; text-decoration:none; font-size:17px; }
+  .beheer .kopje { padding:10px 14px 4px; font-size:16px; color:var(--zacht); font-weight:700; }
+  .leeg { background:var(--ok-zacht); color:var(--ok); border-radius:14px; padding:16px; font-weight:700; text-align:center; }
+  /* Dagscherm (20-11-2026, mock-up https://claude.ai/artifact/8VyrDR5Tzf9wfem2Tp71hW):
+     één regel per bericht met ✓ en ✕, tik op de kop klapt open; tabs bovenaan. */
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .tab { flex:0 0 auto; }
+  .tab { min-height:44px; border-radius:999px; border:1px solid var(--lijn); background:#fff; color:var(--zacht); font-weight:700; font-size:15px; padding:0 12px; }
+  .tab[aria-selected="true"] { background:var(--brand); border-color:var(--brand); color:#fff; }
+  .lijst.compact { gap:0; background:var(--vlak); border:1px solid var(--lijn); border-radius:14px; overflow:hidden; }
+  .lijst.compact > div { border-top:1px solid #eee5e2; }
+  .lijst.compact > div:first-child { border-top:0; }
+  .rij { display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:8px; align-items:center; padding:6px 8px 6px 6px; }
+  .rij.open { background:var(--brand-zacht); }
+  .rij .sc { font-weight:700; font-size:14px; color:var(--zacht); text-align:center; font-variant-numeric:tabular-nums; }
+  .rij .mid { min-width:0; background:none; border:0; padding:4px 0; text-align:left; color:var(--tekst); }
+  .rij .t { display:block; font-weight:700; font-size:16px; line-height:1.3; }
+  .rij.open .t { display:block; }
+  .rij .s { display:block; font-size:14px; line-height:1.4; color:var(--zacht); }
+  .rij .advies { grid-column:1 / -1; font-size:15px; line-height:1.4; color:var(--zacht); white-space:normal; overflow-wrap:anywhere; }
+  .rij .advies b { color:var(--brand); }
+  .rij .s .let { color:var(--oranje); font-weight:700; }
+  .rij .mw { background:#f2b84b; color:#2b2010; border-radius:4px; padding:0 5px; font-size:12px; font-weight:700; margin-right:4px; }
+  .rij .kn { display:flex; gap:6px; }
+  .rk { width:44px; height:44px; border-radius:10px; border:1px solid var(--lijn); background:#fff; font-size:20px; font-weight:700; line-height:1; color:var(--tekst); padding:0; }
+  .rk.ja { background:var(--brand); border-color:var(--brand); color:#fff; }
+  .rij .meer { grid-column:2 / -1; display:flex; flex-direction:column; gap:10px; padding:2px 0 8px; }
+  .rij .meer .samenvatting { font-size:16px; }
+  .rij .meer .waarom { font-size:15px; color:var(--zacht); margin:0; }
+  .rij .meer .klein-knoppen { display:flex; gap:8px; flex-wrap:wrap; }
+  .rij .meer .knop { min-height:44px; font-size:16px; }
+  .rij .bron a { font-size:15px; }
+  .lijst.compact .kaart { border:0; border-radius:0; }
+  .lijst.compact .klaar { border:0; border-left:6px solid var(--ok); border-radius:0; padding:6px 10px; opacity:.75; }
+  .lijst.compact .klaar.nee { border-left-color:#9b9290; }
+  .lijst.compact .klaar.wacht { border-left-color:var(--oranje); opacity:1; }
+  .lijst.compact .klaar .terug { min-height:40px; font-size:14px; }
+  .reden-knop { min-height:32px; background:none; border:0; color:var(--brand); font-weight:700; font-size:14px; padding:0 4px; text-decoration:underline; }
+  @media (min-width:900px) {
+    .kop { padding:14px 28px; }
+    .wrap { max-width:1100px; display:grid; grid-template-columns:300px 1fr; gap:28px; padding:20px 28px 40px; }
+    .romp { padding:0; }
+    .zij { display:flex; flex-direction:column; gap:14px; position:sticky; top:84px; align-self:start; }
+    .romp .alleen-smal { display:none; }
+    .knoppen { grid-template-columns:2fr 1fr 1fr; }
+    .knop.ja { grid-column:auto; }
+  }
+  .extra { font-size:14px; line-height:1.45; color:#2f6b3d; background:#eef4ee; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+  .extra a { color:#2f6b3d; font-weight:700; }
+  .extra .gewijzigd, .rij .s .gewijzigd { color:#8a4b00; font-weight:700; }
+  .peil-acties .gewijzigd { color:#8a4b00; font-weight:700; } .peil-acties .peil { font-weight:700; color:var(--tekst); } .peil-acties a { color:var(--tekst); font-weight:700; }
+  .rij .s .peil { color:#2f6b3d; font-weight:700; }
+.rij .s .geenpeil { color:#6b6b6b; font-weight:700; }
+  .kop .naarregie { min-height:44px; display:inline-flex; align-items:center; padding:0 10px; border:1px solid rgba(255,255,255,.5); border-radius:12px; color:#fff; text-decoration:none; font-weight:700; font-size:16px; flex:0 0 auto; }
+</style>
+</head>
+<body>
+<header class="kop"><div><h1>Redactie</h1><div class="dag" id="dag"></div></div>
+  <span class="teller" id="teller" aria-live="polite"></span>
+  <a class="naarregie" href="/regie" title="Regiekamer: nieuws en PEIL in één overzicht">Regie</a>
+  <button type="button" class="ververs" id="ververs" aria-label="Vernieuwen" title="Vernieuwen">&#8635;</button>
+</header>
+<div class="wrap">
+  <aside class="zij" id="zij"></aside>
+  <main class="romp" id="romp"><p class="status">Laden…</p></main>
+</div>
+<script>
+(function () {
+  "use strict";
+  var DREMPEL = 40; // alleen een beginwaarde, overschreven door /api/selectie (één waarde: SCORE_DREMPEL in lib/config.js)
+  var LOS_DREMPEL = 70; // uit /api/selectie, LOS_SCORE_DREMPEL in lib/redactieregels.js
+  var ONGEDAAN_MS = 5000;
+  var rev = null, sel = null, geladen = false;
+  // Alle toestand van de pagina. De kaarten worden per bericht getekend, nooit
+  // allemaal tegelijk: getypte tekst (st.cn) blijft staan, ook als elders een
+  // bericht wordt geplaatst of de laadbeurt klaar is.
+  var st = { tab: "beslis", uit: {}, redenOpen: {}, besluit: {}, open: {}, cn: {}, fout: {}, gedaan: {}, bewaard: {}, autoWeg: {}, autoBezig: {}, toch: [], lijst: [], auto: [], nietAi: [] };
+  var PLEKKEN = []; // [id, naam, uitleg] uit /api/selectie (lib/redactieregels.js)
+  var NAAM = {};
+  var PLEK_KORT = { nieuwspagina: "Nieuws", nieuwsbrief: "Brief", infopoche: "Infopoche", zijbalk: "Zijbalk", infofrankrijk: "Infofr." };
+  var LABEL = {};
+  var VOLGORDE = ["algemeen", "regelgeving", "ondernemers", "reizen", "meteo", "merkwaardig"];
+  var REDENEN = [];
+  var R17_REDEN = ""; // uit /api/selectie (lib/redactieregels.js)
+  var GROEPEN = ["Door jou teruggehaald", "Meerdere kranten", "Overheid, de AI twijfelt", "Eén krant"];
+  var LOS = "Eén krant: volgens de huisregel niet op nieuwspagina, nieuwsbrief en Infopoche."; // overschreven door sel.regels.losTekst (lib/redactieregels.js)
+  var VOLGT = "Volgt de nieuwspagina: zet eerst de nieuwspagina aan.";
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  // Oude kandidaten bevatten soms nog tekencodes als &#xE9; (é): hier omzetten.
+  function tekens(s) { return String(s == null ? "" : s).replace(/&(?:amp;)?#x([\da-f]+);/gi, function (_, h) { return String.fromCodePoint(parseInt(h, 16)); }).replace(/&(?:amp;)?#(\d+);/g, function (_, d) { return String.fromCodePoint(+d); }); }
+  function veilig(u) { return /^https:\/\//.test(String(u || "")) ? String(u) : ""; }
+  function tijd(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }); }
+  function urlSleutel(u) {
+    try { var x = new URL(String(u || "")); return (x.hostname.replace(/^www\./, "") + x.pathname.replace(/\/+$/, "")).toLowerCase(); } catch (e) { return ""; }
+  }
+  function nlHost(u) { try { return /\.(nl|be)$/.test(new URL(u).hostname); } catch (e) { return false; } }
+  function $(id) { return document.getElementById(id); }
+
+  // ---------- netwerk ----------
+  // keepalive: een verzoek dat tijdens het sluiten van de pagina vertrekt, wordt toch afgemaakt.
+  var wegGaand = false;
+  function post(pad, body) {
+    return fetch(pad, { method: "POST", credentials: "same-origin", keepalive: wegGaand, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (d) { d.status = r.status; return d; }, function () { return { ok: false, status: r.status, fout: "Onverwacht antwoord." }; }); })
+      .catch(function () { return { ok: false, fout: "Niet bereikbaar. Controleer je verbinding." }; });
+  }
+  function haal(pad) {
+    return fetch(pad, { credentials: "same-origin", cache: "no-store" }).then(function (r) {
+      if (r.status === 401) { location.href = "/login?terug=/redactie"; throw new Error("login"); }
+      return r.json();
+    });
+  }
+  // "Deze week klopte het voorstel bij x van de y berichten": alleen bij minstens 5 besluiten.
+  function leerHtml() {
+    var m = sel && sel.meting;
+    if (!m || !m.tonen) return "";
+    return '<p class="leer">Deze week klopte het voorstel bij ' + m.klopt + " van de " + m.totaal + " berichten.</p>";
+  }
+  function laad() {
+    geladen = false; laadFoutTekst = ""; tekenRomp();
+    Promise.all([haal("/api/review"), haal("/api/selectie")]).then(function (uit) {
+      rev = uit[0]; sel = uit[1];
+      if (sel && typeof sel.drempel === "number") DREMPEL = sel.drempel;
+      if (sel && typeof sel.losDrempel === "number") LOS_DREMPEL = sel.losDrempel;
+      if (sel && sel.regels) {
+        var rg = sel.regels;
+        if (rg.losTekst) LOS = rg.losTekst;
+        PLEKKEN = (rg.plekken || []).map(function (p) { return [p.id, p.naam, p.uitleg]; });
+        NAAM = {}; (rg.plekken || []).forEach(function (p) { NAAM[p.id] = p.kort; });
+        LABEL = {}; (rg.rubrieken || []).forEach(function (r) { LABEL[r.key] = r.label; });
+        REDENEN = rg.redenen || [];
+        R17_REDEN = rg.r17Reden || "";
+      }
+      if (!rev.ok || !sel.ok) { laadFout(rev.fout || sel.fout || "Fout bij laden."); return; }
+      geladen = true; bouw(); tekenRomp(); laadPeil();
+    }).catch(function (e) { if (!e || e.message !== "login") laadFout("Niet bereikbaar. Probeer het zo opnieuw."); });
+  }
+  // PEIL-acties (bouwplan AI-bewaking, ronde 2): berichten die een PEIL-waarde
+  // mogelijk wijzigen of een gat tonen. Alleen lezen; de tik komt in ronde 4.
+  var peilK = null;
+  function laadPeil() {
+    fetch("/api/selectie-feed?peil=1", { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (d) { peilK = d && Array.isArray(d.kandidaten) ? d : { kandidaten: [], fout: true }; tekenPeil(); })
+      .catch(function () { peilK = { kandidaten: [], fout: true }; tekenPeil(); });
+  }
+  function peilActiesHtml() {
+    if (!peilK) return '<p class="status">Laden…</p>';
+    if (peilK.fout) return '<p class="status">PEIL-acties konden niet worden geladen.</p>';
+    if (!peilK.kandidaten.length) return '<p class="status">Geen berichten die PEIL mogelijk wijzigen (laatste ' + (peilK.dagen || 7) + ' dagen). Geen is ook goed.</p>';
+    return '<p class="uitleg">Fase a: wijziging verwacht. PEIL rekent nog met de huidige waarde tot een wijziging is vastgesteld en gecontroleerd.</p>' +
+      '<ul class="klein-lijst peil-acties">' + peilK.kandidaten.map(function (k) {
+        var regels = k.peil.map(function (p) {
+          return '<span class="b"><span class="gewijzigd">PEIL: ' + esc(p.naam) + '</span>' + (p.waarde ? ' · nu: ' + esc(p.waarde) : '') + (p.toelichting ? ' · bericht: ' + esc(p.toelichting) : '') + '</span>';
+        }).join("") + (k.gat ? '<span class="b"><span class="peil">Gat in PEIL:</span> ' + esc(k.gat) + '</span>' : '');
+        return '<li data-peil-kandidaat="' + esc(k.id) + '"><span class="t"><a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.titel) + '</a>' +
+          '<span class="b">' + (k.soort === "overheid" ? "Overheid" : "Pers") + (k.bron ? ' · ' + esc(k.bron) : '') + '</span>' + regels + '</span></li>';
+      }).join("") + '</ul>';
+  }
+  function tekenPeil() {
+    var n = $("peil-n"); if (n) n.textContent = peilK && !peilK.fout ? "(" + peilK.kandidaten.length + ")" : "";
+    var p = $("peilacties"); if (p) p.innerHTML = peilActiesHtml();
+  }
+  var laadFoutTekst = "";
+  function laadFout(t) { laadFoutTekst = t; geladen = false; tekenRomp(); }
+
+  // ---------- berichten ----------
+  // Een kandidaat uit de selectie met dezelfde bronlink als een synthese of
+  // overheidsbericht gaat in dat bericht op: zijn AI-oordeel hoort er dan bij.
+  function bouwItems() {
+    var klaar = {};
+    (sel.redactie || []).forEach(function (b) { klaar[b.reviewId] = b; });
+    var opUrl = {};
+    (sel.kandidaten || []).forEach(function (k) { var s = urlSleutel(k.url); if (s) (opUrl[s] = opUrl[s] || []).push(k); });
+    var gebruikt = {};
+    function koppel(urls) {
+      var best = null;
+      urls.forEach(function (u) { (opUrl[urlSleutel(u)] || []).forEach(function (k) {
+        gebruikt[k.id] = true;
+        if (!best || ((k.ai && k.ai.score) || 0) > ((best.ai && best.ai.score) || 0)) best = k;
+      }); });
+      return best;
+    }
+    var items = [];
+    (rev.concepten || []).forEach(function (c) {
+      if (klaar[c.id]) return;
+      var urls = (c.bronnen || []).map(function (b) { return b.url; });
+      var gek = koppel(urls), ai = gek ? gek.ai : null;
+      items.push({ soort: "concept", id: c.id, tijd: c.aangemaaktOp, kop: tekens(c.kop), tekst: tekens(c.tekst), urls: urls,
+        bron: bronTekst(c, urls), ai: ai, url: "", nieuwsMag: !(c.poort && c.poort.publiceerbaar === false),
+        voorstel: ai && ai.plek ? ai.plek : "zijbalk", altijd: true });
+    });
+    (rev.overheid || []).forEach(function (o) {
+      if (klaar[o.id]) return;
+      var gek = koppel([o.url]), ai = gek ? gek.ai : null;
+      var v = ai && ai.plek ? ai.plek : "nieuwspagina";
+      if (v === "zijbalk") v = "beide";
+      var wacht = !!(o.poort && o.poort.status === "wacht");
+      if (wacht && !(ai && ai.plek)) v = "zijbalk";
+      items.push({ soort: "overheid", poort: o.poort, id: o.id, tijd: o.gepubliceerdOp || o.datum, kop: tekens(o.kop || o.titelBron), tekst: tekens(o.samenvatting),
+        bron: o.bron, url: veilig(o.url), ai: ai, voorstel: v, altijd: !wacht, wacht: wacht });
+    });
+    // Syntheses die al op de nieuwspagina staan maar nog geen keuze voor
+    // zijbalk en Infofrankrijk hebben.
+    var grensPub = Date.now() - 24 * 3600e3;
+    (rev.publicaties || []).forEach(function (c) {
+      if (klaar[c.id] || Date.parse(c.gepubliceerdOp || "") < grensPub) return;
+      var urls = (c.bronnen || []).map(function (b) { return b.url; });
+      var gek = koppel(urls), ai = gek ? gek.ai : null;
+      var v = ai && ai.plek ? ai.plek : "nieuwspagina";
+      if (v === "zijbalk") v = "beide";
+      items.push({ soort: "publicatie", id: c.id, tijd: c.gepubliceerdOp, kop: tekens(c.kop), tekst: tekens(c.tekst), urls: urls,
+        bron: bronTekst(c, urls), ai: ai, url: "", voorstel: v, altijd: true });
+    });
+    (sel.kandidaten || []).forEach(function (k) {
+      if (gebruikt[k.id]) return;
+      var ai = k.ai, v = ai && ai.plek ? ai.plek : "zijbalk";
+      if (v === "nieuwspagina" || v === "beide") v = "zijbalk";
+      items.push({ soort: "kandidaat", id: k.id, tijd: k.datum || k.gevondenOp, kop: tekens((ai && ai.titelNl) || k.titel),
+        origineel: ai && ai.titelNl && ai.titelNl !== k.titel ? tekens(k.titel) : "", tekst: "", bron: k.bron, bronNaam: k.bron,
+        url: veilig(k.url), urls: [k.url], ai: ai, voorstel: v, altijd: false, kSoort: k.soort });
+    });
+    items.sort(function (a, b) { return (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0); });
+    return items;
+  }
+  function bronTekst(c, urls) {
+    // De namen van de kranten, niet alleen het aantal.
+    var namen = (c.poort && c.poort.outletNamen) || c.outletNamen || [];
+    if (!namen.length) namen = (c.bronnen || []).map(function (b) { return b.bron || b.naam || ""; });
+    var gezien = {};
+    namen = namen.map(function (x) { return String(x || "").trim(); }).filter(function (x) { var k = x.toLowerCase(); if (!x || gezien[k]) return false; gezien[k] = true; return true; });
+    if (namen.length) return namen.join(", ");
+    return urls.length + (urls.length === 1 ? " bron" : " bronnen");
+  }
+  // PEIL, tool en Café Claude uit het AI-oordeel (teruggezet 21-11-2026; was weg sinds PR 78).
+  function extraBlok(ai) {
+    if (!ai) return "";
+    var r = [];
+    if (!(ai.peil || []).length) r.push("<span><b>PEIL:</b> nee, geen relatie met een PEIL-parameter</span>");
+    (ai.peil || []).forEach(function (p) {
+      var tools = (p.tools || []).map(function (t) { return veilig(t.url) ? '<a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.naam) + "</a>" : esc(t.naam); }).join(", ");
+      r.push("<span><b>PEIL:</b> " + esc(p.naam) + (p.verificatiedatum ? " · gecontroleerd " + esc(p.verificatiedatum) : "") +
+        (p.soort === "mogelijk-gewijzigd" ? ' · <span class="gewijzigd">mogelijk gewijzigd, verifiëren</span>' : "") +
+        (p.toelichting ? "<br>" + esc(p.toelichting) : "") +
+        (tools ? "<br>Tools: " + tools : "<br><i>Nog geen tool gekoppeld in PEIL</i>") + "</span>");
+    });
+    if (ai.tool && veilig(ai.tool.url)) r.push('<span><b>Tool in de zijbalk:</b> <a href="' + esc(ai.tool.url) + '" target="_blank" rel="noopener">' + esc(ai.tool.naam) + " →</a></span>");
+    if (ai.cafe && veilig(ai.cafe.url)) r.push('<span><b>Café Claude:</b> <a href="' + esc(ai.cafe.url) + '" target="_blank" rel="noopener">' + esc(ai.cafe.tekst || "Vraag het Café Claude") + " →</a></span>");
+    if (ai.gat) r.push('<span class="gewijzigd">Gat in PEIL: ' + esc(ai.gat) + "</span>");
+    return r.length ? '<div class="extra">' + r.join("") + "</div>" : "";
+  }
+  // PEIL ja/nee staat bij elk bericht met een AI-oordeel (afspraak 20-11-2026).
+  function peilKort(ai) {
+    if (!ai) return "";
+    var p = ai.peil && ai.peil[0];
+    var tool = ai.tool && ai.tool.naam ? ' · <span class="peil">Tool: ' + esc(ai.tool.naam) + "</span>" : "";
+    if (!p) return ' · <span class="geenpeil">PEIL: nee</span>' + tool;
+    return ' · <span class="' + (p.soort === "mogelijk-gewijzigd" ? "gewijzigd" : "peil") + '">PEIL: ja, ' + esc(p.naam) + (p.soort === "mogelijk-gewijzigd" ? ", mogelijk gewijzigd" : "") + "</span>" + tool;
+  }
+  function score(it) { return it.ai && typeof it.ai.score === "number" ? it.ai.score : null; }
+  function losKrantenbericht(it) { return it.soort === "kandidaat" && (!it.kSoort || it.kSoort === "pers"); }
+  function openLosseKranten() { return st.lijst.filter(function (it) { return losKrantenbericht(it) && !st.besluit[it.id]; }); }
+  function vanVandaag(it) { var d = new Date(it.tijd); return !isNaN(d) && d.toDateString() === new Date().toDateString(); }
+  // Alles zonder besluit uit de afgelopen 24 uur.
+  function recent(it) { var t = Date.parse(it.tijd); return !isNaN(t) && t > Date.now() - 24 * 3600e3; }
+  // Onder de drempel: een synthese of overheidsbericht met een score onder 40,
+  // of een overheidsbericht dat volgens R17 niet hoort. Zonder score: blijft staan.
+  function onderDrempel(it) {
+    if (it.soort === "overheid") return r17(it) || (score(it) != null && score(it) < DREMPEL);
+    if (it.soort === "concept" || it.soort === "publicatie") return score(it) != null && score(it) < DREMPEL;
+    return false;
+  }
+  // Zelfde onderwerp: een gedeelde bron-URL, of koppen die grotendeels dezelfde woorden hebben.
+  function kopWoorden(k) { return String(k || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/).filter(function (w) { return w.length > 3; }); }
+  function zelfdeOnderwerp(a, b) {
+    var ua = (a.urls || []).map(urlSleutel), ub = (b.urls || []).map(urlSleutel);
+    if (ua.some(function (u) { return u && ub.indexOf(u) >= 0; })) return true;
+    var wa = kopWoorden(a.kop), wb = kopWoorden(b.kop);
+    if (!wa.length || !wb.length) return false;
+    var gedeeld = wa.filter(function (w) { return wb.indexOf(w) >= 0; }).length;
+    return gedeeld >= 2 && gedeeld / Math.min(wa.length, wb.length) >= 0.5;
+  }
+  function groepVan(it) {
+    if (it.toch) return GROEPEN[0];
+    if (it.soort === "concept" || it.soort === "publicatie") return GROEPEN[1];
+    if (it.soort === "overheid") return GROEPEN[2];
+    return GROEPEN[3];
+  }
+
+  // Wat heeft een beslissing nodig (lijst), wat staat al automatisch live
+  // (overheid die de poort door is), en wat heeft de AI niet voorgesteld.
+  function bouw() {
+    var items = bouwItems(), lijst = [], auto = [], nietAi = [];
+    items.forEach(function (it) {
+      if (it.soort === "overheid" && it.poort && it.poort.door === "uitgesloten") return;
+      if (it.soort === "overheid" && !it.wacht) { if (vanVandaag(it)) auto.push(it); return; }
+      if (!recent(it)) return;
+      if (onderDrempel(it) && st.toch.indexOf(it.id) < 0) { nietAi.push(it); return; }
+      if (it.soort === "kandidaat" && !(score(it) != null && score(it) >= (losKrantenbericht(it) ? LOS_DREMPEL : DREMPEL))) {
+        if (st.toch.indexOf(it.id) >= 0) { it.toch = true; lijst.push(it); } else nietAi.push(it);
+        return;
+      }
+      lijst.push(it);
+    });
+    // Zelfde onderwerp één keer: synthese gaat voor, dan de hoogste score, dan de nieuwste.
+    // Overheid blijft altijd apart; door jou teruggehaald blijft altijd staan.
+    var rangO = function (it) { return it.soort === "concept" || it.soort === "publicatie" ? 0 : 1; };
+    var gehouden = [];
+    lijst.slice().sort(function (a, b) {
+      return rangO(a) - rangO(b) || (score(b) || 0) - (score(a) || 0) || (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0);
+    }).forEach(function (it) {
+      if (it.soort !== "overheid" && !it.toch && st.toch.indexOf(it.id) < 0 &&
+          gehouden.some(function (x) { return x.soort !== "overheid" && zelfdeOnderwerp(x, it); })) { nietAi.push(it); return; }
+      gehouden.push(it);
+    });
+    lijst = lijst.filter(function (it) { return gehouden.indexOf(it) >= 0; });
+    // Een bericht waarover al besloten is, blijft als regel staan (ook als de server het niet meer als open kent).
+    var aanwezig = {}; lijst.forEach(function (it) { aanwezig[it.id] = true; });
+    Object.keys(st.besluit).forEach(function (id) { if (!aanwezig[id] && st.bewaard[id]) lijst.push(st.bewaard[id]); });
+    lijst.forEach(function (it) { st.bewaard[it.id] = it; });
+    st.lijst = lijst; st.auto = auto; st.nietAi = nietAi;
+  }
+  function vind(id) { for (var i = 0; i < st.lijst.length; i++) if (st.lijst[i].id === id) return st.lijst[i]; return null; }
+
+  // ---------- regels voor de plekken ----------
+  function opPagina(it) { return (it.soort === "overheid" && !it.wacht) || it.soort === "publicatie"; }
+  function plekMag(it, plek, k) {
+    if (plek === "zijbalk" || plek === "infofrankrijk") return "";
+    if (it.soort === "kandidaat") return LOS;
+    if (opPagina(it) && plek === "nieuwspagina") return "Staat al op de nieuwspagina. Nee haalt het er weer af.";
+    if (it.soort === "concept" && it.nieuwsMag === false) return "De huisregel (minstens twee kranten) is niet gehaald.";
+    if (plek !== "nieuwspagina" && !k.nieuwspagina) return VOLGT;
+    return "";
+  }
+  function vast(it, plek) { return opPagina(it) && plek === "nieuwspagina"; }
+  function schoon(it, k) {
+    var u = {};
+    PLEKKEN.forEach(function (p) { var s = p[0]; u[s] = !!k[s] && (!plekMag(it, s, k) || vast(it, s)); });
+    PLEKKEN.forEach(function (p) { var s = p[0]; if ((s === "nieuwsbrief" || s === "infopoche") && !u.nieuwspagina) u[s] = false; });
+    return u;
+  }
+  // Het voorstel van de AI, nooit verder dan de huisregels toelaten. Uitgangspunt is
+  // het modelvoorstel in vijf plekken (ai.plekken); een synthese uit meerdere kranten
+  // leidt zijn voorstel los af, want het oordeel is van één losse krant en mag de
+  // nieuwspagina niet afsluiten.
+  // R17: de poort hield dit overheidsbericht tegen als Nederlands binnenlands nieuws (poort.reden).
+  function r17(it) { return it.soort === "overheid" && !!(it.poort && it.poort.reden === "r17"); }
+  function voorstelK(it) {
+    if (r17(it)) return {}; // geen nieuwspagina, nieuwsbrief of Infopoche: het voorstel is Nee
+    var P = it.ai && Array.isArray(it.ai.plekken) && it.ai.plekken.length ? it.ai.plekken : null;
+    var k = {};
+    if (it.soort === "kandidaat") {
+      if (P) P.forEach(function (p) { k[p] = true; }); else { k.zijbalk = true; k.infofrankrijk = true; }
+      return schoon(it, k);
+    }
+    if (!it.ai && (it.soort === "concept" || (it.soort === "overheid" && it.wacht))) { k.zijbalk = true; k.infofrankrijk = true; return schoon(it, k); }
+    if (it.soort === "concept" || it.soort === "publicatie") {
+      var laag = it.ai && typeof it.ai.score === "number" && it.ai.score < DREMPEL;
+      k.nieuwspagina = it.soort === "publicatie" ? true : it.nieuwsMag !== false && !laag;
+      k.nieuwsbrief = k.infopoche = k.nieuwspagina;
+      k.zijbalk = k.infofrankrijk = P ? (P.indexOf("zijbalk") >= 0 || P.indexOf("infofrankrijk") >= 0) || !k.nieuwspagina : !k.nieuwspagina;
+      return schoon(it, k);
+    }
+    // overheid
+    if (P) { P.forEach(function (p) { k[p] = true; }); if (!it.wacht) k.nieuwspagina = true; return schoon(it, k); }
+    k.nieuwspagina = it.wacht ? false : true;
+    k.nieuwsbrief = k.infopoche = k.nieuwspagina;
+    k.zijbalk = k.infofrankrijk = !k.nieuwspagina || it.voorstel === "zijbalk" || it.voorstel === "beide";
+    return schoon(it, k);
+  }
+  // Het voorstel zoals getoond, als lijst plek-ids: gaat mee met het besluit (meten en leren).
+  function voorstelLijst(it) { var k = voorstelK(it); return PLEKKEN.filter(function (p) { return k[p[0]]; }).map(function (p) { return p[0]; }); }
+  function rubriekVoorstel(it) {
+    if (it.ai && LABEL[it.ai.categorie]) return it.ai.categorie;
+    if (it.soort === "overheid") return "regelgeving";
+    if (it.soort === "kandidaat" && it.kSoort === "meteo") return "meteo";
+    return "algemeen"; // nooit "kies eerst een rubriek"
+  }
+  function lijstTekst(k) {
+    var n = PLEKKEN.filter(function (p) { return k[p[0]]; }).map(function (p) { return NAAM[p[0]]; });
+    if (!n.length) return "nergens";
+    var t = n.length === 1 ? n[0] : n.slice(0, -1).join(", ") + " en " + n[n.length - 1];
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  function conceptVan(it) {
+    if (!st.cn[it.id]) st.cn[it.id] = { k: voorstelK(it), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "" };
+    return st.cn[it.id];
+  }
+  function waarom(it) {
+    if (r17(it)) return R17_REDEN;
+    if (!it.ai) return "De AI heeft dit bericht nog niet beoordeeld; dit is de veilige standaard.";
+    if (it.ai.reden) return it.ai.reden;
+    return "Voorstel van de AI.";
+  }
+
+  // ---------- tekenen ----------
+  function tekenRomp() {
+    $("dag").textContent = (function () { var t = new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" }); return t.charAt(0).toUpperCase() + t.slice(1); })();
+    var romp = $("romp");
+    var uitleg = "Per bericht: <b>✓</b> plaatst zoals voorgesteld, <b>✕</b> slaat over. Tik op een kop voor de tekst en meer keuzes.";
+    $("zij").innerHTML = '<p class="uitleg">' + uitleg + "</p>" + beheerHtml();
+    if (!geladen) {
+      romp.innerHTML = laadFoutTekst
+        ? '<div class="fout-blok" role="alert"><span>' + esc(laadFoutTekst) + '</span><button type="button" class="knop" data-opnieuw="1">Opnieuw proberen</button></div>'
+        : '<p class="status">Laden…</p>';
+      werkTeller(); return;
+    }
+    var r = sel.ronde, tb = st.tab;
+    var nLive = st.auto.filter(function (it) { return !st.autoWeg[it.id]; }).length;
+    romp.innerHTML =
+      '<div class="tabs" role="tablist">' +
+      '<button type="button" class="tab" role="tab" data-tab="beslis" aria-selected="' + (tb === "beslis") + '">Beslissen <span id="tab-n"></span></button>' +
+      '<button type="button" class="tab" role="tab" data-tab="live" aria-selected="' + (tb === "live") + '">Live (' + nLive + ")</button>" +
+      '<button type="button" class="tab" role="tab" data-tab="weg" aria-selected="' + (tb === "weg") + '">Door AI overgeslagen (' + st.nietAi.length + ")</button>" +
+      '<button type="button" class="tab" role="tab" data-tab="peil" aria-selected="' + (tb === "peil") + '">PEIL-acties <span id="peil-n">' + (peilK && !peilK.fout ? "(" + peilK.kandidaten.length + ")" : "") + "</span></button></div>" +
+      (r && r.modelFout ? '<p class="status" style="color:var(--oranje)">AI-oordeel mislukt: ' + esc(r.modelFout) + "</p>" : "") +
+      '<div id="auto"' + (tb === "live" ? "" : " hidden") + ">" + autoHtml(true) + "</div>" +
+      '<div id="aiweg"' + (tb === "weg" ? "" : " hidden") + ">" + aiWegHtml(true) + "</div>" +
+      '<div id="peilacties"' + (tb === "peil" ? "" : " hidden") + ">" + peilActiesHtml() + "</div>" +
+      '<div id="beslis"' + (tb === "beslis" ? "" : " hidden") + ">" +
+      '<button type="button" class="rest" data-rest="1" id="rest" aria-describedby="rest-uitleg">Rest van vandaag: nee</button>' +
+      '<p class="rest-uitleg" id="rest-uitleg">Alleen losse krantenberichten, vijf seconden ongedaan maken.</p>' +
+      '<div class="lijst compact" id="lijst"></div>' +
+      '<div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">' +
+      '<details id="gedaan" hidden><summary><span>Gedaan (<span id="gedaan-n">0</span>)</span><span class="pijl">Bekijk</span></summary><div class="lijst compact" id="gedaan-lijst"></div></details>' +
+      leerHtml() +
+      '<div class="alleen-smal">' + beheerHtml() + "</div></div></div>" +
+      '<div class="toast" id="toast" hidden role="status"><span class="t"></span><button type="button" data-toast-terug="1">Ongedaan maken</button></div>';
+    tekenLijst();
+  }
+  function beheerHtml() {
+    return '<details class="beheer"><summary>Bekijken en beheer<span class="pijl">Open</span></summary>' +
+      '<div class="kopje">Zo staat het er nu</div>' +
+      '<a href="https://www.nederlanders.fr/page/actueel-frankrijknieuws" target="_blank" rel="noopener">Nieuwspagina</a>' +
+      '<a href="https://nlfr-nieuwsbrief.vercel.app/api/nieuwsbrief" target="_blank" rel="noopener">Nieuwsbrief</a>' +
+      '<a href="https://infopoche.fr" target="_blank" rel="noopener">Infopoche</a>' +
+      '<a href="/sidebar-nieuws" target="_blank" rel="noopener">Zijbalk</a>' +
+      '<a href="https://infofrankrijk.com/#open" target="_blank" rel="noopener">Infofrankrijk</a>' +
+      '<div class="kopje">Beheer</div>' +
+      '<a href="/review">Café Jeudi, verwijzingen, bronnen en uitloggen</a>' +
+      "</details>";
+  }
+  function autoHtml(open) {
+    var n = st.auto.filter(function (it) { return !st.autoWeg[it.id]; }).length;
+    return '<details data-auto' + (open ? " open" : "") + '><summary><span class="bol"></span><span>Al automatisch live vandaag (' + n + ')</span><span class="pijl">Bekijk</span></summary>' +
+      '<p class="uitleg" style="padding:0 14px 6px">Overheidsberichten staan vanzelf op de nieuwspagina, in de nieuwsbrief en in Infopoche. Je hoeft niets te doen. Iets weghalen kan hier.</p>' +
+      '<ul class="klein-lijst">' + (st.auto.length ? st.auto.map(function (it) {
+        var w = st.autoWeg[it.id];
+        return '<li class="' + (w ? "weg" : "") + '"><span class="t">' + esc(it.kop) + '<span class="b">' + esc(it.bron || "") + "</span></span>" +
+          '<button type="button" class="terug' + (w ? "" : " wijzig") + '" data-auto-weg="' + esc(it.id) + '"' + (st.autoBezig[it.id] ? " disabled" : "") + ">" + (st.autoBezig[it.id] ? "Even…" : w ? "Terugzetten" : "Haal weg") + "</button></li>";
+      }).join("") : '<li><span class="t b">Vandaag staat er niets automatisch live.</span></li>') + "</ul></details>";
+  }
+  function aiWegHtml(open) {
+    var l = st.nietAi, n = l.length;
+    return '<details data-aiweg' + (open ? " open" : "") + '><summary><span>Door de AI niet voorgesteld (' + n + ')</span><span class="pijl">Bekijk</span></summary>' +
+      '<p class="uitleg" style="padding:0 14px 6px">Ter controle. Zie je hier iets dat wel moet, tik dan op Toch bekijken; dan komt het in de lijst.</p>' +
+      '<ul class="klein-lijst">' + l.slice(0, 20).map(function (it) {
+        return '<li><span class="t">' + esc(it.kop) + '<span class="b">' + esc(it.bron || "") + '</span></span><button type="button" class="terug wijzig" data-toch="' + esc(it.id) + '">Toch bekijken</button></li>';
+      }).join("") + (n > 20 ? '<li><span class="t b">en nog ' + (n - 20) + " andere</span></li>" : "") + (n ? "" : '<li><span class="t b">Niets.</span></li>') + "</ul></details>";
+  }
+  function volgordeItems(a, b) {
+    var rang = function (it) { return it.soort === "concept" || it.soort === "publicatie" ? 0 : it.soort === "overheid" ? 1 : 2; };
+    return rang(a) - rang(b) || (rang(a) === 2 ? (score(b) || 0) - (score(a) || 0) : 0) ||
+      (Date.parse(b.tijd) || 0) - (Date.parse(a.tijd) || 0);
+  }
+  function tekenLijst() {
+    var l = $("lijst"); if (!l) return;
+    var html = "", klaar = "";
+    // Syntheses en overheid eerst, ongeacht de score; losse berichten op score.
+    var lijst = st.lijst.slice().sort(volgordeItems);
+    lijst.forEach(function (it) {
+      var rij = '<div data-item="' + esc(it.id) + '">' + itemHtml(it) + "</div>";
+      if (st.besluit[it.id] && st.besluit[it.id].status === "klaar") klaar += rij;
+      else html += rij;
+    });
+    if (!html) html = '<div class="leeg">Niets te beslissen. De AI kijkt elk uur opnieuw.</div>';
+    l.innerHTML = html;
+    $("gedaan-lijst").innerHTML = klaar;
+    l.querySelectorAll("textarea").forEach(groeiTekst);
+    werkTeller();
+  }
+  function tekenItem(id) {
+    var it = st.bewaard[id] || vind(id);
+    var el = document.querySelector('[data-item="' + id + '"]');
+    if (el && it) {
+      el.innerHTML = itemHtml(it);
+      var b = st.besluit[id], doel = $(b && b.status === "klaar" ? "gedaan-lijst" : "lijst");
+      if (doel && el.parentNode !== doel) {
+        var volgende = null;
+        if (doel.id === "lijst") {
+          var lijst = st.lijst.slice().sort(volgordeItems), index = lijst.indexOf(it);
+          for (var i = index + 1; i < lijst.length; i++) {
+            var buur = document.querySelector('[data-item="' + lijst[i].id + '"]');
+            if (buur && buur.parentNode === doel) { volgende = buur; break; }
+          }
+        }
+        doel.insertBefore(el, volgende);
+      }
+      var veld = el.querySelector("textarea"); if (veld) groeiTekst(veld);
+    }
+    werkTeller();
+  }
+  function werkTeller() {
+    var n = st.lijst.filter(function (it) { return !st.besluit[it.id]; }).length;
+    $("teller").textContent = !geladen ? "" : n === 0 ? "Alles gedaan" : "Nog " + n + " te doen";
+    var tn = $("tab-n"); if (tn) tn.textContent = "(" + n + ")";
+    var gd = $("gedaan"), gn = $("gedaan-n");
+    var klaar = Object.keys(st.besluit).filter(function (id) { return st.besluit[id].status === "klaar"; }).length;
+    if (gd) gd.hidden = klaar === 0;
+    if (gn) gn.textContent = klaar;
+    var l = $("lijst"), leeg = l && l.querySelector(".leeg");
+    if (l && !l.querySelector("[data-item]") && !leeg) l.insertAdjacentHTML("beforeend", '<div class="leeg">Niets te beslissen. De AI kijkt elk uur opnieuw.</div>');
+    else if (leeg && l.querySelector("[data-item]")) leeg.remove();
+    var r = $("rest");
+    var los = openLosseKranten().length;
+    if (r) { r.disabled = los === 0; r.textContent = los ? "Rest van vandaag: nee (" + los + ")" : "Rest van vandaag: nee"; }
+  }
+  function labelHtml(it) {
+    var t = it.soort === "overheid" ? "Overheid" : it.soort === "kandidaat" ? (it.kSoort === "meteo" ? "Meteo" : it.kSoort === "pers" || !it.kSoort ? "Eén krant" : "Bericht") : "Synthese";
+    return '<span class="label">' + t + "</span>";
+  }
+  function itemHtml(it) {
+    var b = st.besluit[it.id];
+    if (b) return klaarHtml(it, b);
+    var c = st.open[it.id] ? conceptVan(it) : null;
+    var vk = voorstelK(it), vr = rubriekVoorstel(it);
+    var zbAlleen = vk.zijbalk && PLEKKEN.every(function (p) { return p[0] === "zijbalk" || p[0] === "infofrankrijk" || !vk[p[0]]; });
+    var kop = it.url ? '<a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.kop) + "</a>" : esc(it.kop);
+    var f = st.fout[it.id];
+    if (!c) return rijHtml(it, vk, vr, zbAlleen, f);
+    var h = '<article class="kaart bewerken">' +
+      '<div class="soort">' + labelHtml(it) + "<span>" + esc(it.bron || "") + "</span>" + (tijd(it.tijd) ? "<span>· " + tijd(it.tijd) + "</span>" : "") + "</div>" +
+      (it.soort === "concept"
+        ? '<label class="veld">Kop<input class="veld-in" data-kop="' + esc(it.id) + '" value="' + esc(c.kop) + '"></label>'
+        : "<h2>" + kop + "</h2>" + (it.origineel ? '<p class="fr">' + esc(it.origineel) + "</p>" : "") +
+          (it.tekst ? '<p class="samenvatting">' + esc(it.tekst) + "</p>" : ""));
+    if (f) h += '<div class="melding-kaart" role="alert"><span>' + esc(f.tekst) + "</span>" + (f.bevestig ? '<button type="button" class="knop" data-bevestig="' + esc(it.id) + '">Toch publiceren</button>' : "") + "</div>";
+    h += '<div class="anders"><h3>Waar komt het?</h3><div class="plekken">' + PLEKKEN.map(function (p) {
+        var s = p[0], nee = vast(it, s) ? "" : plekMag(it, s, c.k), aan = !!c.k[s] && !nee;
+        return '<button type="button" class="plek" data-plek="' + s + '" data-id="' + esc(it.id) + '" aria-pressed="' + aan + '" aria-label="' + esc(p[1]) + '" title="' + esc(nee || (vast(it, s) ? "Staat al op de nieuwspagina." : p[1] + ": " + p[2])) + '"' + (nee || vast(it, s) ? " disabled" : "") + ">" +
+          '<span class="naam">' + esc(PLEK_KORT[s] || p[1]) + "</span></button>";
+      }).join("") + "</div>" +
+        (it.soort === "kandidaat" ? '<p class="samen">' + esc(LOS) + "</p>" : it.soort === "concept" && it.nieuwsMag === false ? '<p class="samen">De huisregel (minstens twee kranten) is niet gehaald.</p>' : "") +
+        "<h3>Rubriek</h3><div class=\"chips\">" + VOLGORDE.map(function (r) {
+          return '<button type="button" class="chip" data-rub="' + r + '" data-id="' + esc(it.id) + '" aria-pressed="' + (c.rubriek === r) + '">' + LABEL[r] + "</button>";
+        }).join("") + "</div>" +
+        (it.soort === "concept" ?
+          '<label class="veld">Tekst<textarea rows="3" data-tekst="' + esc(it.id) + '">' + esc(c.tekst) + "</textarea></label>" : "") +
+        '<p class="samen" data-samen="' + esc(it.id) + '">' + samenTekst(it, c) + "</p>" +
+        '<div class="rij2"><button type="button" class="knop ja" style="grid-column:auto" data-zo="' + esc(it.id) + '">Plaats zo</button>' +
+        '<button type="button" class="knop nee" data-sluit="' + esc(it.id) + '" aria-expanded="true">Sluiten</button></div></div>';
+    return h + "</article>";
+  }
+  function rijHtml(it, vk, vr, zbAlleen, f) {
+    var id = esc(it.id), open = !!st.uit[it.id], sc = score(it);
+    var soortT = labelTekst(it);
+    var advies = r17(it) ? "Nee" : lijstTekst(vk);
+    var h = '<div class="rij' + (open ? " open" : "") + '">' +
+      '<span class="sc" title="Score">' + (sc == null ? "–" : sc) + "</span>" +
+      '<button type="button" class="mid" data-uit="' + id + '" aria-expanded="' + open + '">' +
+      '<span class="t">' + (vr === "merkwaardig" ? '<span class="mw">Merkwaardig</span>' : "") + esc(it.kop) + "</span>" +
+      '<span class="s">' + esc(soortT) + (LABEL[vr] ? " · " + esc(LABEL[vr]) : "") + (it.bron ? " · " + esc(it.bron) : "") + (tijd(it.tijd) ? " · " + tijd(it.tijd) : "") +
+      (!it.ai ? ' · <span class="let">geen AI-oordeel</span>' : "") + peilKort(it.ai) + "</span></button>" +
+      '<span class="kn"><button type="button" class="rk ja" data-ja="' + id + '" aria-label="Ja, zoals voorgesteld" title="Ja, zoals voorgesteld">✓</button>' +
+      '<button type="button" class="rk" data-nee="' + id + '" aria-label="Nee" title="Nee">✕</button></span>' +
+      '<span class="advies">Advies: <b>' + esc(advies) + '</b></span>';
+    if (f) h += '<div class="meer"><div class="melding-kaart" role="alert"><span>' + esc(f.tekst) + "</span>" + (f.bevestig ? '<button type="button" class="knop" data-bevestig="' + id + '">Toch publiceren</button>' : "") + "</div></div>";
+    if (open) {
+      h += '<div class="meer">' +
+        (it.origineel ? '<p class="fr">' + esc(it.origineel) + "</p>" : "") +
+        (it.tekst ? '<p class="samenvatting">' + esc(it.tekst) + "</p>" : "") +
+        '<p class="waarom">Rubriek ' + esc(LABEL[vr]) + ". " + esc(waarom(it)) + "</p>" + extraBlok(it.ai) +
+        (it.url ? '<span class="bron"><a href="' + esc(veilig(it.url)) + '" target="_blank" rel="noopener">Bron: ' + esc(it.bron || "openen") + " ↗</a></span>" : "") +
+        '<div class="klein-knoppen">' + (zbAlleen ? "" : '<button type="button" class="knop" data-zb="' + id + '">Alleen zijbalk</button>') +
+        '<button type="button" class="knop" data-anders="' + id + '">Anders: plekken, rubriek of tekst</button></div></div>';
+    }
+    return h + "</div>";
+  }
+  function labelTekst(it) {
+    if (it.soort === "overheid") return "Overheid";
+    if (it.soort === "kandidaat") return it.kSoort === "meteo" ? "Meteo" : it.kSoort === "pers" || !it.kSoort ? "Eén krant" : "Bericht";
+    return "Synthese";
+  }
+  function samenTekst(it, c) {
+    var k = schoon(it, c.k);
+    return PLEKKEN.some(function (p) { return k[p[0]]; }) ? "Komt op: " + lijstTekst(k) + "." : "Nog geen plek gekozen: Plaats zo werkt pas met minstens één plek.";
+  }
+  function klaarHtml(it, b) {
+    var wacht = b.status === "wacht", bezig = b.status === "bezig";
+    var rest = wacht ? Math.max(0, Math.ceil((b.tot - Date.now()) / 1000)) : 0;
+    var knop = wacht ? '<button type="button" class="terug" data-terug="' + esc(it.id) + '">Ongedaan maken (' + rest + ")</button>"
+      : bezig ? '<button type="button" class="terug wijzig" disabled>Opslaan…</button>'
+      : b.vast ? "" : '<button type="button" class="terug wijzig" data-wijzig="' + esc(it.id) + '">Wijzig</button>';
+    var kop = esc(b.kop || it.kop);
+    if (b.soort === "nee") {
+      return '<div class="klaar nee' + (wacht || bezig ? " wacht" : "") + '"><b class="kk">' + kop + '</b><div class="r1"><span class="wat">' +
+        (wacht ? "Wordt niet geplaatst" : bezig ? "Opslaan…" : "Niet geplaatst") + (b.reden ? " · " + esc(b.reden) : "") +
+        (b.rest || b.reden || st.redenOpen[it.id] ? "" : ' <button type="button" class="reden-knop" data-redenopen="' + esc(it.id) + '">waarom?</button>') + "</span>" + knop + "</div>" +
+        (b.rest || !st.redenOpen[it.id] ? "" : '<p class="reden-vraag">Waarom niet? Mag ook overslaan. De AI leert hiervan.</p><div class="chips reden">' + REDENEN.map(function (r) {
+          return '<button type="button" class="chip" data-reden="' + esc(r) + '" data-id="' + esc(it.id) + '" aria-pressed="' + (b.reden === r) + '">' + r + "</button>";
+        }).join("") + "</div>") + "</div>";
+    }
+    return '<div class="klaar' + (wacht || bezig ? " wacht" : "") + '"><b class="kk">' + kop + '</b><div class="r1"><span class="wat">' +
+      (wacht ? "Wordt geplaatst: " : bezig ? "Opslaan: " : "Geplaatst: ") + lijstTekst(b.k) + " · " + esc(LABEL[b.rubriek]) + (b.aangepast ? " · tekst aangepast" : "") + "</span>" + knop + "</div></div>";
+  }
+
+  // ---------- besluiten ----------
+  // Ongedaan maken: het besluit wordt pas na vijf seconden naar de server
+  // gestuurd. Een weggegooide synthese (review "weg") of een van de nieuwspagina
+  // gehaalde publicatie is niet terug te zetten; wachten is dus het enige dat
+  // voor elk soort bericht echt werkt. Verlaat je de pagina in die vijf seconden,
+  // dan waarschuwt de browser. Naar de achtergrond gaan verkort de vijf
+  // seconden niet; een bericht verdwijnt pas uit de werklijst na geslaagd opslaan.
+  var blokTot = 0;
+  // Na een tik krimpt de kaart en schuift de lijst op: 700 ms geen tikken op de lijst,
+  // zodat een tweede tik niet op de volgende kaart, de bronlink of Ongedaan maken valt.
+  document.addEventListener("click", function (e) {
+    if (Date.now() < blokTot && e.target.closest && e.target.closest("#lijst")) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  function besluit(it, b) {
+    blokTot = Date.now() + 700;
+    st.bewaard[it.id] = it;
+    b.tot = Date.now() + ONGEDAAN_MS; b.status = "wacht";
+    delete st.fout[it.id]; delete st.open[it.id];
+    st.besluit[it.id] = b;
+    b.timer = setTimeout(function () { opslaan(it.id); }, ONGEDAAN_MS);
+    tekenItem(it.id);
+  }
+  function opslaan(id) {
+    var b = st.besluit[id], it = st.bewaard[id];
+    if (!b || !it || b.status !== "wacht") return;
+    clearTimeout(b.timer); b.status = "bezig"; tekenItem(id);
+    uitvoer(it, b).then(function (d) {
+      if (!d.ok) {
+        delete st.besluit[id];
+        if (d.gepubliceerd && it.soort === "concept") { it.soort = "publicatie"; it.kop = b.kop; it.tekst = b.tekst; }
+        st.fout[id] = { tekst: d.fout || "Opslaan is mislukt.", bevestig: !!d.bevestigingNodig, b: b };
+        if (d.bevestigingNodig) st.cn[id] = st.cn[id] || { k: b.k, rubriek: b.rubriek, kop: b.kop, tekst: b.tekst };
+        tekenItem(id); return;
+      }
+      b.status = "klaar"; b.besluitId = d.besluit && d.besluit.id;
+      st.gedaan[id] = { besluitId: b.besluitId, soort: b.soort };
+      if (b.soort === "ja") {
+        if (it.soort === "concept") { it.kop = b.kop; it.tekst = b.tekst; if (b.k.nieuwspagina) it.soort = "publicatie"; }
+        if (it.wacht && b.k.nieuwspagina) it.wacht = false;
+      } else if (it.soort !== "kandidaat" && it.soort !== "overheid") b.vast = true; // weggegooid/gedepubliceerd: niet terug te zetten
+      delete st.cn[id];
+      tekenItem(id); stuurReden(id);
+    });
+  }
+  function stuurReden(id) {
+    var b = st.besluit[id]; if (!b) return;
+    var r = b.reden || "";
+    if ( b.soort !== "nee" || b.status !== "klaar" || !b.besluitId || (b.redenGestuurd || "") === r) return;
+    post("/api/selectie", { actie: "reden", id: b.besluitId, reden: r }).then(function (d) {
+      if (d.ok) b.redenGestuurd = r; else toon("De reden is niet opgeslagen: " + (d.fout || "mislukt."), null);
+    });
+  }
+  function eerst(it, b) {
+    var g = st.gedaan[it.id];
+    if (!g || !g.besluitId) return Promise.resolve({ ok: true });
+    var stap = g.soort === "nee" && it.soort === "overheid" ? post("/api/review", { actie: "herstel-overheid", id: it.id }) : Promise.resolve({ ok: true });
+    return stap.then(function (d) {
+      if (!d.ok) return d;
+      return post("/api/selectie", { actie: "herstel", id: g.besluitId }).then(function (r) { return r.ok || r.status === 404 ? { ok: true } : r; });
+    });
+  }
+  function terugBijFout(besluitD, tweede) {
+    return tweede.then(function (r) {
+      if (r.ok || !besluitD.besluit) return r;
+      return post("/api/selectie", { actie: "herstel", id: besluitD.besluit.id }).then(function () { return r; }, function () { return r; });
+    });
+  }
+  // Eén besluit naar de server, per soort bericht (zie de stappen in REGIE.md).
+  function uitvoer(it, b) {
+    return eerst(it, b).then(function (v) {
+      if (!v.ok) return v;
+      var id = it.id, k = b.k, weg = b.soort === "nee";
+      var zij = [];
+      if (!weg && k.zijbalk) zij.push("zijbalk");
+      if (!weg && k.infofrankrijk) zij.push("infofrankrijk");
+      var act = { nieuwsbrief: !weg && !!k.nieuwsbrief, infopoche: !weg && !!k.infopoche };
+      var elders = !weg && !!(k.nieuwspagina || k.nieuwsbrief || k.infopoche);
+      var c = weg ? undefined : b.rubriek, reden = weg && b.reden ? b.reden : undefined;
+      if (it.soort === "kandidaat") return post("/api/selectie", { actie: zij.length ? "go" : "nogo", id: id, categorie: c, kanalen: zij, reden: reden, voorstel: voorstelLijst(it) });
+      if (it.soort === "overheid" || it.soort === "publicatie") {
+        // Eén verzoek: besluit en (de)publiceren, verwijderen of kanalen gaan samen.
+        // Overheid: ook op een regel onder "Al automatisch live" telt alleen de echte keuze: nieuwspagina aan = live:true (keuze:true), uit = van de site.
+        return post("/api/selectie", { actie: "redactie", herkomst: it.soort, id: id, kanalen: weg ? [] : zij, categorie: c, elders: elders, opPagina: it.soort === "overheid" || it.wacht ? !!k.nieuwspagina : true, reden: reden, weg: weg || undefined, voorstel: voorstelLijst(it), act: weg || ((it.soort === "overheid" || it.wacht) && !k.nieuwspagina) ? undefined : act, live: !weg && (it.soort === "overheid" || it.wacht) && k.nieuwspagina ? true : undefined });
+      }
+      // concept: één verzoek volstaat (kop en tekst, publiceren en het redactiebesluit gaan mee),
+      // zodat een sluitende pagina niets half achterlaat. Is een eerdere poging voor de helft
+      // gelukt, dan is het bericht nu een publicatie (it.soort) en slaat de server publiceren over.
+      var bewerkt = !weg && (b.kop !== it.kop || b.tekst !== it.tekst);
+      if (!weg && k.nieuwspagina) {
+        return post("/api/review", { actie: "publiceer", id: id, kop: b.kop, tekst: b.tekst, bevestigd: b.bevestigd === true, kanalen: act, selectie: { kanalen: zij, categorie: c, elders: elders, voorstel: voorstelLijst(it) } });
+      }
+      return post("/api/selectie", { actie: "redactie", herkomst: "concept", id: id, kanalen: zij, categorie: c, reden: reden, voorstel: voorstelLijst(it), kop: bewerkt ? b.kop : undefined, tekst: bewerkt ? b.tekst : undefined, weg: weg || undefined });
+    });
+  }
+
+  // ---------- melding onderaan ----------
+  var toastTimer = 0, toastTerug = null;
+  function toon(tekst, terug) {
+    var m = $("toast"); if (!m) return;
+    m.hidden = false; m.querySelector(".t").textContent = tekst;
+    m.querySelector("button").hidden = !terug; toastTerug = terug;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { m.hidden = true; toastTerug = null; }, ONGEDAAN_MS);
+  }
+
+  // ---------- gebeurtenissen ----------
+  function maakK(it, k) { return schoon(it, k); }
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("button"); if (!t) return;
+    var d = t.dataset, it;
+    if (d.opnieuw) { laad(); return; }
+    if (d.tab) { kiesTab(d.tab); return; }
+    if (d.uit) { if (st.uit[d.uit]) delete st.uit[d.uit]; else st.uit[d.uit] = true; tekenItem(d.uit); return; }
+    if (d.redenopen) { st.redenOpen[d.redenopen] = true; tekenItem(d.redenopen); return; }
+    if (d.ja) { it = vind(d.ja); if (it && r17(it)) { besluit(it, { soort: "nee", k: {}, rubriek: rubriekVoorstel(it) }); return; } if (it) besluit(it, { soort: "ja", k: voorstelK(it), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "", aangepast: false }); return; }
+    if (d.zb) { it = vind(d.zb); if (it) besluit(it, { soort: "ja", k: schoon(it, { zijbalk: true }), rubriek: rubriekVoorstel(it), kop: it.kop, tekst: it.tekst || "", aangepast: false }); return; }
+    if (d.nee) { it = vind(d.nee); if (it) besluit(it, { soort: "nee", k: {}, rubriek: rubriekVoorstel(it) }); return; }
+    if (d.anders) { st.open[d.anders] = true; tekenItem(d.anders); var x = document.querySelector('[data-item="' + d.anders + '"] .anders'); if (x) x.scrollIntoView({ block: "nearest" }); return; }
+    if (d.sluit) { delete st.open[d.sluit]; tekenItem(d.sluit); return; }
+    if (d.plek) {
+      it = vind(d.id); if (!it) return;
+      var c = conceptVan(it), k = Object.assign({}, c.k), was = !!k[d.plek];
+      if (plekMag(it, d.plek, k) && !vast(it, d.plek)) return;
+      k[d.plek] = !was;
+      // Nieuwspagina uit: nieuwsbrief en Infopoche gaan mee uit.
+      if (d.plek === "nieuwspagina") k.nieuwsbrief = k.infopoche = k.nieuwspagina;
+      c.k = k; tekenItem(d.id); return;
+    }
+    if (d.rub) { it = vind(d.id); if (it) { conceptVan(it).rubriek = d.rub; tekenItem(d.id); } return; }
+    if (d.zo) {
+      it = vind(d.zo); if (!it) return;
+      var c3 = conceptVan(it), p = schoon(it, c3.k);
+      if (!PLEKKEN.some(function (q) { return p[q[0]]; })) return;
+      besluit(it, { soort: "ja", k: p, rubriek: c3.rubriek, kop: c3.kop, tekst: c3.tekst, aangepast: it.soort === "concept" && (c3.kop !== it.kop || c3.tekst !== (it.tekst || "")) });
+      return;
+    }
+    if (d.bevestig) {
+      var f = st.fout[d.bevestig]; it = vind(d.bevestig);
+      if (f && f.b && it) { f.b.bevestigd = true; besluit(it, f.b); }
+      return;
+    }
+    if (d.terug) {
+      var b = st.besluit[d.terug];
+      if (b && b.status === "wacht") { clearTimeout(b.timer); delete st.besluit[d.terug]; tekenItem(d.terug); }
+      return;
+    }
+    if (d.wijzig) {
+      var b2 = st.besluit[d.wijzig]; it = st.bewaard[d.wijzig];
+      if (!b2 || !it || b2.status !== "klaar") return;
+      delete st.besluit[d.wijzig];
+      st.cn[d.wijzig] = b2.soort === "ja" ? { k: Object.assign({}, b2.k), rubriek: b2.rubriek, kop: b2.kop, tekst: b2.tekst } : null;
+      if (!st.cn[d.wijzig]) delete st.cn[d.wijzig];
+      st.open[d.wijzig] = true; tekenItem(d.wijzig); return;
+    }
+    if (d.reden) {
+      var b3 = st.besluit[d.id]; if (!b3) return;
+      b3.reden = b3.reden === d.reden ? "" : d.reden;
+      tekenItem(d.id); stuurReden(d.id); return;
+    }
+    if (d.rest) {
+      var ids = openLosseKranten();
+      ids.forEach(function (q) { besluit(q, { soort: "nee", rest: true, k: {}, rubriek: rubriekVoorstel(q) }); });
+      var nr = ids.map(function (q) { return q.id; });
+      toon(nr.length + (nr.length === 1 ? " bericht" : " berichten") + " niet geplaatst.", function () {
+        nr.forEach(function (id) { var b4 = st.besluit[id]; if (b4 && b4.status === "wacht") { clearTimeout(b4.timer); delete st.besluit[id]; tekenItem(id); } });
+      });
+      return;
+    }
+    if (d.toastTerug) { if (toastTerug) toastTerug(); toastTerug = null; var m = $("toast"); if (m) m.hidden = true; return; }
+    if (d.toch) {
+      if (st.toch.indexOf(d.toch) < 0) st.toch.push(d.toch);
+      var open1 = (document.querySelector("[data-aiweg]") || {}).open;
+      bouw(); tekenLijst(); $("aiweg").innerHTML = aiWegHtml(true); kiesTab("beslis");
+      var nw = document.querySelector('[data-item="' + d.toch + '"]'); if (nw) nw.scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (d.autoWeg) {
+      var id5 = d.autoWeg, was5 = !!st.autoWeg[id5];
+      st.autoBezig[id5] = true; herAuto();
+      post("/api/review", was5 ? { actie: "herstel-overheid", id: id5 } : { actie: "verwijder-overheid", id: id5 }).then(function (r) {
+        delete st.autoBezig[id5];
+        if (r.ok) { if (was5) delete st.autoWeg[id5]; else st.autoWeg[id5] = true; } else toon((was5 ? "Terugzetten" : "Weghalen") + " is mislukt: " + (r.fout || "probeer het opnieuw."), null);
+        herAuto();
+      });
+      return;
+    }
+  });
+  // Tab wisselen zonder opnieuw te tekenen: de melding onderaan (Ongedaan maken) en
+  // getypte tekst blijven staan.
+  function kiesTab(t) {
+    st.tab = t;
+    ["beslis", "live", "weg", "peil"].forEach(function (k) {
+      var paneel = $(k === "beslis" ? "beslis" : k === "live" ? "auto" : k === "peil" ? "peilacties" : "aiweg");
+      if (paneel) paneel.hidden = k !== t;
+      var knop = document.querySelector('[data-tab="' + k + '"]');
+      if (knop) knop.setAttribute("aria-selected", String(k === t));
+    });
+    if (t === "beslis") $("lijst").querySelectorAll("textarea").forEach(groeiTekst);
+  }
+  function herAuto() { var o = (document.querySelector("[data-auto]") || {}).open; $("auto").innerHTML = autoHtml(o); }
+  $("ververs").addEventListener("click", function () {
+    var open = Object.keys(st.besluit).some(function (id) { return st.besluit[id].status !== "klaar"; });
+    if (open) { toon("Wacht even: er wordt nog iets opgeslagen.", null); return; }
+    laad();
+  });
+  function groeiTekst(veld) {
+    veld.style.height = "auto";
+    veld.style.height = (veld.scrollHeight + 2) + "px";
+  }
+  document.addEventListener("input", function (e) {
+    var t = e.target; if (!t || !t.dataset) return;
+    var it;
+    if (t.dataset.kop) { it = vind(t.dataset.kop); if (it) conceptVan(it).kop = t.value; }
+    if (t.dataset.tekst) { it = vind(t.dataset.tekst); if (it) conceptVan(it).tekst = t.value; groeiTekst(t); }
+  });
+  // Aftellen: werkt alleen de knoptekst bij, nooit de kaart (getypte tekst blijft staan).
+  setInterval(function () {
+    var nu = Date.now();
+    Object.keys(st.besluit).forEach(function (id) {
+      var b = st.besluit[id]; if (b.status !== "wacht") return;
+      var kn = document.querySelector('[data-terug="' + id + '"]');
+      if (kn) kn.textContent = "Ongedaan maken (" + Math.max(0, Math.ceil((b.tot - nu) / 1000)) + ")";
+    });
+  }, 250);
+  window.addEventListener("beforeunload", function (e) {
+    var wacht = Object.keys(st.besluit).some(function (id) { return st.besluit[id].status !== "klaar"; });
+    if (wacht) { e.preventDefault(); e.returnValue = ""; }
+  });
+  // Bij echt sluiten gaat wat nog wacht meteen weg (keepalive).
+  function spoel() {
+    wegGaand = true;
+    Object.keys(st.besluit).forEach(function (id) { if (st.besluit[id].status === "wacht") opslaan(id); });
+  }
+  document.addEventListener("visibilitychange", function () {
+    wegGaand = document.visibilityState === "hidden";
+  });
+  window.addEventListener("pagehide", spoel);
+
+  window.__redactie = { st: st };
+  laad();
+})();
+</script>
+</body>
+</html>

@@ -32,7 +32,7 @@ test("de export wordt geschoond: alleen https-links en geldige punten", () => {
 });
 
 test("/regie leest de vier bronnen, stuurt bij 401 naar de inlog en linkt naar redactie en Cockpit", () => {
-  const html = readFileSync(new URL("../regie.html", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../archief/regie.html", import.meta.url), "utf8");
   for (const pad of ["/api/actueel", "/api/review", "/api/selectie", "/api/regie"]) assert.ok(html.includes(`"${pad}"`), pad);
   assert.match(html, /\/login\?terug=\/regie/);
   assert.match(html, /href="\/redactie"/);
@@ -41,11 +41,11 @@ test("/regie leest de vier bronnen, stuurt bij 401 naar de inlog en linkt naar r
 });
 
 test("/redactie linkt naar de regiekamer", () => {
-  assert.match(readFileSync(new URL("../redactie.html", import.meta.url), "utf8"), /href="\/regie"/);
+  assert.match(readFileSync(new URL("../archief/redactie-oud.html", import.meta.url), "utf8"), /href="\/regie"/);
 });
 
 test("/regie heeft de Café Jeudi-knoppen via dezelfde sessie-API als /review", () => {
-  const html = readFileSync(new URL("../regie.html", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../archief/regie.html", import.meta.url), "utf8");
   assert.match(html, /id="cjja"/);
   assert.match(html, /id="cjnee"/);
   assert.match(html, /\/api\/review\?deel=banner/);

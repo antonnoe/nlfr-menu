@@ -315,7 +315,7 @@ test("er staat geen kaartkop meer boven de strip", () => {
 });
 
 test("de strip en de hoogte-sync staan er zoals afgesproken", () => {
-  assert.ok(HTML.includes("Zoek in het forum…"), "zoekplaceholder");
+  assert.ok(HTML.includes("Zoek in forum…"), "zoekplaceholder");
   // Gewoon zoeken gaat naar de zoekfunctie van Ning, AI-modus naar de AI-zoeker.
   assert.ok(HTML.includes('var ZOEK_FORUM = "https://www.nederlanders.fr/main/search/search?q="'), "gewone zoekroute");
   assert.ok(HTML.includes('var ZOEK_APP = "https://www.nederlanders.fr/page/ai-zoek?q="'), "AI-zoekroute");

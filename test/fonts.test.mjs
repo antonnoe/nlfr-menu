@@ -54,8 +54,11 @@ test("de gewichten en groottes zijn niet meegewijzigd", () => {
   assert.match(menu, /\.grp a \{[^}]*font-size: 15px/, "menulinks");
 
   const banner = lees("lib/banner.js");
-  assert.match(banner, /\.bnr-titel \{ font-family:Georgia/, "de bannertitel blijft een serif");
-  assert.match(banner, /font-size:24px/, "en houdt zijn 24px");
+  // Sinds 26-11-2026 is de banner één lage regel: de titel staat in de gewone
+  // letter op 15px, niet meer in een serif op 24px (besluit Anton: de banner
+  // mag niet de belangrijkste knop van de pagina lijken).
+  assert.match(banner, /\.bnr-titel \{ font-family:'Mulish'[^}]*font-size:15px; font-weight:700/, "bannertitel in de gewone letter");
+  assert.ok(!/Georgia/.test(banner.split("BANNER_CSS")[1]), "geen serif meer in de banner");
 });
 
 test("Poppins en Mulish staan nog wel vooraan, voor wie ze lokaal heeft", () => {

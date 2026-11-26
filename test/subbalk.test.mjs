@@ -119,8 +119,12 @@ test("de links naar andere sites zijn als extern herkenbaar, Diensten niet", () 
   for (const zuster of l.slice(1)) {
     assert.ok(zuster.klasse.includes("sbl-ext"), zuster.tekst + " hoort als extern gemarkeerd");
   }
-  assert.equal(html.split('class="sbx"').length - 1, 3, "drie pijltjes: elke externe link");
-  assert.match(CSS_KAAL, /\.sbl-ext \{ color: var\(--brand\)/, "en in bordeaux");
+  // Sinds de strakke opmaak (november 2026) zonder pijltje: de regel was te
+  // druk. Het verschil staat nog in de titel van de link, voor wie de muis
+  // erboven houdt en voor een schermlezer.
+  assert.equal(html.split('title="Opent in een nieuw tabblad"').length - 1, 3, "elke externe link zegt dat hij een tabblad opent");
+  assert.ok(!html.includes('class="sbx"'), "geen pijltjes meer");
+  assert.match(CSS_KAAL, /\.sbl \{[^}]*color: var\(--actueel\)/, "de links staan in het groen van de bijkleur");
 });
 
 // --- altijd zichtbaar, en de hoogte gaat mee -------------------------------

@@ -85,38 +85,43 @@ test("op mobiel neemt de kaart de volle breedte en vervalt het pijltje", () => {
   assert.match(HTML, /if \(isNarrow\(\) \|\| !ladeKnop \|\| !ladeNu\) return;/, "en geen uitlijning");
 });
 
-test("Plaats bericht heeft twee kolommen met precies de afgesproken teksten", () => {
-  const k = data().PLAATS_KOLOMMEN;
-  assert.equal(k.length, 2, "twee kolommen");
+test("Plaats bericht heeft drie gratis tegels met een tip en de betaalde advertentie", () => {
+  // Besluit Anton, 26-11-2026: per uitnodiging een tegel, alle drie naar het
+  // formulier voor een nieuw bericht. De tipteksten zijn door hem goedgekeurd.
+  const d = data();
+  const k = d.PLAATS_KOLOMMEN;
+  assert.equal(k.length, 4, "vier tegels");
+  assert.deepEqual(k.map((x) => x.kop), ["Stel een vraag", "Deel je ervaring", "Een leuk verhaal?", "Advertentie"]);
+  assert.deepEqual(k.map((x) => x.knop), ["Schrijf je vraag", "Schrijf je ervaring", "Schrijf je verhaal", "Naar de betaalpagina"]);
+  for (const x of k.slice(0, 3)) {
+    assert.equal(x.label, "GRATIS");
+    assert.equal(x.pil, "gratis");
+    assert.equal(x.url, NL + "/profiles/blog/new");
+  }
+  assert.equal(k[0].tekst, "Zet je vraag in de titel en vertel kort je situatie. Hoe duidelijker de vraag, hoe sneller een lid je verder helpt.");
+  assert.equal(k[1].tekst, "Iets geregeld of meegemaakt in Frankrijk? Vertel wat werkte en wat niet. Daar hebben anderen morgen iets aan.");
+  assert.equal(k[2].tekst, "Een ontmoeting, een dorpsfeest, een misverstand in het Frans. Korte verhalen krijgen een eigen rubriek.");
 
-  assert.equal(k[0].kop, "Plaats een forumbijdrage");
-  assert.equal(k[0].label, "GRATIS");
-  assert.equal(k[0].pil, "gratis");
-  assert.equal(k[0].tekst,
-    "Uw forumbijdrage wordt bijzonder op prijs gesteld. Vragen worden beantwoord in het forum, " +
-    "van ervaringen leren we allemaal, en korte verhalen krijgen een eigen rubriek. Ook roerende " +
-    "goederen te koop (auto’s, campers, caravans) plaatst u hier gratis."
-      .replace("’", "'"));
-  assert.equal(k[0].knop, "Naar het forum");
-  assert.equal(k[0].url, NL + "/profiles/blog/new");
+  assert.equal(k[3].label, "BETAALD");
+  assert.equal(k[3].pil, "betaald");
+  assert.equal(k[3].tekst, "Vacatures, vastgoed en bedrijfsberichten worden alleen geplaatst na betaling.");
+  assert.equal(k[3].url, NL + "/page/betaalpagina-berichten");
 
-  assert.equal(k[1].kop, "Plaats een advertentie");
-  assert.equal(k[1].label, "BETAALD");
-  assert.equal(k[1].pil, "betaald");
-  assert.equal(k[1].tekst, "Vacatures, vastgoed en bedrijfsberichten worden alleen geplaatst na betaling.");
-  assert.equal(k[1].knop, "Naar de betaalpagina");
-  assert.equal(k[1].url, NL + "/page/betaalpagina-berichten");
+  assert.match(HTML, /var PLAATS_VOET = "Auto, camper of caravan te koop\? Dat plaats je gratis als forumbericht\.";/);
+  assert.match(CSS_KAAL, /\.plaatskolommen \{ display: grid; grid-template-columns: repeat\(auto-fit, minmax\(200px, 1fr\)\)/, "naast elkaar zolang het past");
+  assert.match(CSS_KAAL, /\.ladekaart\.plaats \{ width: auto; \}/, "over de volle breedte");
 });
 
-test("de knoppen van beide kolommen openen de hele pagina, niet het iframe", () => {
-  assert.match(HTML, /<a class="plaatsknop" href="' \+ k\.url \+ '" target="_parent">/);
+test("de knoppen van de tegels openen de hele pagina, niet het iframe", () => {
+  assert.match(HTML, /<a class="plaatsknop' \+ \(betaald \? ' rand' : ''\) \+ '" href="' \+ k\.url \+ '" target="_parent">/);
 });
 
-test("GRATIS is groen, BETAALD is bordeaux", () => {
-  assert.match(CSS_KAAL, /\.pil\.gratis \{ background: var\(--actueel\)/);
-  assert.match(CSS_KAAL, /--actueel: #2f6b3a/, "en dat groen is #2f6b3a");
-  assert.match(CSS_KAAL, /\.pil\.betaald \{ background: var\(--brand\)/);
+test("GRATIS is groen, BETAALD is bordeaux, en alleen de gratis knoppen zijn vol", () => {
+  assert.match(CSS_KAAL, /\.pil\.gratis \{ background: #e7f0e9; color: #2f6b3a; \}/);
+  assert.match(CSS_KAAL, /\.pil\.betaald \{ background: #f3e6e6; color: #800000; \}/);
+  assert.match(CSS_KAAL, /--actueel: #2f6b3a/);
   assert.match(CSS_KAAL, /--brand: #800000/);
+  assert.match(CSS_KAAL, /\.plaatsknop\.rand \{ background: #fff; color: #800000;/, "de betaalknop heeft een rand");
 });
 
 test("Nu actueel houdt zijn kop en zijn items uit actueel.json", () => {

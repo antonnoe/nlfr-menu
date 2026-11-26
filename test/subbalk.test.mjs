@@ -31,7 +31,7 @@ function renderers() {
   const bron =
     pak("  function tgt(href)", "  // ---- Data ----") +
     pak("  var U = function(p)", "  // ---- De vier ingangen") +
-    pak("  var SNELRIJ =", "  // De twee kolommen achter de knop") +
+    pak("  var SNELRIJ =", "  // De tegels achter de knop \"Plaats bericht\"") +
     pak("  var kruisSvg =", "  // ---- Hoogte melden") +
     pak("  function snelrijHTML(){", "  function bouwPaneel(){");
   // eslint-disable-next-line no-new-func

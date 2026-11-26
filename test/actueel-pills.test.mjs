@@ -262,18 +262,22 @@ test("het tikoppervlak is 44px zonder dat de pill groeit", () => {
   assert.match(vlak, /position: absolute/, "het vlak ligt over de link heen");
   assert.match(vlak, /min-height: 44px/, "en is minstens 44px hoog");
   assert.ok(!/background/.test(vlak), "het vlak hoort onzichtbaar te blijven");
-  // De pill zelf blijft klein: 13px tekst met 7px padding boven en onder.
+  // De pill zelf blijft een pill: 13,5px tekst met 11px padding boven en onder.
   const pill = regel(".ladekaart.actueel .nap");
-  assert.match(pill, /padding: 7px 15px/);
-  assert.match(pill, /font-size: 13px/);
+  assert.match(pill, /padding: 11px 13px/);
+  assert.match(pill, /font-size: 13\.5px/);
 });
 
-test("de lade zet de items onder elkaar, links uitgelijnd", () => {
+test("de lade zet de items naast elkaar over de volle breedte", () => {
+  // Besluit Anton, 26-11-2026: de breedte gebruiken, opties niet onder elkaar.
   const kaart = regel(".ladekaart.actueel");
-  assert.match(kaart, /flex-direction: column/);
-  assert.match(kaart, /align-items: flex-start/, "anders rekken de pills over de volle breedte");
+  assert.match(kaart, /width: auto/, "de kaart neemt de volle breedte");
+  assert.match(kaart, /flex-direction: row/);
+  assert.match(kaart, /flex-wrap: wrap/, "op een smal scherm mogen ze doorlopen op een volgende regel");
+  assert.match(kaart, /align-items: center/, "anders rekken de pills in de hoogte");
   assert.match(kaart, /gap: 8px/);
-  assert.match(regel(".ladekaart.actueel .h"), /margin-bottom: 10px/);
+  assert.match(regel(".ladekaart.actueel .nal"), /margin: 0 4px 0 auto/, "het tekstlinkje staat rechts");
+  assert.match(regel(".ladekaart.actueel .nap"), /border: 1px solid #9c8782/, "pill met rand, geen vol vlak");
 });
 
 test("op compact blijft de opmaak dezelfde", () => {

@@ -41,7 +41,7 @@ test("de acht bestemmingen komen uit index.html, niet uit een lijst hier", () =>
     NL + "/page/frankrijknieuws",
     NL + "/page/diensten",
     "https://nieuws.infofrankrijk.com/",
-    "https://kalender-frankrijk.vercel.app/",
+    NL + "/page/kalender-frankrijk",
     "https://nlfr-nieuwsbrief.vercel.app/oproep",
   ]);
   // Elke bestemming zegt ook waar hij vandaan komt, anders staat er straks een

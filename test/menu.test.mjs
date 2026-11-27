@@ -246,7 +246,7 @@ test("de smalle regel onder de balk telt precies vier links", () => {
   assert.equal(d.SNELRIJ[0][1], NL + "/page/diensten",
     "Diensten wijst naar de pagina binnen Ning, niet naar het oude /diensten");
   assert.equal(d.SNELRIJ[1][1], "https://nieuws.infofrankrijk.com/");
-  assert.equal(d.SNELRIJ[2][1], "https://kalender-frankrijk.vercel.app/");
+  assert.equal(d.SNELRIJ[2][1], NL + "/page/kalender-frankrijk");
   assert.equal(d.SNELRIJ[3][1], "https://nlfr-nieuwsbrief.vercel.app/oproep");
   // Word abonnee staat sinds november 2026 in de netwerkbalk boven de titel
   // (pagina van Ning), los van Plaats bericht. Dit menu mag daarom pas live

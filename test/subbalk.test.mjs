@@ -95,15 +95,17 @@ test("de adressen staan voluit, en Diensten wijst binnen Ning", () => {
   // buiten Ning, en dat is nu juist wat hier is rechtgezet.
   assert.equal(l[0].href, NL + "/page/diensten");
   assert.equal(l[1].href, "https://nieuws.infofrankrijk.com/");
-  assert.equal(l[2].href, "https://kalender-frankrijk.vercel.app/");
+  assert.equal(l[2].href, NL + "/page/kalender-frankrijk");
   assert.equal(l[3].href, "https://nlfr-nieuwsbrief.vercel.app/oproep");
   assert.ok(!HTML.includes('U("/diensten")'), "het oude /diensten hoort nergens meer te staan");
 });
 
 test("nederlanders.fr opent in het bovenliggende venster, de andere sites in een tabblad", () => {
   const l = snel();
-  assert.equal(l[0].target, "_parent", "Diensten blijft binnen de site");
-  for (const zuster of l.slice(1)) {
+  // Diensten en de Frankrijkkalender (sinds 27-11-2026 /page/kalender-frankrijk)
+  // zijn pagina's van nederlanders.fr en blijven binnen de site.
+  for (const eigen of [l[0], l[2]]) assert.equal(eigen.target, "_parent", eigen.tekst + " blijft binnen de site");
+  for (const zuster of [l[1], l[3]]) {
     assert.equal(zuster.target, "_blank", zuster.tekst + " opent in een nieuw tabblad");
     assert.equal(zuster.rel, "noopener", zuster.tekst + " krijgt rel=noopener");
   }
@@ -112,14 +114,14 @@ test("nederlanders.fr opent in het bovenliggende venster, de andere sites in een
 test("de links naar andere sites zijn als extern herkenbaar, Diensten niet", () => {
   const html = subbalkHTML();
   const l = snel();
-  assert.ok(!l[0].klasse.includes("sbl-ext"), "Diensten is geen externe link");
-  for (const zuster of l.slice(1)) {
+  for (const eigen of [l[0], l[2]]) assert.ok(!eigen.klasse.includes("sbl-ext"), eigen.tekst + " is geen externe link");
+  for (const zuster of [l[1], l[3]]) {
     assert.ok(zuster.klasse.includes("sbl-ext"), zuster.tekst + " hoort als extern gemarkeerd");
   }
   // Sinds de strakke opmaak (november 2026) zonder pijltje: de regel was te
   // druk. Het verschil staat nog in de titel van de link, voor wie de muis
   // erboven houdt en voor een schermlezer.
-  assert.equal(html.split('title="Opent in een nieuw tabblad"').length - 1, 3, "elke externe link zegt dat hij een tabblad opent");
+  assert.equal(html.split('title="Opent in een nieuw tabblad"').length - 1, 2, "elke externe link zegt dat hij een tabblad opent");
   assert.ok(!html.includes('class="sbx"'), "geen pijltjes meer");
   assert.match(CSS_KAAL, /\.sbl \{[^}]*color: var\(--actueel\)/, "de links staan in het groen van de bijkleur");
 });
